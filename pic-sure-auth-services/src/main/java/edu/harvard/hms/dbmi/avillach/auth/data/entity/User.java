@@ -6,9 +6,8 @@ import edu.harvard.dbmi.avillach.data.entity.BaseEntity;
 
 import javax.persistence.*;
 import java.io.Serializable;
-import java.util.Date;
-
 import java.security.Principal;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -28,7 +27,9 @@ public class User extends BaseEntity implements Serializable, Principal {
 
 	private String email;
 
-	private String connectionId;
+	@ManyToOne
+	@JoinColumn(name = "connectionId")
+	private Connection connection;
 
 	private boolean matched;
 
@@ -89,6 +90,31 @@ public class User extends BaseEntity implements Serializable, Principal {
 		return nameSet;
 	}
 
+	/**
+	 * return privilege names in each role as a set based on Application given.
+	 *
+	 * @return
+	 */
+	@JsonIgnore
+	public Set<String> getPrivilegeNameSetByApplication(Application application){
+		Set<Privilege> totalPrivilegeSet = getTotalPrivilege();
+
+		if (totalPrivilegeSet == null)
+			return null;
+
+		Set<String> nameSet = new HashSet<>();
+		if (application == null)
+			return nameSet;
+
+		totalPrivilegeSet.stream().forEach(
+				p -> {
+					if (application.equals(p.getApplication()))
+						nameSet.add(p.getName());
+				}
+		);
+		return nameSet;
+	}
+
 	@JsonIgnore
 	public String getPrivilegeString(){
 		Set<Privilege> totalPrivilegeSet = getTotalPrivilege();
@@ -131,12 +157,12 @@ public class User extends BaseEntity implements Serializable, Principal {
 		this.email = email;
 	}
 
-	public String getConnectionId() {
-		return connectionId;
+	public Connection getConnection() {
+		return connection;
 	}
 
-	public User setConnectionId(String connectionId) {
-		this.connectionId = connectionId;
+	public User setConnection(Connection connection) {
+		this.connection = connection;
 		return this;
 	}
 
@@ -159,5 +185,42 @@ public class User extends BaseEntity implements Serializable, Principal {
 	@Override
 	public String getName() {
 		return this.subject;
+	}
+
+	@JsonInclude(JsonInclude.Include.NON_EMPTY)
+	public static class UserForDisaply {
+		String uuid;
+		String email;
+		Set<String> privileges;
+
+		public UserForDisaply() {
+		}
+
+		public String getEmail() {
+			return email;
+		}
+
+		public UserForDisaply setEmail(String email) {
+			this.email = email;
+			return this;
+		}
+
+		public Set<String> getPrivileges() {
+			return privileges;
+		}
+
+		public UserForDisaply setPrivileges(Set<String> privileges) {
+			this.privileges = privileges;
+			return this;
+		}
+
+		public String getUuid() {
+			return uuid;
+		}
+
+		public UserForDisaply setUuid(String uuid) {
+			this.uuid = uuid;
+			return this;
+		}
 	}
 }

@@ -1,5 +1,8 @@
-define(["backbone","handlebars", "user/addUser", "text!user/userManagement.hbs", "text!user/userDetails.hbs", "text!user/userTable.hbs", "text!options/modal.hbs", "picSure/userFunctions", "util/notification"],
-		function(BB, HBS,  AddUserView, template, userDetailsTemplate, userTableTemplate, modalTemplate, userFunctions, notification){
+define(["backbone","handlebars", "user/addUser", "text!user/userManagement.hbs",
+		"text!user/userDetails.hbs", "text!user/userTable.hbs",
+		"text!options/modal.hbs", "picSure/userFunctions", "util/notification"],
+		function(BB, HBS,  AddUserView, template, userDetailsTemplate,
+				 userTableTemplate, modalTemplate, userFunctions, notification){
 	var userManagementModel = BB.Model.extend({
 	});
 
@@ -17,7 +20,10 @@ define(["backbone","handlebars", "user/addUser", "text!user/userManagement.hbs",
 				}
 			});
             HBS.registerHelper('requiredFieldValue', function(userMetadata, metadataId){
-            	return userMetadata[metadataId];
+            	if (userMetadata)
+            		return userMetadata[metadataId];
+            	else
+            		return "";
 			});
             HBS.registerHelper('displayUserRoles', function(roles){
                 return _.pluck(roles, "name").join(", ");
@@ -49,8 +55,10 @@ define(["backbone","handlebars", "user/addUser", "text!user/userManagement.hbs",
 		showUserAction: function (event) {
 			var uuid = event.target.id;
             userFunctions.showUserDetails(uuid, function(result) {
-                var requiredFields = _.where(this.connections, {id: result.connectionId})[0].requiredFields;
-                result.generalMetadata = JSON.parse(result.generalMetadata);
+                var requiredFields = _.where(this.connections, {id: result.connection.id})[0].requiredFields;
+                if (result.generalMetadata){
+                    result.generalMetadata = JSON.parse(result.generalMetadata);
+            	}
 				this.model.set("selectedUser", result);
                 $("#modal-window", this.$el).html(this.modalTemplate({title: "User info"}));
 				$("#modalDialog", this.$el).show();
@@ -59,7 +67,7 @@ define(["backbone","handlebars", "user/addUser", "text!user/userManagement.hbs",
 		},
         editUserMenu: function (events) {
             var user = this.model.get("selectedUser");
-            var requiredFields = _.where(this.connections, {id: user.connectionId})[0].requiredFields;
+            var requiredFields = _.where(this.connections, {id: user.connection.id})[0].requiredFields;
             $(".modal-body", this.$el).html(this.crudUserTemplate({createOrUpdateUser: true, user: user, availableRoles: this.model.get("availableRoles"), requiredFields: requiredFields}));
             this.applyCheckboxes();
         },
@@ -83,7 +91,9 @@ define(["backbone","handlebars", "user/addUser", "text!user/userManagement.hbs",
 
             var uuid = this.$('input[name=uuid]').val();
             var subject = this.$('input[name=subject]').val();
-            var connectionId = this.$('input[name=connectionId]').val();
+            var connection = {
+            	id: this.$('input[name=connectionId]').val()
+            };
             var general_metadata = {};
             _.each($('#required-fields input[type=text]'), function(entry){
                 general_metadata[entry.name] = entry.value
@@ -100,7 +110,9 @@ define(["backbone","handlebars", "user/addUser", "text!user/userManagement.hbs",
                 user = [{
                     uuid: uuid,
                     email: email,
-                    connectionId: connectionId,
+                    connection: {
+                    	id:connectionId
+					},
                     generalMetadata:JSON.stringify(general_metadata),
                     auth0metadata: auth0_metadata,
                     subject: subject,
@@ -115,7 +127,7 @@ define(["backbone","handlebars", "user/addUser", "text!user/userManagement.hbs",
 
             userFunctions.createOrUpdateUser(user, requestType, function(result) {
                 console.log(result);
-                this.render();
+                window.location.reload();
             }.bind(this));
         },
 		deleteUser: function (event) {
@@ -152,7 +164,10 @@ define(["backbone","handlebars", "user/addUser", "text!user/userManagement.hbs",
 						    return _.extend(connection, {
 								users: users.filter(
 									function(user){
-										return user.connectionId === connection.id;
+										if (user.connection)
+											return user.connection.id === connection.id;
+										else
+											return false;
 								})
 							})
 						})

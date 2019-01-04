@@ -28,8 +28,11 @@ CREATE TABLE `privilege` (
   `uuid` binary(16) NOT NULL,
   `description` varchar(255) COLLATE utf8_bin DEFAULT NULL,
   `name` varchar(255) COLLATE utf8_bin DEFAULT NULL,
+  `application_id` binary(16) DEFAULT NULL,
   PRIMARY KEY (`uuid`),
-  UNIQUE KEY `UK_h7iwbdg4ev8mgvmij76881tx8` (`name`)
+  UNIQUE KEY `UK_h7iwbdg4ev8mgvmij76881tx8` (`name`),
+  KEY `FK61h3jewffk70b5ni4tsi5rhoy` (`application_id`),
+  CONSTRAINT `FK61h3jewffk70b5ni4tsi5rhoy` FOREIGN KEY (`application_id`) REFERENCES `application` (`uuid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -77,12 +80,14 @@ CREATE TABLE `user` (
   `auth0_metadata` varchar(8000) COLLATE utf8_bin DEFAULT NULL,
   `general_metadata` varchar(9000) COLLATE utf8_bin DEFAULT NULL,
   `acceptedTOS` datetime COLLATE utf8_bin DEFAULT NULL,
-  `connectionId` varchar(255) COLLATE utf8_bin DEFAULT NULL,
+  `connectionId` binary(16) DEFAULT NULL,
   `email` varchar(255) COLLATE utf8_bin DEFAULT NULL,
   `matched` bit(1) NOT NULL DEFAULT FALSE,
   `subject` varchar(255) COLLATE utf8_bin DEFAULT NULL,
   PRIMARY KEY (`uuid`),
-  UNIQUE KEY `UK_r8xpakluitn685ua7pt8xjy9r` (`subject`)
+  UNIQUE KEY `UK_r8xpakluitn685ua7pt8xjy9r` (`subject`),
+  KEY `FKn8bku0vydfcnuwbqwgnbgg8ry` (`connectionId`),
+  CONSTRAINT `FKn8bku0vydfcnuwbqwgnbgg8ry` FOREIGN KEY (`connectionId`) REFERENCES `connection` (`uuid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -96,9 +101,11 @@ CREATE TABLE `user` (
 CREATE TABLE `userMetadataMapping` (
   `uuid` binary(16) NOT NULL,
   `auth0MetadataJsonPath` varchar(255) COLLATE utf8_bin DEFAULT NULL,
-  `connectionId` varchar(255) COLLATE utf8_bin DEFAULT NULL,
+  `connectionId` binary(16) DEFAULT NULL,
   `generalMetadataJsonPath` varchar(255) COLLATE utf8_bin DEFAULT NULL,
-  PRIMARY KEY (`uuid`)
+  PRIMARY KEY (`uuid`),
+  KEY `FKayr8vrvvwpgsdhxdyryt6k590` (`connectionId`),
+  CONSTRAINT `FKayr8vrvvwpgsdhxdyryt6k590` FOREIGN KEY (`connectionId`) REFERENCES `connection` (`uuid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -140,6 +147,13 @@ CREATE TABLE `connection` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
+CREATE TABLE `application` (
+  `uuid` binary(16) NOT NULL,
+  `description` varchar(255) COLLATE utf8_bin DEFAULT NULL,
+  `enable` bit(1) NOT NULL DEFAULT b'1',
+  `name` varchar(255) COLLATE utf8_bin DEFAULT NULL,
+  PRIMARY KEY (`uuid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
 /*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
