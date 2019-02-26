@@ -1,6 +1,6 @@
 // Util functions get data to/from picsure
-define(["util/notification", "text!picSure/connections.json", "picSure/settings"],
-		function(notification, connectionsJSON, settings){
+define(["util/notification", "picSure/settings"],
+		function(notification, settings){
     var picsureFunctions = {
         init: function () {}
     };
@@ -8,23 +8,23 @@ define(["util/notification", "text!picSure/connections.json", "picSure/settings"
     var connections = undefined;
     
     picsureFunctions.getConnection = function (connectionUuid, callback) {
-    		if(connections){
-    			callback(_.findWhere(connections, {uuid: connectionUuid}));
-    		}else{
-    	        $.ajax({
-    	            url: window.location.origin + settings.basePath + '/connection/' + (connectionUuid ? connectionUuid : ''),
-    	            type: 'GET',
-    	            contentType: 'application/json',
-    	            success: function(response){
-    	                connections = response;
-    	                callback(response);
-    	            },
-    	            error: function(response){
-    	                console.log("Failed to get connections from server.");
-    	                console.log(response);
-    	            }
-    	        });    			
-    		}
+        if(connections){
+            callback(_.findWhere(connections, {uuid: connectionUuid}));
+        }else{
+            $.ajax({
+                url: window.location.origin + settings.basePath + '/connection/' + (connectionUuid ? connectionUuid : ''),
+                type: 'GET',
+                contentType: 'application/json',
+                success: function(response){
+                    connections = response;
+                    callback(response);
+                },
+                error: function(response){
+                    notification.showFailureMessage("Failed to get connection(s) from server.");
+                    console.log(response);
+                }
+            });
+        }
     }.bind(picsureFunctions);
     picsureFunctions.getConnections = function (callback) {
     	    if(connections){
@@ -40,7 +40,6 @@ define(["util/notification", "text!picSure/connections.json", "picSure/settings"
     	            },
     	            error: function(response){
     	                console.log("Failed to get connections from server.");
-    	                return connectionsJSON;
     	            }
     	        });
     	    }
