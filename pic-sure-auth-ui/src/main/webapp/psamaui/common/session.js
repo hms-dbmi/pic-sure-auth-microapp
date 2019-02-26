@@ -34,7 +34,7 @@ define(["jquery", "underscore", "picSure/userFunctions", "picSure/settings"], fu
 			session.token = token;
 			session.username = username;
 			session.permissions = permissions;
-			session.acceptedTOS = (acceptedTOS === 'true');
+			session.acceptedTOS = acceptedTOS;
 			sessionStorage.setItem("session", JSON.stringify(session));
 			configureAjax(callback);
 		},
