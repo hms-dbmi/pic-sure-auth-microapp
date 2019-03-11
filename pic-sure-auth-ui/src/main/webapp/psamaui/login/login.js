@@ -19,7 +19,7 @@ define(['common/session', 'picSure/settings', 'common/searchParser', 'jquery', '
                             + "/psamaui/login/";
             if(typeof queryObject.access_token === "string"){
                 $.ajax({
-                    url: '/picsureauth/authentication',
+                    url: settings.basePath + '/authentication',
                     type: 'post',
                     data: JSON.stringify({
                         access_token : queryObject.access_token,
