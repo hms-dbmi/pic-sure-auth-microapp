@@ -41,10 +41,11 @@ public class MailService {
 	}
 
 	public void sendUsersAccessEmail(User user){
-		if (user.getEmail() != null) {
+		if (user.getEmail() == null) {
 			logger.error("User " + user.getSubject() + " has no email");
-		}
-		sendEmail("accessEmail.mustache", "Your Access To " + JAXRSConfiguration.systemName, user.getEmail(), new AccessEmail(user));
+		} else {
+            sendEmail("accessEmail.mustache", user.getEmail(),"Your Access To " + JAXRSConfiguration.systemName, new AccessEmail(user));
+        }
 	}
 
 	public void sendDeniedAccessEmail(JsonNode userInfo){
