@@ -22,4 +22,4 @@ RUN mkdir /usr/local/apache2/logs/ssl_mutex
 
 COPY ./src/main/webapp /usr/local/apache2/htdocs
 COPY ./target/webjars/META-INF/resources/webjars /usr/local/apache2/htdocs/psamaui/webjars
-COPY ./src/main/resources /usr/local/apache2/htdocs/settings
+COPY ./src/main/resources /usr/local/apache2/htdocs/psamaui/settings
