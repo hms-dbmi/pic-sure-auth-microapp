@@ -179,7 +179,7 @@
 							</execution>
 						</executions>
 						<configuration>
-							<installationDirectory>target/chromedriver</installationDirectory>
+							<installationDirectory>${project.basedir}/target/chromedriver</installationDirectory>
 							<drivers>
 								<driver>
 									<name>chromedriver</name>
@@ -203,7 +203,7 @@
 									<properties>
 										<property>
 											<name>webdriver.chrome.driver</name>
-											<value>target/chromedriver/chromedriver-mac-64bit</value>
+											<value>${project.basedir}/target/chromedriver/chromedriver-mac-64bit</value>
 										</property>
 									</properties>
 								</configuration>
