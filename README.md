@@ -54,8 +54,8 @@ After the commands successfully executed, list the three containers, that compri
 Note: <small>This was changed from the much shorter maven based deployment to resolve a certificate issue 
   with grin-docker-dev. Once the cert issue is resolved the maven tomcat configs will work again.</small>
 
-You'll need to provide Auth0 client_id in `/admin/overrides/login.js` and the client_secret of pic-sure-auth-services 
-has to match the one from Auth0 based on client_id.
+~~You'll need to provide Auth0 client_id in `/admin/overrides/login.js` and the client_secret of pic-sure-auth-services 
+has to match the one from Auth0 based on client_id.~~
 
 #### To add an initial top admin user in the system
 If you follow the steps above, spins up the docker containers and you can see the login page in the browser, you are almost there.
