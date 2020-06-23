@@ -15,7 +15,10 @@ import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
+
 import java.util.Map;
 
 /**
@@ -41,11 +44,11 @@ public class AuthService {
     @ApiOperation(value = "The authentication endpoint for retrieving a valid user token")
     @POST
     @Path("/authentication")
-    public Response authentication(@ApiParam(required = true, value = "A json object that includes all Oauth authentication needs, for example, access_token and redirectURI") Map<String, String> authRequest) {
+    public Response authentication(@Context HttpHeaders headers, @ApiParam(required = true, value = "A json object that includes all Oauth authentication needs, for example, access_token and redirectURI") Map<String, String> authRequest) {
         logger.debug("authentication() starting...");
         if (JAXRSConfiguration.idp_provider.equalsIgnoreCase("fence")) {
             logger.debug("authentication() FENCE authentication");
-            return fenceAuthenticationService.getFENCEProfile(authRequest);
+            return fenceAuthenticationService.getFENCEProfile(headers.getHeaderString(HttpHeaders.HOST), authRequest);
         } else {
             logger.debug("authentication() default authentication");
             return authenticationService.getToken(authRequest);
