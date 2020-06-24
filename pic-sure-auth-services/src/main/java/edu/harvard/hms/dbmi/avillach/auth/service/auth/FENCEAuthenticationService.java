@@ -93,7 +93,7 @@ public class FENCEAuthenticationService {
         return fence_user_profile_response;
     }
 
-    private JsonNode getFENCEAccessToken(String hostHeader, String fence_code) {
+    private JsonNode getFENCEAccessToken(String callback_url, String fence_code) {
         logger.debug("getFENCEAccessToken() starting, using FENCE code");
 
         List<Header> headers = new ArrayList<>();
@@ -107,7 +107,7 @@ public class FENCEAuthenticationService {
 		String query_string =
         		"grant_type=authorization_code"
         				+ "&code=" + fence_code
-        				+ "&redirect_uri=" + hostHeader + "/psamaui/login/";
+        				+ "&redirect_uri=" + callback_url;
 
         String fence_token_url = JAXRSConfiguration.idp_provider_uri+"/user/oauth2/token";
 
@@ -128,7 +128,7 @@ public class FENCEAuthenticationService {
     }
 
     // Get access_token from FENCE, based on the provided `code`
-    public Response getFENCEProfile(String hostHeader, Map<String, String> authRequest){
+    public Response getFENCEProfile(String callback_url, Map<String, String> authRequest){
         logger.debug("getFENCEProfile() starting...");
         String fence_code  = authRequest.get("code");
 
@@ -136,7 +136,7 @@ public class FENCEAuthenticationService {
         // Get the Gen3/FENCE user profile. It is a JsonNode object
         try {
             logger.debug("getFENCEProfile() query FENCE for user profile with code");
-            fence_user_profile = getFENCEUserProfile(getFENCEAccessToken(hostHeader, fence_code).get("access_token").asText());
+            fence_user_profile = getFENCEUserProfile(getFENCEAccessToken(callback_url, fence_code).get("access_token").asText());
             logger.debug("getFENCEProfile() user profile structure:"+fence_user_profile.asText());
             logger.debug("getFENCEProfile() .username:" + fence_user_profile.get("username"));
             logger.debug("getFENCEProfile() .user_id:" + fence_user_profile.get("user_id"));
