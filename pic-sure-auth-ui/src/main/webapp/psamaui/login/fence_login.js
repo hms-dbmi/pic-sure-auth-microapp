@@ -65,7 +65,10 @@ define(['common/session', 'picSure/settings', 'common/searchParser', 'jquery', '
                             "?response_type=code"+
                             "&scope=user+openid"+
                             "&client_id=" + settings.fence_client_id +
-                            "&redirect_uri=" + window.location.href.replace(window.location.search, "")
+                            "&redirect_uri=" + window.location.protocol
+                            + "//"+ window.location.hostname
+                            + (window.location.port ? ":"+window.location.port : "")
+                            + "/psamaui/login/"
                     }));
                     
                     //also need to show footer on login page
