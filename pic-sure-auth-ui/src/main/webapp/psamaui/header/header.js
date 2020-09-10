@@ -156,6 +156,14 @@ define(["backbone","handlebars", 'picSure/settings', "text!header/header.hbs", "
                     }.bind(this));
                 }
             }
+            // disable Jupyterhub application link if it is not running
+            $.ajax({
+                "url":"/jupyterhub",
+                "timeout":"2000",
+                "error": function(e) {
+                    $('a[href = "/jupyterhub"]').hide()
+                }
+            })
         }
     });
 
