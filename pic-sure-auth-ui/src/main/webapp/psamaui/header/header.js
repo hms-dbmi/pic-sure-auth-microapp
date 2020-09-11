@@ -159,9 +159,12 @@ define(["backbone","handlebars", 'picSure/settings', "text!header/header.hbs", "
             // disable Jupyterhub application link if it is not running
             $.ajax({
                 "url":"/jupyterhub",
-                "timeout":"2000",
+                "timeout":"1000",
                 "error": function(e) {
-                    $('a[href = "/jupyterhub"]').hide()
+                    // delayed execution to allow DOM to render
+                    setTimeout(function(){
+                        $('a[href = "/jupyterhub"]').hide();
+                    }, 100);
                 }
             })
         }
