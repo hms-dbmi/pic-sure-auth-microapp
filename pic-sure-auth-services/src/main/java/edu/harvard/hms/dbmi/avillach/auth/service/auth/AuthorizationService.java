@@ -27,7 +27,10 @@ import java.util.stream.Collectors;
  *     <br><br>
  *     <p>
  *     Whether users are allowed access or not depends on their privileges, which depends on
- *     the accessRules underneath. AuthorizationService class will eventually use jsonpath to check if
+ *     the accessRules underneath. 
+ *     
+ *     NC - is this last bit still true? (9/20)
+ *     AuthorizationService class will eventually use jsonpath to check if
  *     certain places in the incoming JSON meet the requirement of the preset rules in accessRules to determine
  *     if the token holder is authorized or not.
  *     </p>
@@ -66,8 +69,6 @@ public class AuthorizationService {
 	 */
 	public boolean isAuthorized(Application application , Object requestBody, User user){
 
-	    // (application.getPrivileges().isEmpty() && !user.getPrivilegeNameSetByApplication(application).isEmpty())
-
         String applicationName = application.getName();
 		//in some cases, we don't go through the evaluation
 		if (requestBody == null) {
@@ -76,18 +77,15 @@ public class AuthorizationService {
 			return true;
 		}
 
-		//        Object parsedRequestBody = null;
-		//        Configuration conf = Configuration.defaultConfiguration().addOptions(Option.DEFAULT_PATH_LEAF_TO_NULL).addOptions(Option.ALWAYS_RETURN_LIST);
-		//        try {
-		//            parsedRequestBody = conf.jsonProvider().parse(JAXRSConfiguration.objectMapper.writeValueAsString(requestBody));
-		//        } catch (JsonProcessingException e) {
-		//            return true;
-		//        }
-
 		// start to process the jsonpath checking
 
 		String formattedQuery = null;
 		try {
+			
+			/**
+			 * NC - TODO this formatted query can sometimes mask data.  We should be using the raw data
+			 */
+			
 			formattedQuery = (String) ((Map)requestBody).get("formattedQuery");
 			
 			if(formattedQuery == null) {
@@ -96,7 +94,6 @@ public class AuthorizationService {
 			}
 			
 		} catch (ClassCastException | JsonProcessingException e1) {
-			// TODO Auto-generated catch block
 			e1.printStackTrace();
 			logger.info("ACCESS_LOG ___ " + user.getUuid().toString() + "," + user.getEmail() + "," + user.getName() + 
 					" ___ has been denied access to execute query ___ " + requestBody + " ___ in application ___ " + applicationName

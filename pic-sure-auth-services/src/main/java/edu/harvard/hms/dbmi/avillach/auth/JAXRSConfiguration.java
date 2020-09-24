@@ -101,6 +101,7 @@ public class JAXRSConfiguration extends Application {
     public static String fence_consent_group_concept_path;
     public static String fence_standard_access_rules;
     public static String fence_harmonized_concept_path;
+    public static String fence_topmed_consent_group_concept_path;
 
     public static String defaultAdminRoleName = "PIC-SURE Top Admin";
 
@@ -198,6 +199,12 @@ public class JAXRSConfiguration extends Application {
                 if (fence_consent_group_concept_path == null) {
                     logger.error("checkIDPProvider() Empty consent group concept path from standalone.xml. Using default!");
                     fence_consent_group_concept_path = "\\\\_Consents\\\\Short Study Accession with Consent code\\\\";
+                }
+                
+                fence_topmed_consent_group_concept_path = (String) ctx.lookup("java:global/fence_topmed_consent_group_concept_path");
+                if (fence_topmed_consent_group_concept_path == null) {
+                    logger.error("checkIDPProvider() Empty consent group concept path from standalone.xml. Using default!");
+                    fence_topmed_consent_group_concept_path = "\\\\_Consents\\\\Short Study Accession with Consent code\\\\";
                 }
 
                 fence_standard_access_rules = (String) ctx.lookup("java:global/fence_standard_access_rules");
