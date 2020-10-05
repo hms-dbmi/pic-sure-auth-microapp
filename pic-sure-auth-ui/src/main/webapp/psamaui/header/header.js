@@ -160,6 +160,7 @@ define(["backbone","handlebars", 'picSure/settings', "text!header/header.hbs", "
             $.ajax({
                 "url":"/jupyterhub",
                 "timeout":"1000",
+                "cache": false,
                 "error": function(e) {
                     // delayed execution to allow DOM to render
                     setTimeout(function(){
