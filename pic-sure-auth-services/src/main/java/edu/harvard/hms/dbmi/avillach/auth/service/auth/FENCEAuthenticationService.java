@@ -3,6 +3,7 @@ package edu.harvard.hms.dbmi.avillach.auth.service.auth;
 import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_consent_group_concept_path;
 import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_topmed_consent_group_concept_path;
 import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_harmonized_concept_path;
+import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_harmonized_consent_group_concept_path;
 import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_standard_access_rules;
 
 import java.io.File;
@@ -18,6 +19,7 @@ import javax.ws.rs.core.Response;
 import org.apache.http.Header;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicHeader;
+import org.hibernate.query.criteria.internal.predicate.IsEmptyPredicate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,17 +65,25 @@ public class FENCEAuthenticationService {
     private JsonNode fenceMapping;
     
     
-    //some default gate config
-    private static final Map<String, String> clinicalGateMapTemplates = Map.of(
-    		"CATEGORY_CLINICAL_FILTERS", "$.query.categoryFilters",
-    		"NUMERIC_CLINICAL_FILTERS",  "$.query.numericFilters");
+
     
-    private static final Map<String, String> clinicalGateListTemplates = Map.of(
-    		"REQUIRED_FIELDS_FILTERS",  "$.query.requiredFields");
-    
-    private static final Map<String, String> topMedGateTemplates = Map.of(
+    private static final Map<String, String> topMedARTemplates = Map.of(
     		"CATEGORY_VARIANT_FILTERS", "$.query.variantInfoFilters[*].categoryVariantInfoFilters.*",
     		"NUMERIC_VARIANT_FILTERS",  "$.query.variantInfoFilters[*].numericVariantInfoFilters.*");
+    
+    
+    //some default gate config
+    private static final Map<String, String> clinicalConsentTemplate = Map.of(
+    		"GATE_PARENT_STUDY_CONSENT", "$..categoryFilters.['"+fence_consent_group_concept_path+"']");
+    
+    private static final Map<String, String> harmonizedConsentTemplates = Map.of(
+    		//TODO: actual harmonized consent field
+    		"GATE_HARMONIZED_CONSENT",   "$..categoryFilters.['"+fence_harmonized_concept_path+"']");
+    
+    private static final Map<String, String> topMedConsentTemplates = Map.of(
+    		//TODO: actual topmed consent field
+    		"GATE_TOPMED_CONSENT",   "$..categoryFilters.['"+fence_topmed_consent_group_concept_path+"']");
+    
     
 
     @PostConstruct
@@ -282,7 +292,7 @@ public class FENCEAuthenticationService {
                 r.setDescription(roleDescription);
                 // Since this is a new Role, we need to ensure that the
                 // corresponding Privilege (with gates) and AccessRule is added.
-                r.setPrivileges(upsertPrivilege(u, r));
+                r.setPrivileges(addPrivileges(u, r));
                 roleRepo.persist(r);
                 logger.info("upsertRole() created new role");
             }
@@ -297,9 +307,9 @@ public class FENCEAuthenticationService {
         return status;
     }
 
-    private Set<Privilege> upsertPrivilege(User u, Role r) {
+    private Set<Privilege> addPrivileges(User u, Role r) {
         String roleName = r.getName();
-        logger.info("upsertPrivilege() starting, adding privilege to role "+roleName);
+        logger.info("addPrivileges() starting, adding privilege(s) to role "+roleName);
 
         String[] parts = roleName.split("_");
         String project_name = parts[1];
@@ -308,57 +318,77 @@ public class FENCEAuthenticationService {
         
         if(projectMetadata.isNull() || projectMetadata.size() == 0 || projectMetadata.get("consent_group").isNull()) {
         	// TODO: Assign NO ACCESS privilege here
-        	//... but then how do we clear that out if there's new metadata to fix it?
+        	//... but then how do we clear that out if there's new metadata to fix it? (whole DB gets cleared! -nc)
         }
         
-                
-
-        // Get privilege and assign it to this role.
-        String privilegeName = r.getName().replaceFirst("FENCE_*","PRIV_FENCE_");
-        logger.info("upsertPrivilege() Looking for privilege, with name : "+privilegeName);
-
+        //each role can have up to three privileges: Parent  |  Harmonized  | Topmed
+        //harmonized has 2 ARs for parent + harminized and harmonized only
+        //Topmed has up to four ARs for topmed / topmed + parent / topmed + harmonized / topmed + parent + harmonized
         Set<Privilege> privs = r.getPrivileges();
         if (privs == null) { privs = new HashSet<Privilege>();}
 
-        Privilege p = privilegeRepo.getUniqueResultByColumn("name", privilegeName);
-        if (p != null) {
-            logger.info("upsertPrivilege() Assigning privilege "+p.getName()+" to role "+r.getName());
-            privs.add(p);
-
-        } else {
-            logger.info("upsertPrivilege() This is a new privilege");
-            
-            String projectType = projectMetadata.get("project_type").asText();
-            if(projectType != null && projectType.contains("G")) {
-            	//insert genomic/topmed privs
-            	privs.add(createNewTopmedPrivilege(project_name, consent_group));
-            }
-            
-            if(projectType != null && projectType.contains("C")) {
-            	//insert clinical privs
-            	String concept_path = projectMetadata.get("concept_path").asText();
-                logger.info("upsertPrivilege() project:"+project_name+" consent_group:"+consent_group+" concept_path:"+concept_path);
-
-                // Add new privilege PRIV_FENCE_phs######_c# and PRIV_FENCE_phs######_c#_HARMONIZED
-                privs.add(createNewClinicalPrivilege(project_name, consent_group, concept_path, false));
-                privs.add(createNewClinicalPrivilege(project_name, consent_group, fence_harmonized_concept_path, true));
-            	
-            }
+        logger.info("addPrivileges() This is a new privilege");
+        
+        String projectType = projectMetadata.get("project_type").asText();
+        String concept_path = projectMetadata.get("concept_path").asText();
+        Boolean isHarmonized = projectMetadata.get("isHarmonized").asBoolean();
+        
+        if(projectType != null && projectType.contains("G")) {
+        	//insert genomic/topmed privs - this will also add rules for including harmonized & parent data if applicable
+        	privs.add(upsertTopmedPrivilege(project_name, consent_group, concept_path, isHarmonized));
         }
-        logger.info("upsertPrivilege() Finished");
+        
+        if(projectType != null && projectType.contains("P")) {
+        	//insert clinical privs
+            logger.info("addPrivileges() project:"+project_name+" consent_group:"+consent_group+" concept_path:"+concept_path);
+
+            // Add new privilege PRIV_FENCE_phs######_c# and PRIV_FENCE_phs######_c#_HARMONIZED
+            privs.add(upsertClinicalPrivilege(project_name, consent_group, concept_path, false));
+            
+            //if harmonized study, also create harmonized privileges
+            if(Boolean.TRUE.equals(isHarmonized)) {
+            	privs.add(upsertClinicalPrivilege(project_name, consent_group, concept_path, true));
+            }
+        	
+        }
+            
+        logger.info("addPrivileges() Finished");
         return privs;
     }
 
-    private Privilege createNewClinicalPrivilege(String project_name, String consent_group, String queryScopeConceptPath, boolean isHarmonized) {
-        Privilege priv = new Privilege();
+    /**
+     * Creates a privilege with a set of access rules that allow queries containing a consent group to pass if the query only contains valid entries that match conceptPath.  If the study is harmonized, 
+     * this also creates an access rule to allow access when using the harmonized consent concept path.
+     * 
+     * Privileges created with this method will deny access if any genomic filters (topmed data) are included.
+     * 
+     * @param project_name
+     * @param consent_group
+     * @param conceptPath
+     * @param isHarmonized
+     * @return
+     */
+    private Privilege upsertClinicalPrivilege(String project_name, String consent_group, String conceptPath, boolean isHarmonized) {
+    	
+    	
+    	String privilegeName = "PRIV_FENCE_"+project_name+"_"+consent_group+(isHarmonized?"_HARMONIZED":"");
+    	Privilege priv = privilegeRepo.getUniqueResultByColumn("name", privilegeName);
+    	if(priv !=  null) {
+    		 logger.info("upsertClinicalPrivilege() " + privilegeName + " already exists");
+    		return priv;
+    	}
+    	
+        priv = new Privilege();
 
-        // Build Privilege Object
         try {
+        	
+        	
+        	
             priv.setApplication(picSureApp);
-            priv.setName("PRIV_FENCE_"+project_name+"_"+consent_group+(isHarmonized?"_HARMONIZED":""));
-            priv.setDescription("FENCE privilege for "+project_name+"/"+consent_group);
+            priv.setName(privilegeName);
+            priv.setDescription("FENCE privilege for "+project_name+"/"+consent_group+(isHarmonized?" harmonized data":""));
 
-            String consent_concept_path = fence_consent_group_concept_path;
+            String consent_concept_path = isHarmonized ? fence_harmonized_consent_group_concept_path : fence_consent_group_concept_path;
             // TOOD: Change this to a mustache template
             String queryTemplateText = "{\"categoryFilters\": {\""
                     +consent_concept_path
@@ -370,22 +400,61 @@ public class FENCEAuthenticationService {
                     +"\"expectedResultType\": \"COUNT\""
                     +"}";
             priv.setQueryTemplate(queryTemplateText);
-            priv.setQueryScope(queryScopeConceptPath);
+            priv.setQueryScope(conceptPath);
 
-            AccessRule ar = upsertClinicalAccessRule(project_name, consent_group, queryScopeConceptPath);
-            if (ar != null) {
-                Set<AccessRule> accessrules = new HashSet<AccessRule>();
-                accessrules.add(ar);
-                // Add additional access rules;  
-                for(String arName: fence_standard_access_rules.split(",")) {
-                    if (arName.startsWith("AR_")) {
-                        logger.info("Adding AccessRule "+arName+" to privilege "+priv.getName());
-                        accessrules.add(accessruleRepo.getUniqueResultByColumn("name",arName));
-                    }
+            Set<AccessRule> accessrules = new HashSet<AccessRule>();
+            
+            //parent
+
+            if(isHarmonized) {
+            	//harmonized data has two ARs; one for _only_ harmonized, and one for a mix of harmonized and parent concepts
+            	AccessRule ar = upsertConsentAccessRule(project_name, consent_group, "PARENT_HARMONIZED", fence_harmonized_consent_group_concept_path);
+                
+                //if this is a new rule, we need to populate it
+                if(ar.getGates().size() == 0) {
+                	ar.getGates().addAll(getGates(true, true, false));
+                	ar.getSubAccessRule().addAll(getPhenotypeSubRules(conceptPath));
+            		ar.getSubAccessRule().addAll(getPhenotypeSubRules(fence_harmonized_concept_path));
+            		ar.getSubAccessRule().addAll(getTopmedRestrictedSubRules());
+            		ar.getSubAccessRule().add(upsertConsentAccessRule(project_name, consent_group, "HARMONIZED_SUB_RULE", fence_harmonized_consent_group_concept_path));
+            		
                 }
-                priv.setAccessRules(accessrules);
-                logger.info("createNewPrivilege() Added "+accessrules.size()+" access_rules to privilege");
+                accessrules.add(ar);
+                
+				//also add another rule for accessing only harmonized data
+				ar = upsertConsentAccessRule(project_name, consent_group, "HARMONIZED_ONLY", fence_harmonized_consent_group_concept_path);
+	                
+	            //if this is a new rule, we need to populate it
+	            if(ar.getGates().size() == 0) {
+	            	ar.getGates().addAll(getGates(false, true, false));
+	            	ar.getSubAccessRule().addAll(getPhenotypeSubRules(fence_harmonized_concept_path));
+	            	ar.getSubAccessRule().addAll(getTopmedRestrictedSubRules());
+	            }
+	            accessrules.add(ar);
+            } else {
+            	// NO HARMONIZED DATA
+            	//just need one AR for parent study
+	            AccessRule ar = upsertConsentAccessRule(project_name, consent_group, "PARENT_HARMONIZED", fence_consent_group_concept_path);
+	            
+	            //if this is a new rule, we need to populate it
+	            if(ar.getGates().size() == 0) {
+	            	ar.getGates().addAll(getGates(true, false, false));
+	            	ar.getSubAccessRule().addAll(getPhenotypeSubRules(conceptPath));
+	            	ar.getSubAccessRule().addAll(getTopmedRestrictedSubRules());
+	            }
+	            accessrules.add(ar);
             }
+            
+            
+            // Add additional access rules;   (these are still created through that SQL script I guess)
+            for(String arName: fence_standard_access_rules.split(",")) {
+                if (arName.startsWith("AR_")) {
+                    logger.info("Adding AccessRule "+arName+" to privilege "+priv.getName());
+                    accessrules.add(accessruleRepo.getUniqueResultByColumn("name",arName));
+                }
+            }
+            priv.setAccessRules(accessrules);
+            logger.info("createNewPrivilege() Added "+accessrules.size()+" access_rules to privilege");
 
             privilegeRepo.persist(priv);
             logger.info("createNewPrivilege() Added new privilege "+priv.getName()+" to DB");
@@ -396,19 +465,133 @@ public class FENCEAuthenticationService {
         return priv;
     }
     
-    private Privilege createNewTopmedPrivilege(String project_name, String consent_group) {
-        Privilege priv = new Privilege();
+    private Collection<? extends AccessRule> getTopmedRestrictedSubRules() {
+    	Set<AccessRule> rules = new HashSet<AccessRule>();
+    	//categorical filters will always contain at least one entry (for the consent groups); it will never be empty
+    	rules.add(upsertTopmedRestrictedSubRule("CATEGORICAL", "$.query.variantInfoFilters[*].categoryVariantInfoFilters.*"));
+    	rules.add(upsertTopmedRestrictedSubRule("NUMERIC", "$.query.variantInfoFilters[*].numericVariantInfoFilters.*"));
+    	
+    	return rules;
+	}
+    
+    //topmed restriction rules don't need much configuration.  Just deny all access.
+    private AccessRule upsertTopmedRestrictedSubRule(String name, String rule) {
+        logger.debug("upsertTopmedRestrictedSubRule() starting");
+        String ar_name = "AR_TOPMED_RESTRICTED_"+name;
+        AccessRule ar = accessruleRepo.getUniqueResultByColumn("name", ar_name);
+        if (ar != null) {
+            logger.info("upsertTopmedRestrictedSubRule() AccessRule "+ar_name+" already exists.");
+            return ar;
+        }
+
+        logger.info("upsertTopmedRestrictedSubRule() Creating new access rule "+ar_name);
+        ar = new AccessRule();
+        ar.setName(ar_name);
+        ar.setDescription("FENCE SUB AR for retricting " + name + " genomic concepts");
+        ar.setRule(rule);
+        ar.setType(AccessRule.TypeNaming.IS_EMPTY);
+        ar.setValue(null);
+        ar.setCheckMapKeyOnly(false);
+        ar.setCheckMapNode(false);
+        ar.setEvaluateOnlyByGates(false);
+        ar.setGateAnyRelation(false); 
+
+        accessruleRepo.persist(ar);
+
+        logger.debug("upsertTopmedRestrictedSubRule() finished");
+        return ar;
+    }
+
+	private Collection<? extends AccessRule> getPhenotypeSubRules(String conceptPath) {
+    	
+    	Set<AccessRule> rules = new HashSet<AccessRule>();
+    	//categorical filters will always contain at least one entry (for the consent groups); it will never be empty
+    	rules.add(upsertPhenotypeSubRule(conceptPath, "$..categoryFilters.[*]", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true));
+    	rules.add(upsertPhenotypeSubRule(conceptPath, "$..numericFilters.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "NUMERIC", true));
+    	rules.add(upsertPhenotypeSubRule(conceptPath, "$..fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false));
+    	rules.add(upsertPhenotypeSubRule(conceptPath, "$..requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQUIRED_FIELDS", false));
+    	
+    	return rules;
+	}
+	
+
+	//generate and return a set of rules that disallow access to phenotype data
+	private Collection<? extends AccessRule> getPhenotypeRestrictedSubRules() {
+    	
+    	Set<AccessRule> rules = new HashSet<AccessRule>();
+    	//Categorical filters not included, because they will always have the consent values
+    	rules.add(upsertPhenotypeSubRule("DISALLOW_NUMERIC", "$..numericFilters.[*]", AccessRule.TypeNaming.IS_EMPTY, "NUMERIC", false));
+    	rules.add(upsertPhenotypeSubRule("DISALLOW_FIELDS", "$..fields.[*]", AccessRule.TypeNaming.IS_EMPTY, "FIELDS", false));
+    	rules.add(upsertPhenotypeSubRule("DISALLOW_REQUIRED_FIELDS", "$..requiredFields.[*]", AccessRule.TypeNaming.IS_EMPTY, "REQUIRED_FIELDS", false));
+    	
+    	return rules;
+	}
+
+	private Collection<? extends AccessRule> getGates(boolean parent, boolean harmonized, boolean topmed) {
+    	
+    	 Set<AccessRule> gates = new HashSet<AccessRule>();
+    	gates.add(upsertConsentGate("PARENT_CONSENT", "$..categoryFilters.['" + fence_consent_group_concept_path + "']", parent, "parent study data"));
+    	gates.add(upsertConsentGate("HARMONIZED_CONSENT", "$..categoryFilters.['" + fence_harmonized_consent_group_concept_path + "']", harmonized, "harmonized data"));
+    	gates.add(upsertConsentGate("TOPMED_CONSENT", "$..categoryFilters.['" + fence_topmed_consent_group_concept_path + "']", topmed, "Topmed data"));
+   		
+		return null;
+	}
+	
+	 private AccessRule upsertPhenotypeSubRule(String conceptPath, String rule, int ruleType, String label, boolean useMapKey) {
+	        logger.debug("upsertPhenotypeSubRule() starting");
+	        String ar_name = "AR_PHENO_"+conceptPath + "_" + label;
+	        AccessRule ar = accessruleRepo.getUniqueResultByColumn("name", ar_name);
+	        if (ar != null) {
+	            logger.info("upsertPhenotypeSubRule() AccessRule "+ar_name+" already exists.");
+	            return ar;
+	        }
+
+	        logger.info("upsertPhenotypeSubRule() Creating new access rule "+ar_name);
+	        ar = new AccessRule();
+	        ar.setName(ar_name);
+	        ar.setDescription("FENCE SUB AR for " + conceptPath + " " + label + " clinical concepts");
+	        ar.setRule(rule);
+	        ar.setType(ruleType);
+	        ar.setValue(ruleType == AccessRule.TypeNaming.IS_NOT_EMPTY ? null : conceptPath);
+	        ar.setCheckMapKeyOnly(useMapKey);
+	        ar.setCheckMapNode(useMapKey);
+	        ar.setEvaluateOnlyByGates(false);
+	        ar.setGateAnyRelation(false); 
+
+	        accessruleRepo.persist(ar);
+
+	        logger.debug("upsertPhenotypeSubRule() finished");
+	        return ar;
+	    }
+	 
+
+	/**
+	 * Creates a privilege for Topmed access.  This has (up to) three access rules - 1) topmed only 2) topmed + parent 3) topmed+ hermonized  (??)
+	 * @param project_name
+	 * @param consent_group
+	 * @return
+	 */
+	private Privilege upsertTopmedPrivilege(String project_name, String consent_group, String parentConceptPath, boolean isHarmonized) {
+		
+    	String privilegeName = "PRIV_FENCE_"+project_name+"_"+consent_group + "_TOPMED";
+    	Privilege priv = privilegeRepo.getUniqueResultByColumn("name", privilegeName);
+    	if(priv !=  null) {
+    		 logger.info("upsertClinicalPrivilege() " + privilegeName + " already exists");
+    		return priv;
+    	}
+    	
+        priv = new Privilege();
+
 
         // Build Privilege Object
         try {
             priv.setApplication(picSureApp);
-            priv.setDescription("FENCE privilege for "+project_name+"/"+consent_group);
-//            priv.setQueryScope();
+            priv.setName(privilegeName);
+            priv.setDescription("FENCE privilege for Topmed "+project_name+"/"+consent_group);
 
-            String consent_concept_path = fence_consent_group_concept_path;
             // TOOD: Change this to a mustache template
             String queryTemplateText = "{\"categoryFilters\": {\""
-                    +consent_concept_path
+                    +fence_topmed_consent_group_concept_path
                     +"\":\""
                     +project_name+"."+consent_group
                     +"\"},"
@@ -418,20 +601,69 @@ public class FENCEAuthenticationService {
                     +"}";
             priv.setQueryTemplate(queryTemplateText);
 
-            AccessRule ar = upsertTopmedAccessRule(project_name, consent_group);
-            if (ar != null) {
-                Set<AccessRule> accessrules = new HashSet<AccessRule>();
-                accessrules.add(ar);
-                // Add additional access rules;  
-                for(String arName: fence_standard_access_rules.split(",")) {
-                    if (arName.startsWith("AR_")) {
-                        logger.info("Adding AccessRule "+arName+" to privilege "+priv.getName());
-                        accessrules.add(accessruleRepo.getUniqueResultByColumn("name",arName));
-                    }
-                }
-                priv.setAccessRules(accessrules);
-                logger.info("createNewPrivilege() Added "+accessrules.size()+" access_rules to privilege");
+            Set<AccessRule> accessrules = new HashSet<AccessRule>();
+            
+            AccessRule ar = upsertTopmedAccessRule(project_name, consent_group, "TOPMED");
+            
+            //if this is a new rule, we need to populate it
+            if(ar.getGates().size() == 0) {
+            	ar.getGates().addAll(getGates(false, false, true));
+        		ar.getSubAccessRule().addAll(getPhenotypeRestrictedSubRules());
             }
+            accessrules.add(ar);
+            
+            if(parentConceptPath != null) {
+            	
+            	ar = upsertTopmedAccessRule(project_name, consent_group, "TOPMED+PARENT");
+                
+                //if this is a new rule, we need to populate it
+                if(ar.getGates().size() == 0) {
+                	ar.getGates().addAll(getGates(true, false, true));
+            		ar.getSubAccessRule().addAll(getPhenotypeSubRules(parentConceptPath));
+            		ar.getSubAccessRule().add(upsertConsentAccessRule(project_name, consent_group, "PARENT_SUB_RULE", fence_consent_group_concept_path));
+                }
+                accessrules.add(ar);
+                
+                
+                if(isHarmonized) {
+                	//harmonized data has two ARs; one for adding _only_ harmonized, and one for a mix of harmonized and parent concepts
+                	ar = upsertTopmedAccessRule(project_name, consent_group, "TOPMED+HARMONIZED");
+                    
+                    //if this is a new rule, we need to populate it
+                    if(ar.getGates().size() == 0) {
+                    	ar.getGates().addAll(getGates(true, true, false));
+                		ar.getSubAccessRule().addAll(getPhenotypeSubRules(fence_harmonized_concept_path));
+                		ar.getSubAccessRule().add(upsertConsentAccessRule(project_name, consent_group, "HARMONIZED_SUB_RULE", fence_harmonized_consent_group_concept_path));
+                    }
+                    
+                    accessrules.add(ar);
+                    
+                    
+                	ar = upsertTopmedAccessRule(project_name, consent_group, "TOPMED+HARMONIZED+PARENT");
+                    
+                    //if this is a new rule, we need to populate it
+                    if(ar.getGates().size() == 0) {
+                    	ar.getGates().addAll(getGates(true, true, false));
+                    	ar.getSubAccessRule().addAll(getPhenotypeSubRules(parentConceptPath));
+                		ar.getSubAccessRule().addAll(getPhenotypeSubRules(fence_harmonized_concept_path));
+                		ar.getSubAccessRule().add(upsertConsentAccessRule(project_name, consent_group, "PARENT_SUB_RULE", fence_consent_group_concept_path));
+                		ar.getSubAccessRule().add(upsertConsentAccessRule(project_name, consent_group, "HARMONIZED_SUB_RULE", fence_harmonized_consent_group_concept_path));
+                    }
+                    
+                    accessrules.add(ar);
+                }
+            	
+            }
+            
+            // Add additional access rules;  
+            for(String arName: fence_standard_access_rules.split(",")) {
+                if (arName.startsWith("AR_")) {
+                    logger.info("Adding AccessRule "+arName+" to privilege "+priv.getName());
+                    accessrules.add(accessruleRepo.getUniqueResultByColumn("name",arName));
+                }
+            }
+            priv.setAccessRules(accessrules);
+            logger.info("createNewPrivilege() Added "+accessrules.size()+" access_rules to privilege");
 
             privilegeRepo.persist(priv);
             logger.info("createNewPrivilege() Added new privilege "+priv.getName()+" to DB");
@@ -442,54 +674,42 @@ public class FENCEAuthenticationService {
         return priv;
     }
 
-    private AccessRule upsertClinicalAccessRule(String project_name, String consent_group, String queryScopeConceptPath) {
-        logger.debug("upsertClinicalAccessRule() starting");
-        String ar_name = "AR_CLINICAL_"+project_name+"_"+consent_group;
+    //Generates Main rule only; gates & sub rules attached after calling this
+    private AccessRule upsertConsentAccessRule(String project_name, String consent_group, String label, String consent_path) {
+        logger.debug("upsertConsentAccessRule() starting");
+        String ar_name = "AR_CLINICAL_" + project_name+"_"+consent_group+ "_" +label;
         AccessRule ar = accessruleRepo.getUniqueResultByColumn("name", ar_name);
         if (ar != null) {
-            logger.info("upsertClinicalAccessRule() AccessRule "+ar_name+" already exists.");
+            logger.info("upsertConsentAccessRule() AccessRule "+ar_name+" already exists.");
             return ar;
         }
 
-        logger.info("upsertClinicalAccessRule() Creating new access rule "+ar_name);
+        logger.info("upsertConsentAccessRule() Creating new access rule "+ar_name);
         ar = new AccessRule();
         ar.setName(ar_name);
         ar.setDescription("FENCE AR for "+project_name+"/"+consent_group + " clinical concepts");
         StringBuilder ruleText = new StringBuilder();
         ruleText.append("$..categoryFilters.['");
-        ruleText.append(fence_consent_group_concept_path);
+        ruleText.append(consent_path);
         ruleText.append("']");
         ar.setRule(ruleText.toString());
         ar.setType(AccessRule.TypeNaming.ALL_EQUALS);
         ar.setValue(project_name+"."+consent_group);
         ar.setCheckMapKeyOnly(false);
-        ar.setCheckMapNode(true);
+        ar.setCheckMapNode(false);
         ar.setEvaluateOnlyByGates(false);
-        ar.setGateAnyRelation(true);  //one gate per 'categoryFilter/NumericFilter etc.'. one non-null value triggers.
-
-        // Assign all GATE_ access rules to this AR access rule.
-        Set<AccessRule> gates = new HashSet<AccessRule>();
-        
-        //category & numeric paths are objects; req. fields is a list
-        for (Entry<String, String> gateTemplate : clinicalGateMapTemplates.entrySet()) {
-        	gates.add(upsertClinicalGate(project_name, queryScopeConceptPath, gateTemplate.getKey(), gateTemplate.getValue(), true));
-		}
-        
-        for (Entry<String, String> gateTemplate : clinicalGateListTemplates.entrySet()) {
-        	gates.add(upsertClinicalGate(project_name, queryScopeConceptPath, gateTemplate.getKey(), gateTemplate.getValue(), false));
-		}
-        
-        ar.setGates(gates);
+        ar.setGateAnyRelation(false); 
 
         accessruleRepo.persist(ar);
 
-        logger.debug("upsertAccessRule() finished");
+        logger.debug("upsertConsentAccessRule() finished");
         return ar;
     }
     
-    private AccessRule upsertTopmedAccessRule(String project_name, String consent_group) {
+    // Generates Main Rule only; gates & sub rules attached by calling method
+    private AccessRule upsertTopmedAccessRule(String project_name, String consent_group, String label ) {
         logger.debug("upsertTopmedAccessRule() starting");
-        String ar_name = "AR_TOPMED_"+project_name+"_"+consent_group;
+        String ar_name = "AR_TOPMED_"+project_name+"_"+consent_group + "_" + label;
         AccessRule ar = accessruleRepo.getUniqueResultByColumn("name", ar_name);
         if (ar != null) {
             logger.info("upsertTopmedAccessRule() AccessRule "+ar_name+" already exists.");
@@ -508,83 +728,37 @@ public class FENCEAuthenticationService {
         ar.setType(AccessRule.TypeNaming.ALL_EQUALS);
         ar.setValue(project_name+"."+consent_group);
         ar.setCheckMapKeyOnly(false);
-        ar.setCheckMapNode(true);
+        ar.setCheckMapNode(false);
         ar.setEvaluateOnlyByGates(false);
         ar.setGateAnyRelation(true);  //one gate per 'categoryFilter/NumericFilter etc.'. one non-null value triggers.
 
-        // Assign all GATE_ access rules to this AR access rule.
-        Set<AccessRule> gates = new HashSet<AccessRule>();
-        
-        //category & numeric paths are objects; req. fields is a list
-        for (Entry<String, String> gateTemplate : topMedGateTemplates.entrySet()) {
-        	gates.add(upsertTopmedGate(project_name, gateTemplate.getKey(), gateTemplate.getValue()));
-		}
-        //TODO: probably need to add another gate for VCF* result types; make sure there are no exports without filters.
-        
-        ar.setGates(gates);
-
         accessruleRepo.persist(ar);
 
-        logger.debug("upsertAccessRule() finished");
+        logger.debug("upsertTopmedAccessRule() finished");
         return ar;
     }
 
     /**
      * Insert a new gate if it doesn't exist yet.  
-     * return an existing gate named GATE_{project_name_}_{gate_name_template} if it exists.
+     * return an existing gate named GATE_{gateName} if it exists.
      */
-	private AccessRule upsertClinicalGate(String project_name, String queryScopeConceptPath, String gate_name_template, String rule,
-			boolean checkMapNode) {
+	private AccessRule upsertConsentGate(String gateName, String rule, boolean is_empty, String description) {
 		
-		 String gate_name = "GATE_" + project_name + "_" + gate_name_template;
+		gateName = "GATE_" + gateName + "_" + (is_empty ? "MISSING" : "PRESENT");
 		
-		 AccessRule gate = accessruleRepo.getUniqueResultByColumn("name", gate_name);
+		 AccessRule gate = accessruleRepo.getUniqueResultByColumn("name", gateName);
 	        if (gate != null) {
-	            logger.info("upsertClinicalGate() AccessRule "+gate_name+" already exists.");
+	            logger.info("upsertConsentGate() AccessRule "+gateName+" already exists.");
 	            return gate;
 	        }
 
-	        logger.info("upsertClinicalGate() Creating new access rule "+gate_name);
+	        logger.info("upsertClinicalGate() Creating new access rule "+gateName);
 	        gate = new AccessRule();
-	        gate.setName(gate_name);
-	        gate.setDescription("FENCE GATE for "+project_name+" "+gate_name_template);
+	        gate.setName(gateName);
+	        gate.setDescription("FENCE GATE for " + description + " consent present");
 	        gate.setRule(rule);
-	        gate.setType(AccessRule.TypeNaming.ANY_EQUALS);
-	        gate.setValue(queryScopeConceptPath);  //TODO: do we need to sanitize this at all?
-	        gate.setCheckMapKeyOnly(checkMapNode); //trigger on the concept path for a study;  that's the map key.
-	        gate.setCheckMapNode(checkMapNode);
-	        gate.setEvaluateOnlyByGates(false);
-	        gate.setGateAnyRelation(false); 
-	        
-		return gate;
-	}
-	
-	/**
-	 * For topmed/genomic data we don't need to have a separate gate for each project;  they all share the same concept
-	 * paths.  We just trigger on a non-empty value in the variant filters.
-	 * 
-	 * @param project_name
-	 * @param gate_name_template
-	 * @param rule
-	 * @return
-	 */
-	private AccessRule upsertTopmedGate(String project_name, String gate_name_template, String rule) {
-		
-		 String gate_name = "GATE_" + gate_name_template;
-		
-		 AccessRule gate = accessruleRepo.getUniqueResultByColumn("name", gate_name);
-	        if (gate != null) {
-	            logger.info("upsertTopmedGate() AccessRule "+gate_name+" already exists.");
-	            return gate;
-	        }
-
-	        logger.info("upsertTopmedGate() Creating new access rule "+gate_name);
-	        gate = new AccessRule();
-	        gate.setName(gate_name);
-	        gate.setDescription("FENCE GATE for "+project_name+" "+gate_name_template);
-	        gate.setRule(rule);
-	        gate.setType(AccessRule.TypeNaming.IS_NOT_EMPTY);
-	        gate.setValue(null); 
+	        gate.setType(is_empty ? AccessRule.TypeNaming.IS_EMPTY : AccessRule.TypeNaming.IS_NOT_EMPTY);
+	        gate.setValue(null);  
 	        gate.setCheckMapKeyOnly(false); 
 	        gate.setCheckMapNode(false);
 	        gate.setEvaluateOnlyByGates(false);
@@ -592,6 +766,7 @@ public class FENCEAuthenticationService {
 	        
 		return gate;
 	}
+	
 
 	/**
 	 * Get the mappings of fence privileges

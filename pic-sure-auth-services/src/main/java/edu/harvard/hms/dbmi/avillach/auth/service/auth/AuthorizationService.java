@@ -502,6 +502,8 @@ public class AuthorizationService {
                                 // since collection is empty, nothing is complimented to the rule,
                                 // it should return false
                                 return false;
+                            case(AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY):
+                            case (AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY_IGNORE_CASE):
                             default:
                                 // since collection is empty, nothing will be denied by the rule,
                                 // so return true
@@ -545,6 +547,8 @@ public class AuthorizationService {
                                 // since collection is empty, nothing is complimented to the rule,
                                 // it should return false
                                 return false;
+                            case(AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY):
+                            case (AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY_IGNORE_CASE):
                             default:
                                 // since collection is empty, nothing will be denied by the rule,
                                 // so return true
@@ -659,12 +663,14 @@ public class AuthorizationService {
                 else
                     return false;
             case(AccessRule.TypeNaming.ALL_CONTAINS):
+            case(AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY):
             case(AccessRule.TypeNaming.ANY_CONTAINS):
                 if (requestBodyValue.contains(value))
                     return true;
                 else
                     return false;
             case(AccessRule.TypeNaming.ALL_CONTAINS_IGNORE_CASE):
+            case (AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY_IGNORE_CASE):
                 if (requestBodyValue.toLowerCase().contains(value.toLowerCase()))
                     return true;
                 else
