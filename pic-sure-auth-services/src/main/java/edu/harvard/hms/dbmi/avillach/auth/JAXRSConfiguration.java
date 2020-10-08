@@ -91,6 +91,9 @@ public class JAXRSConfiguration extends Application {
 
     @Resource(lookup = "java:global/deniedEmailEnabled")
     public static String deniedEmailEnabled;
+    
+    @Resource(lookup = "java:global/variantAnnotationColumns")
+    public static String variantAnnotationColumns;
 
     // See checkIDPProvider method for setting these variables
     public static String idp_provider;
