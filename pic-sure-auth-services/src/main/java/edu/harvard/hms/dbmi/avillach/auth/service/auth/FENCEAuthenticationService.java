@@ -238,7 +238,10 @@ public class FENCEAuthenticationService {
 
         User new_user = new User();
         new_user.setSubject("fence|"+node.get("user_id").asText());
-        new_user.setEmail(node.get("email").asText());
+        // This is not always an email address, but it is the only attribute other than the sub claim 
+        // that is guaranteed to be populated by Fence and which makes sense as a display name for a
+        // user.
+        new_user.setEmail(node.get("username").asText());
         new_user.setGeneralMetadata(node.toString());
         // This is a hack, but someone has to do it.
         new_user.setAcceptedTOS(new Date());
