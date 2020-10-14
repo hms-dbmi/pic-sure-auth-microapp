@@ -101,7 +101,7 @@ public class JAXRSConfiguration extends Application {
     public static String fence_client_id;
     public static String fence_client_secret;
     public static String fence_redirect_url;
-    public static String fence_consent_group_concept_path;
+    public static String fence_parent_consent_group_concept_path;
     public static String fence_standard_access_rules;
     public static String fence_harmonized_concept_path;
     public static String fence_harmonized_consent_group_concept_path;
@@ -199,10 +199,10 @@ public class JAXRSConfiguration extends Application {
                 fence_client_secret = (String) ctx.lookup("java:global/fence_client_secret");
                 fence_redirect_url = (String) ctx.lookup("java:global/fence_redirect_url");
 
-                fence_consent_group_concept_path = (String) ctx.lookup("java:global/fence_consent_group_concept_path");
-                if (fence_consent_group_concept_path == null) {
+                fence_parent_consent_group_concept_path = (String) ctx.lookup("java:global/fence_parent_consent_group_concept_path");
+                if (fence_parent_consent_group_concept_path == null) {
                     logger.error("checkIDPProvider() Empty parent consent group concept path from standalone.xml. Using default!");
-                    fence_consent_group_concept_path = "\\\\_Consents\\\\Short Study Accession with Consent code\\\\";
+                    fence_parent_consent_group_concept_path = "\\\\_Consents\\\\Short Study Accession with Consent code\\\\";
                 }
                 
                 fence_harmonized_consent_group_concept_path = (String) ctx.lookup("java:global/fence_harmonized_consent_group_concept_path");
@@ -247,7 +247,7 @@ public class JAXRSConfiguration extends Application {
 
                 // For debugging purposes, here is a dump of most of the FENCE variables
                 logger.info("checkIDPProvider() fence_standard_access_rules        "+fence_standard_access_rules);
-                logger.info("checkIDPProvider() fence_consent_group_concept_path   "+fence_consent_group_concept_path);
+                logger.info("checkIDPProvider() fence_consent_group_concept_path   "+fence_parent_consent_group_concept_path);
                 logger.info("checkIDPProvider() fence_harmonized_concept_path      "+fence_harmonized_concept_path);
 
             } catch (Exception ex) {
