@@ -477,10 +477,17 @@ public class FENCEAuthenticationService {
             
             
             // Add additional access rules;   (these are still created through that SQL script I guess)
+            // Add additional access rules;  
             for(String arName: fence_standard_access_rules.split(",")) {
                 if (arName.startsWith("AR_")) {
-                    logger.info("Adding AccessRule "+arName+" to privilege "+priv.getName());
-                    accessrules.add(accessruleRepo.getUniqueResultByColumn("name",arName));
+                    logger.info("upsertClinicalPrivilege() Adding AccessRule "+arName+" to privilege "+priv.getName());
+                    AccessRule ar = accessruleRepo.getUniqueResultByColumn("name",arName);
+                    if(ar != null) {
+                    	accessrules.add(ar);
+                    }
+                    else {
+                    	logger.warn("upsertClinicalPrivilege() unable to find an access rule with name " + arName);
+                    }
                 }
             }
             priv.setAccessRules(accessrules);
@@ -574,10 +581,18 @@ public class FENCEAuthenticationService {
 	private Collection<? extends AccessRule> getGates(boolean parent, boolean harmonized, boolean topmed) {
     	
     	Set<AccessRule> gates = new HashSet<AccessRule>();
-    	gates.add(upsertConsentGate("PARENT_CONSENT", "$..categoryFilters.['" + fence_parent_consent_group_concept_path + "']", parent, "parent study data"));
-    	gates.add(upsertConsentGate("HARMONIZED_CONSENT", "$..categoryFilters.['" + fence_harmonized_consent_group_concept_path + "']", harmonized, "harmonized data"));
-    	gates.add(upsertConsentGate("TOPMED_CONSENT", "$..categoryFilters.['" + fence_topmed_consent_group_concept_path + "']", topmed, "Topmed data"));
+//    	gates.add(upsertConsentGate("PARENT_CONSENT", "$..categoryFilters.['" + fence_parent_consent_group_concept_path + "']", parent, "parent study data"));
+//    	gates.add(upsertConsentGate("HARMONIZED_CONSENT", "$..categoryFilters.['" + fence_harmonized_consent_group_concept_path + "']", harmonized, "harmonized data"));
+//    	gates.add(upsertConsentGate("TOPMED_CONSENT", "$..categoryFilters.['" + fence_topmed_consent_group_concept_path + "']", topmed, "Topmed data"));
    		
+    	
+    	//nc - do we need to escape these?
+    	
+    	gates.add(upsertConsentGate("PARENT_CONSENT", "$..categoryFilters." + fence_parent_consent_group_concept_path + "[*]", parent, "parent study data"));
+    	gates.add(upsertConsentGate("HARMONIZED_CONSENT", "$..categoryFilters." + fence_harmonized_consent_group_concept_path + "[*]", harmonized, "harmonized data"));
+    	gates.add(upsertConsentGate("TOPMED_CONSENT", "$..categoryFilters." + fence_topmed_consent_group_concept_path + "[*]", topmed, "Topmed data"));
+   		
+    	
 		return gates;
 	}
 	
@@ -618,7 +633,7 @@ public class FENCEAuthenticationService {
     	String privilegeName = "PRIV_FENCE_"+project_name+"_"+consent_group + "_TOPMED";
     	Privilege priv = privilegeRepo.getUniqueResultByColumn("name", privilegeName);
     	if(priv !=  null) {
-    		 logger.info("upsertClinicalPrivilege() " + privilegeName + " already exists");
+    		 logger.info("upsertTopmedPrivilege() " + privilegeName + " already exists");
     		return priv;
     	}
     	
@@ -729,18 +744,24 @@ public class FENCEAuthenticationService {
             // Add additional access rules;  
             for(String arName: fence_standard_access_rules.split(",")) {
                 if (arName.startsWith("AR_")) {
-                    logger.info("Adding AccessRule "+arName+" to privilege "+priv.getName());
-                    accessrules.add(accessruleRepo.getUniqueResultByColumn("name",arName));
+                    logger.info("upsertTopmedPrivilege() Adding AccessRule "+arName+" to privilege "+priv.getName());
+                    ar = accessruleRepo.getUniqueResultByColumn("name",arName);
+                    if(ar != null) {
+                    	accessrules.add(ar);
+                    }
+                    else {
+                    	logger.warn("uupsertTopmedPrivilege() nable to find an access rule with name " + arName);
+                    }
                 }
             }
             priv.setAccessRules(accessrules);
-            logger.info("createNewPrivilege() Added "+accessrules.size()+" access_rules to privilege");
+            logger.info("upsertTopmedPrivilege() Added "+accessrules.size()+" access_rules to privilege");
 
             privilegeRepo.persist(priv);
-            logger.info("createNewPrivilege() Added new privilege "+priv.getName()+" to DB");
+            logger.info("upsertTopmedPrivilege() Added new privilege "+priv.getName()+" to DB");
         } catch (Exception ex) {
             ex.printStackTrace();
-            logger.error("createNewPrivilege() could not save privilege");
+            logger.error("upsertTopmedPrivilege() could not save privilege");
         }
         return priv;
     }
@@ -801,8 +822,8 @@ public class FENCEAuthenticationService {
         ar.setCheckMapKeyOnly(false);
         ar.setCheckMapNode(false);
         ar.setEvaluateOnlyByGates(false);
-        ar.setGateAnyRelation(true);  //one gate per 'categoryFilter/NumericFilter etc.'. one non-null value triggers.
-
+        ar.setGateAnyRelation(false);  
+        
         accessruleRepo.persist(ar);
 
         logger.debug("upsertTopmedAccessRule() finished");
@@ -813,9 +834,9 @@ public class FENCEAuthenticationService {
      * Insert a new gate if it doesn't exist yet.  
      * return an existing gate named GATE_{gateName} if it exists.
      */
-	private AccessRule upsertConsentGate(String gateName, String rule, boolean is_empty, String description) {
+	private AccessRule upsertConsentGate(String gateName, String rule, boolean is_present, String description) {
 		
-		gateName = "GATE_" + gateName + "_" + (is_empty ? "MISSING" : "PRESENT");
+		gateName = "GATE_" + gateName + "_" + (is_present ? "PRESENT": "MISSING");
 		
 	    AccessRule gate = accessruleRepo.getUniqueResultByColumn("name", gateName);
         if (gate != null) {
@@ -828,7 +849,7 @@ public class FENCEAuthenticationService {
         gate.setName(gateName);
         gate.setDescription("FENCE GATE for " + description + " consent present");
         gate.setRule(rule);
-        gate.setType(is_empty ? AccessRule.TypeNaming.IS_EMPTY : AccessRule.TypeNaming.IS_NOT_EMPTY);
+        gate.setType(is_present ? AccessRule.TypeNaming.IS_NOT_EMPTY : AccessRule.TypeNaming.IS_EMPTY );
         gate.setValue(null);  
         gate.setCheckMapKeyOnly(false); 
         gate.setCheckMapNode(false);

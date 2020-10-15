@@ -130,6 +130,8 @@ public class AuthorizationService {
 		Set<AccessRule> failedRules = new HashSet<>();
 		AccessRule passByRule = null;
         boolean result = false;
+        
+        logger.debug("REQUEST: " + requestBody);
 		for (AccessRule accessRule : accessRules) {
 
 			if (evaluateAccessRule(requestBody, accessRule)){
@@ -232,7 +234,6 @@ public class AuthorizationService {
 
             // then we combine them together as one string for the key
             String key = keys.stream().collect(Collectors.joining());
-
             // put it into the accessRuleMap
             if (accessRuleMap.containsKey(key)){
                 accessRuleMap.get(key).add(accessRule);
@@ -258,14 +259,15 @@ public class AuthorizationService {
      */
     private Set<AccessRule> mergeSameKeyAccessRules(Collection<Set<AccessRule>> accessRuleMap){
         Set<AccessRule> accessRules = new HashSet<>();
-
+        logger.debug("AccessRuleMap has " + accessRuleMap.size() + " entries");
         for (Set<AccessRule> accessRulesSet : accessRuleMap) {
             // merge one set of accessRule into one accessRule
             AccessRule accessRule = null;
+            logger.debug("XXXX  merging " + accessRulesSet.size() + " elements from map entry");
             for (AccessRule innerAccessRule : accessRulesSet){
+            	logger.trace("merging rule " + innerAccessRule.getName());
                 accessRule = mergeAccessRules(accessRule, innerAccessRule);
             }
-
             // if the new merged accessRule exists, add it into the final result set
             if (accessRule != null)
                 accessRules.add(accessRule);
@@ -319,8 +321,8 @@ public class AuthorizationService {
      * @return
      */
 	protected boolean evaluateAccessRule(Object parsedRequestBody, AccessRule accessRule) {
-	    logger.debug("evaluateAccessRule() starting with:");
-	    logger.debug(parsedRequestBody.toString());
+//	    logger.debug("evaluateAccessRule() starting with:");
+//	    logger.debug(parsedRequestBody.toString());
 	    logger.debug("evaluateAccessRule()  access rule:"+accessRule.getName());
 
 		Set<AccessRule> gates = accessRule.getGates();
@@ -337,18 +339,21 @@ public class AuthorizationService {
         // 3. if getGateAnyRelation is true, one of the gate passed
 		if (gates != null && !gates.isEmpty()) {
 		    if (accessRule.getGateAnyRelation() == null || accessRule.getGateAnyRelation() == false) {
-
+		    	logger.debug("checking AND gates ");
 		        // All gates are AND relationship
                 // means one fails all fail
                 for (AccessRule gate : gates){
                     if (!evaluateAccessRule(parsedRequestBody, gate)){
-                        logger.error("evaluateAccessRule() gate "+gate.getName()+" failed ");
+                        logger.error("evaluateAccessRule() gate "+gate.getName()+" failed: " + gate.getRule() + " ____ " + gate.getValue());
                         gatesPassed = false;
                         break;
                     }
                 }
+                if(gatesPassed) {
+                	logger.debug("all AND gates passed");
+                }
             } else {
-
+            	logger.debug("checking OR gates ");
 		        // All gates are OR relationship
                 // means one passes all pass
 		        gatesPassed = false;
@@ -359,18 +364,19 @@ public class AuthorizationService {
                         break;
                     }
                 }
+                if(!gatesPassed) {
+                	logger.debug("all OR gates failed");
+                }
             }
-
 		}
 
 		// the result is based on if gates passed or not
 		if (accessRule.getEvaluateOnlyByGates() != null && accessRule.getEvaluateOnlyByGates()){
-            logger.debug("evaluateAccessRule() eval only by gates");
+            logger.debug("evaluateAccessRule() eval only by gates.  result:" + gatesPassed);
 		    return gatesPassed;
         }
 
         if (gatesPassed) {
-            logger.debug("evaluateAccessRule() gates passed");
             if (extractAndCheckRule(accessRule, parsedRequestBody) == false)
                 return false;
             else {
@@ -381,13 +387,11 @@ public class AuthorizationService {
                     }
                 }
             }
-        } else {
-            logger.debug("evaluateAccessRule() gates failed");
-		    // if gates not applied, this accessRule will consider deny
-		    return false;
-        }
+            return true;
+        } 
 
-        return true;
+        // if gates not applied, this accessRule will consider deny
+	    return false;
 	}
 
     /**
@@ -402,7 +406,6 @@ public class AuthorizationService {
      * @return
      */
 	private boolean extractAndCheckRule(AccessRule accessRule, Object parsedRequestBody){
-	    logger.debug("extractAndCheckRule() starting");
         String rule = accessRule.getRule();
 
         if (rule == null || rule.isEmpty())
@@ -443,7 +446,7 @@ public class AuthorizationService {
 
 
     private boolean evaluateNode(Object requestBodyValue, AccessRule accessRule){
-	    logger.debug("evaluateNode() starting...");
+//	    logger.debug("evaluateNode() starting...");
 
         /**
          * NOTE: if the path(driven by attribute rule) eventually leads to String values, we can do check,
@@ -587,7 +590,7 @@ public class AuthorizationService {
      * @return
      */
     private boolean decisionMaker(AccessRule accessRule, String requestBodyValue){
-
+    	logger.debug("_decisionMaker() merged rule name: "+accessRule.getName());
         // it might be possible that sometimes there is value in the accessRule.getValue()
         // but the mergedValues doesn't have elements in it...
         if (accessRule.getMergedValues().isEmpty()){
@@ -634,11 +637,8 @@ public class AuthorizationService {
     }
 
 	private boolean _decisionMaker(AccessRule accessRule, String requestBodyValue, String value){
-        logger.debug("_decisionMaker() starting");
-        logger.debug("_decisionMaker() access rule:"+accessRule.getName());
-        logger.debug(requestBodyValue);
-        logger.debug(value);
-
+        
+        logger.debug("_decisionMaker() checking for value " + value + " in " + requestBodyValue);
 
 	    switch (accessRule.getType()){
             case AccessRule.TypeNaming.NOT_CONTAINS:
