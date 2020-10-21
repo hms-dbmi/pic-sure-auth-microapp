@@ -358,7 +358,7 @@ public class UserService extends BaseEntityService<User> {
             try {
                 templateMap = objectMapper.readValue(template, Map.class);
             } catch (IOException ex){
-                logger.error("mergeTemplate() cannot convert stored queryTemplate using Jackson, the queryTemplate is: " + template);
+                logger.error("mergeTemplate() cannot convert stored queryTemplate using Jackson, the queryTemplate is: " + template, ex);
                 throw new ApplicationException("Inner application error, please contact admin.");
             }
 

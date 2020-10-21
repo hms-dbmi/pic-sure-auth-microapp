@@ -120,7 +120,7 @@ public class FENCEAuthenticationService {
         } catch (Exception ex) {
             logger.error("getFENCEAccessToken() failed to call FENCE token service, "+ex.getMessage());
         }
-        logger.debug("getFENCEAccessToken() finished. "+resp.asText());
+        logger.debug("getFENCEAccessToken() finished: "+resp.asText());
         return resp;
     }
 
@@ -147,7 +147,7 @@ public class FENCEAuthenticationService {
             logger.debug("getFENCEProfile() .user_id:" + fence_user_profile.get("user_id"));
             logger.debug("getFENCEProfile() .email:" + fence_user_profile.get("email"));
         } catch (Exception ex) {
-            logger.error("getFENCEToken() could not retrieve the user profile from the auth provider, because "+ex.getMessage(), ex);
+            logger.error("getFENCEProfile() could not retrieve the user profile from the auth provider, because "+ex.getMessage(), ex);
             throw new NotAuthorizedException("Could not get the user profile "+
                     "from the Gen3 authentication provider."+ex.getMessage());
         }
@@ -408,11 +408,17 @@ public class FENCEAuthenticationService {
             priv.setDescription("FENCE privilege for "+project_name+"/"+consent_group+(isHarmonized?" harmonized data":""));
 
             String consent_concept_path = isHarmonized ? fence_harmonized_consent_group_concept_path : fence_parent_consent_group_concept_path;
+           
+            if(!consent_concept_path.contains("\\\\")){
+            	 //these have to be escaped again so that jaxson can convert it correctly
+            	consent_concept_path = consent_concept_path.replaceAll("\\\\", "\\\\\\\\");
+            	logger.debug(consent_concept_path);
+            }
             // TOOD: Change this to a mustache template
             String queryTemplateText = "{\"categoryFilters\": {\""
                     +consent_concept_path
                     +"\":\""
-                    +project_name+"."+consent_group
+                    +project_name+".c"+consent_group
                     +"\"},"
                     +"\"numericFilters\":{},\"requiredFields\":[],"
                     +"\"variantInfoFilters\":[{\"categoryVariantInfoFilters\":{},\"numericVariantInfoFilters\":{}}],"
@@ -427,7 +433,7 @@ public class FENCEAuthenticationService {
 
             if(isHarmonized) {
             	//harmonized data has two ARs; one for _only_ harmonized, and one for a mix of harmonized and parent concepts
-            	AccessRule ar = upsertConsentAccessRule(project_name, consent_group, "PARENT_HARMONIZED", fence_harmonized_consent_group_concept_path);
+            	AccessRule ar = upsertConsentAccessRule(project_name, consent_group, "PARENT", fence_harmonized_consent_group_concept_path);
                 
                 //if this is a new rule, we need to populate it
                 if(ar.getGates().size() == 0) {
@@ -586,7 +592,7 @@ public class FENCEAuthenticationService {
 //    	gates.add(upsertConsentGate("TOPMED_CONSENT", "$..categoryFilters.['" + fence_topmed_consent_group_concept_path + "']", topmed, "Topmed data"));
    		
     	
-    	//nc - do we need to escape these?
+    	//nc - do we need to escape these?s
     	
     	gates.add(upsertConsentGate("PARENT_CONSENT", "$..categoryFilters." + fence_parent_consent_group_concept_path + "[*]", parent, "parent study data"));
     	gates.add(upsertConsentGate("HARMONIZED_CONSENT", "$..categoryFilters." + fence_harmonized_consent_group_concept_path + "[*]", harmonized, "harmonized data"));
@@ -646,11 +652,18 @@ public class FENCEAuthenticationService {
             priv.setName(privilegeName);
             priv.setDescription("FENCE privilege for Topmed "+project_name+"/"+consent_group);
 
+            String consent_concept_path = fence_topmed_consent_group_concept_path;
+            if(!consent_concept_path.contains("\\\\")){
+           	 //these have to be escaped again so that jaxson can convert it correctly
+           	consent_concept_path = consent_concept_path.replaceAll("\\\\", "\\\\\\\\");
+           	logger.debug(consent_concept_path);
+           }
+            
             // TOOD: Change this to a mustache template
             String queryTemplateText = "{\"categoryFilters\": {\""
-                    +fence_topmed_consent_group_concept_path
+                    +consent_concept_path
                     +"\":\""
-                    +project_name+"."+consent_group
+                    +project_name+".c"+consent_group
                     +"\"},"
                     +"\"numericFilters\":{},\"requiredFields\":[],"
                     +"\"variantInfoFilters\":[{\"categoryVariantInfoFilters\":{},\"numericVariantInfoFilters\":{}}],"
@@ -781,12 +794,15 @@ public class FENCEAuthenticationService {
         ar.setName(ar_name);
         ar.setDescription("FENCE AR for "+project_name+"/"+consent_group + " clinical concepts");
         StringBuilder ruleText = new StringBuilder();
-        ruleText.append("$..categoryFilters.['");
+//        ruleText.append("$..categoryFilters.['");
+//        ruleText.append(consent_path);
+//        ruleText.append("'][*]");
+        ruleText.append("$..categoryFilters.");
         ruleText.append(consent_path);
-        ruleText.append("']");
+        ruleText.append("[*]");
         ar.setRule(ruleText.toString());
         ar.setType(AccessRule.TypeNaming.ALL_EQUALS);
-        ar.setValue(project_name+"."+consent_group);
+        ar.setValue(project_name+".c"+consent_group);
         ar.setCheckMapKeyOnly(false);
         ar.setCheckMapNode(false);
         ar.setEvaluateOnlyByGates(false);
@@ -813,12 +829,15 @@ public class FENCEAuthenticationService {
         ar.setName(ar_name);
         ar.setDescription("FENCE AR for "+project_name+"/"+consent_group + " Topmed data");
         StringBuilder ruleText = new StringBuilder();
-        ruleText.append("$..categoryFilters.['");
+//        ruleText.append("$..categoryFilters.['");
+//        ruleText.append(fence_topmed_consent_group_concept_path);
+//        ruleText.append("'][*]");
+        ruleText.append("$..categoryFilters.");
         ruleText.append(fence_topmed_consent_group_concept_path);
-        ruleText.append("']");
+        ruleText.append("[*]");
         ar.setRule(ruleText.toString());
         ar.setType(AccessRule.TypeNaming.ALL_EQUALS);
-        ar.setValue(project_name+"."+consent_group);
+        ar.setValue(project_name+".c"+consent_group);
         ar.setCheckMapKeyOnly(false);
         ar.setCheckMapNode(false);
         ar.setEvaluateOnlyByGates(false);

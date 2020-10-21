@@ -135,10 +135,12 @@ public class AuthorizationService {
 		for (AccessRule accessRule : accessRules) {
 
 			if (evaluateAccessRule(requestBody, accessRule)){
+				logger.debug("accessRule " + accessRule.getMergedName() + "GRANTS ACCESS");
 				result = true;
 				passByRule = accessRule;
 				break;
 			} else {
+				logger.warn("accessRule " + accessRule.getMergedName() + "FAILS");
 			    failedRules.add(accessRule);
             }
 		}
@@ -263,7 +265,7 @@ public class AuthorizationService {
         for (Set<AccessRule> accessRulesSet : accessRuleMap) {
             // merge one set of accessRule into one accessRule
             AccessRule accessRule = null;
-            logger.debug("XXXX  merging " + accessRulesSet.size() + " elements from map entry");
+//            logger.debug("XXXX  merging " + accessRulesSet.size() + " elements from map entry");
             for (AccessRule innerAccessRule : accessRulesSet){
             	logger.trace("merging rule " + innerAccessRule.getName());
                 accessRule = mergeAccessRules(accessRule, innerAccessRule);
@@ -414,6 +416,10 @@ public class AuthorizationService {
         Object requestBodyValue;
 
         try {
+        	logger.debug("extractAndCheckRule() "
+        			+ ""
+        			+ "rule: " + rule );
+        	logger.debug(" Body " + parsedRequestBody);
             requestBodyValue = JsonPath.parse(parsedRequestBody).read(rule);
         } catch (PathNotFoundException ex){
             logger.debug("extractAndCheckRule() -> JsonPath.parse().read() throws exception with parsedRequestBody - {} : {} - {}", parsedRequestBody, ex.getClass().getSimpleName(), ex.getMessage());
@@ -611,6 +617,7 @@ public class AuthorizationService {
         // if there is only one element in the merged value set
         // the operation equals to _decisionMaker(accessRule, requestBodyValue, value)
         boolean res = false;
+//        logger.debug("checking " + requestBodyValue + " in collection " + Arrays.deepToString(accessRule.getMergedValues().toArray()));
         for (String s : accessRule.getMergedValues()){
 
             // check the special case value is null
@@ -638,7 +645,7 @@ public class AuthorizationService {
 
 	private boolean _decisionMaker(AccessRule accessRule, String requestBodyValue, String value){
         
-        logger.debug("_decisionMaker() checking for value " + value + " in " + requestBodyValue);
+//        logger.debug("_decisionMaker() checking for value " + requestBodyValue + " in " + );
 
 	    switch (accessRule.getType()){
             case AccessRule.TypeNaming.NOT_CONTAINS:
