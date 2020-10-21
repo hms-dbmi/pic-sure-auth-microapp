@@ -181,9 +181,9 @@ public class FENCEAuthenticationService {
             }
             //topmed ==> access to all studies (not just topmed)
             if (access_role_name.equals("topmed") ) {
-            	Collection<Map> projects = getFENCEMappingForAllProjects();
-            	for(Map projectMetadata : projects) {
-					String projectId = (String) projectMetadata.get("study_identifer");
+            	Map<String, Map> projects = getFENCEMapping();
+            	for(Map projectMetadata : projects.values()) {
+					String projectId = (String) projectMetadata.get("study_identifier");
 					String consentCode = (String) projectMetadata.get("consent_group_code");
 					String newRoleName =  "FENCE_"+projectId+"_"+consentCode;
 					
@@ -315,7 +315,7 @@ public class FENCEAuthenticationService {
 
     private Set<Privilege> addFENCEPrivileges(User u, Role r) {
         String roleName = r.getName();
-        logger.info("addPrivileges() starting, adding privilege(s) to role "+roleName);
+        logger.info("addFENCEPrivileges() starting, adding privilege(s) to role "+roleName);
 
         //each project can have up to three privileges: Parent  |  Harmonized  | Topmed
         //harmonized has 2 ARs for parent + harminized and harmonized only
@@ -418,7 +418,7 @@ public class FENCEAuthenticationService {
             String queryTemplateText = "{\"categoryFilters\": {\""
                     +consent_concept_path
                     +"\":\""
-                    +project_name+".c"+consent_group
+                    +project_name+"."+consent_group
                     +"\"},"
                     +"\"numericFilters\":{},\"requiredFields\":[],"
                     +"\"variantInfoFilters\":[{\"categoryVariantInfoFilters\":{},\"numericVariantInfoFilters\":{}}],"
@@ -433,7 +433,7 @@ public class FENCEAuthenticationService {
 
             if(isHarmonized) {
             	//harmonized data has two ARs; one for _only_ harmonized, and one for a mix of harmonized and parent concepts
-            	AccessRule ar = upsertConsentAccessRule(project_name, consent_group, "PARENT", fence_harmonized_consent_group_concept_path);
+            	AccessRule ar = upsertConsentAccessRule(project_name, consent_group, "PARENT_HARMONIZED", fence_harmonized_consent_group_concept_path);
                 
                 //if this is a new rule, we need to populate it
                 if(ar.getGates().size() == 0) {
@@ -460,7 +460,7 @@ public class FENCEAuthenticationService {
             } else {
             	// NO HARMONIZED DATA
             	//just need one AR for parent study
-	            AccessRule ar = upsertConsentAccessRule(project_name, consent_group, "PARENT_HARMONIZED", fence_parent_consent_group_concept_path);
+	            AccessRule ar = upsertConsentAccessRule(project_name, consent_group, "PARENT", fence_parent_consent_group_concept_path);
 	            
 	            logger.debug("AR" + ar);
 	            logger.debug("gates" + ar.getGates());
@@ -663,7 +663,7 @@ public class FENCEAuthenticationService {
             String queryTemplateText = "{\"categoryFilters\": {\""
                     +consent_concept_path
                     +"\":\""
-                    +project_name+".c"+consent_group
+                    +project_name+"."+consent_group
                     +"\"},"
                     +"\"numericFilters\":{},\"requiredFields\":[],"
                     +"\"variantInfoFilters\":[{\"categoryVariantInfoFilters\":{},\"numericVariantInfoFilters\":{}}],"
@@ -802,7 +802,7 @@ public class FENCEAuthenticationService {
         ruleText.append("[*]");
         ar.setRule(ruleText.toString());
         ar.setType(AccessRule.TypeNaming.ALL_EQUALS);
-        ar.setValue(project_name+".c"+consent_group);
+        ar.setValue(project_name+"."+consent_group);
         ar.setCheckMapKeyOnly(false);
         ar.setCheckMapNode(false);
         ar.setEvaluateOnlyByGates(false);
@@ -837,7 +837,7 @@ public class FENCEAuthenticationService {
         ruleText.append("[*]");
         ar.setRule(ruleText.toString());
         ar.setType(AccessRule.TypeNaming.ALL_EQUALS);
-        ar.setValue(project_name+".c"+consent_group);
+        ar.setValue(project_name+"."+consent_group);
         ar.setCheckMapKeyOnly(false);
         ar.setCheckMapNode(false);
         ar.setEvaluateOnlyByGates(false);
@@ -879,89 +879,80 @@ public class FENCEAuthenticationService {
 		return gate;
 	}
 	
-	private static DocumentContext _parsed_fence_mapping;
+	private static Map<String, Map> _projectMap;
 
 	
 	private Map getFENCEMappingforProjectAndConsent(String projectId, String consent_group) {
 	
-		 logger.info("getFENCEMappingforProjectAndConsent() looking up "+projectId + " " + consent_group);
-		for(Object projectMetadata : getFENCEMappingforProject(projectId)) {
+		String consentVal = projectId + "." + consent_group;
+		logger.info("getFENCEMappingforProjectAndConsent() looking up "+consentVal);
 			 
-			if(projectMetadata instanceof Map) {
-				
-				logger.debug("getFENCEMappingforProjectAndConsent() found obj " + Arrays.deepToString(((Map)projectMetadata).keySet().toArray()));
-				String proj_consent_code = (String) ((Map)projectMetadata).get("consent_group_code");
-				logger.info("getFENCEMappingforProjectAndConsent() found consent code : " + proj_consent_code);
-				if(proj_consent_code != null && proj_consent_code.equals(consent_group)) {
-					return (Map)projectMetadata;
-				}
-			} else {
-				logger.info("getFENCEMappingforProjectAndConsent() Obj instance of " + projectMetadata.getClass().getCanonicalName());	
-			}
+		Object projectMetadata = getFENCEMapping().get(consentVal);
+		if( projectMetadata instanceof Map) {
+			return (Map)projectMetadata;
+		} else {
+			logger.info("getFENCEMappingforProjectAndConsent() Obj instance of " + projectMetadata.getClass().getCanonicalName());	
 		}
 		return null;
 	}
+//	
+//	/**
+//	 * Get the mappings of fence privileges
+//	 * 
+//	 * 
+//	 * 
+//	 */
+//	private Collection<Map> getFENCEMappingforProject(String projectId) {
+//		
+//		if(_parsed_fence_mapping == null) {
+//			try {
+//				
+//				_parsed_fence_mapping = JsonPath.parse(new File(String.join(File.separator,
+//						new String[] {JAXRSConfiguration.templatePath ,"fence_mapping.json"})));
+//				
+//			} catch (IOException e) {
+//				logger.error("fence_mapping.json not found at "+JAXRSConfiguration.templatePath);
+//				return new ArrayList<Map>();
+//			}
+//		}
+//		
+//		//find all objects that have the right project ID.  There could be several, one for each consent group
+//		// key is "study_identifier"
+//		String matchProjectJsonPath = "$..[?(@.study_identifer=='"+ projectId+"')]";
+//		
+//		Object projects = _parsed_fence_mapping.read(matchProjectJsonPath);
+//		
+//		if( ! (projects instanceof Collection) ) {
+//			//this should not happen
+//			logger.error("parsed json data does not contain study "+projectId);
+//			return new ArrayList<Map>();
+//		}
+//		
+//		return (Collection)projects;
+//	}
 	
-	/**
-	 * Get the mappings of fence privileges
-	 * 
-	 * 
-	 * 
-	 */
-	private Collection<Map> getFENCEMappingforProject(String projectId) {
-		
-		if(_parsed_fence_mapping == null) {
+	private Map<String, Map> getFENCEMapping(){
+		if(_projectMap == null || _projectMap.isEmpty()) {
 			try {
+				Map fenceMapping = JAXRSConfiguration.objectMapper.readValue(
+						new File(String.join(File.separator,
+								new String[] {JAXRSConfiguration.templatePath ,"fence_mapping.json"}))
+						, Map.class);
+				List<Map> projects = (List<Map>) fenceMapping.get("bio_data_catalyst");
+				logger.debug("getFENCEMapping: found FENCE mapping with " + fenceMapping.size() + " entries");
+				_projectMap = new HashMap<String, Map>(projects.size());
+				for(Map project : projects) {
+					String consentVal = "" + project.get("study_identifier") + "." + project.get("consent_group_code");
+					logger.debug("adding study " + consentVal);
+					_projectMap.put(consentVal, project);
+				}
 				
-				_parsed_fence_mapping = JsonPath.parse(new File(String.join(File.separator,
-						new String[] {JAXRSConfiguration.templatePath ,"fence_mapping.json"})));
-				
-			} catch (IOException e) {
-				logger.error("fence_mapping.json not found at "+JAXRSConfiguration.templatePath);
-				return new ArrayList<Map>();
+			} catch (Exception e) {
+				logger.error("getFENCEMapping: Non-fatal error parsing fence_mapping.json: "+JAXRSConfiguration.templatePath, e);
+				return new HashMap<String,Map>();
 			}
 		}
 		
-		//find all objects that have the right project ID.  There could be several, one for each consent group
-		// key is "study_identifier"
-		String matchProjectJsonPath = "$..[?(@.study_identifer=='"+ projectId+"')]";
-		
-		Object projects = _parsed_fence_mapping.read(matchProjectJsonPath);
-		
-		if( ! (projects instanceof Collection) ) {
-			//this should not happen
-			logger.error("parsed json data does not contain study "+projectId);
-			return new ArrayList<Map>();
-		}
-		
-		return (Collection)projects;
-	}
-	
-	private Collection<Map> getFENCEMappingForAllProjects(){
-		if(_parsed_fence_mapping == null) {
-			try {
-				
-				_parsed_fence_mapping = JsonPath.parse(new File(String.join(File.separator,
-						new String[] {JAXRSConfiguration.templatePath ,"fence_mapping.json"})));
-				
-			} catch (IOException e) {
-				logger.error("getFENCEMappingForAllProjects: fence_mapping.json not found at "+JAXRSConfiguration.templatePath);
-				return new ArrayList<Map>();
-			}
-		}
-		
-		
-		String allProjectsJsonPath = "$.bio_data_catalyst[*]";
-		
-		Object projects = _parsed_fence_mapping.read(allProjectsJsonPath);
-
-		if( ! (projects instanceof Collection) ) {
-			//this should not happen
-			logger.error("parsed json data does not contain any studies");
-			return new ArrayList<Map>();
-		}
-		
-		return (Collection)projects;
-		
+		return _projectMap;
 	}
 }
