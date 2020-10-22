@@ -120,9 +120,9 @@ public class AuthorizationService {
 
 		if (accessRules == null || accessRules.isEmpty()) {
 			logger.info("ACCESS_LOG ___ " + user.getUuid().toString() + "," + user.getEmail() + "," + user.getName() + 
-					" ___ has been granted access to execute query ___ " + formattedQuery + " ___ in application ___ " + applicationName
+					" ___ has been denied access to execute query ___ " + formattedQuery + " ___ in application ___ " + applicationName
                     + " ___ NO ACCESS RULES EVALUATED");
-			return true;        	
+			return false;        	
 		}
 
          // loop through all accessRules
