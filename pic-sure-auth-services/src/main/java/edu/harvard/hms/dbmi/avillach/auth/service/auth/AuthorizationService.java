@@ -379,6 +379,7 @@ public class AuthorizationService {
         }
 
         if (gatesPassed) {
+        	logger.debug("Gates passed.  Request Body: " + parsedRequestBody);
             if (extractAndCheckRule(accessRule, parsedRequestBody) == false)
                 return false;
             else {
@@ -416,10 +417,9 @@ public class AuthorizationService {
         Object requestBodyValue;
 
         try {
-        	logger.debug("extractAndCheckRule() "
-        			+ ""
+        	logger.debug("extractAndCheckRule() " + accessRule.getMergedName()
+        			+ ": "
         			+ "rule: " + rule );
-        	logger.debug(" Body " + parsedRequestBody);
             requestBodyValue = JsonPath.parse(parsedRequestBody).read(rule);
         } catch (PathNotFoundException ex){
             logger.debug("extractAndCheckRule() -> JsonPath.parse().read() throws exception with parsedRequestBody - {} : {} - {}", parsedRequestBody, ex.getClass().getSimpleName(), ex.getMessage());
@@ -596,7 +596,6 @@ public class AuthorizationService {
      * @return
      */
     private boolean decisionMaker(AccessRule accessRule, String requestBodyValue){
-    	logger.debug("_decisionMaker() merged rule name: "+accessRule.getName());
         // it might be possible that sometimes there is value in the accessRule.getValue()
         // but the mergedValues doesn't have elements in it...
         if (accessRule.getMergedValues().isEmpty()){

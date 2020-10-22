@@ -350,7 +350,7 @@ public class UserService extends BaseEntityService<User> {
         Map mergedTemplateMap = null;
         for (Privilege privilege : user.getPrivilegesByApplication(application)){
             String template = privilege.getQueryTemplate();
-            logger.debug("mergeTemplate() processing template:"+template);
+//            logger.debug("mergeTemplate() processing template:"+template);
             if (template == null || template.trim().isEmpty()){
                 continue;
             }

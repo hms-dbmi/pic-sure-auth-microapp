@@ -64,8 +64,8 @@ public class FENCEAuthenticationService {
     private Application picSureApp;
     private Connection fenceConnection;
     
-    
-
+    //read the fence_mapping.json into this object to improve lookup speeds
+    private static Map<String, Map> _projectMap;
 
     @PostConstruct
 	public void initializeFenceService() {
@@ -329,19 +329,16 @@ public class FENCEAuthenticationService {
         String consent_group = parts[2];
         
         
-        // 
+        // Look up the metadata by consent group.
        Map projectMetadata = getFENCEMappingforProjectAndConsent(project_name, consent_group);
         
         if(projectMetadata == null || projectMetadata.size() == 0) {
-        	// TODO: Assign NO ACCESS privilege here
-        	//... but then how do we clear that out if there's new metadata to fix it? (whole DB gets cleared! -nc)
+        	//no privileges means no access to this project.  just return existing set of privs.
         	logger.debug("NO metadata available for project " + project_name + " : " + consent_group);
         	return privs;
         }
         
         logger.info("addPrivileges() This is a new privilege");
-        
-        
         
         String dataType = (String) projectMetadata.get("data_type");
         Boolean isHarmonized = "Y".equals(projectMetadata.get("isHarmonized"));
@@ -368,8 +365,9 @@ public class FENCEAuthenticationService {
             if(Boolean.TRUE.equals(isHarmonized)) {
             	privs.add(upsertClinicalPrivilege(project_name, consent_group, concept_path, true));
             }
-        	
         }
+        
+        //projects without G or P in data_type are skipped
             
         logger.info("addPrivileges() Finished");
         return privs;
@@ -389,7 +387,6 @@ public class FENCEAuthenticationService {
      */
     private Privilege upsertClinicalPrivilege(String project_name, String consent_group, String conceptPath, boolean isHarmonized) {
     	
-    	
     	String privilegeName = "PRIV_FENCE_"+project_name+"_"+consent_group+(isHarmonized?"_HARMONIZED":"");
     	Privilege priv = privilegeRepo.getUniqueResultByColumn("name", privilegeName);
     	if(priv !=  null) {
@@ -400,9 +397,6 @@ public class FENCEAuthenticationService {
         priv = new Privilege();
 
         try {
-        	
-        	
-        	
             priv.setApplication(picSureApp);
             priv.setName(privilegeName);
             priv.setDescription("FENCE privilege for "+project_name+"/"+consent_group+(isHarmonized?" harmonized data":""));
@@ -429,8 +423,6 @@ public class FENCEAuthenticationService {
 
             Set<AccessRule> accessrules = new HashSet<AccessRule>();
             
-            //parent
-
             if(isHarmonized) {
             	//harmonized data has two ARs; one for _only_ harmonized, and one for a mix of harmonized and parent concepts
             	AccessRule ar = upsertConsentAccessRule(project_name, consent_group, "PARENT_HARMONIZED", fence_harmonized_consent_group_concept_path);
@@ -481,9 +473,7 @@ public class FENCEAuthenticationService {
 	            accessrules.add(ar);
             }
             
-            
-            // Add additional access rules;   (these are still created through that SQL script I guess)
-            // Add additional access rules;  
+            // Add additional access rules;   (these are still created through that SQL script)
             for(String arName: fence_standard_access_rules.split(",")) {
                 if (arName.startsWith("AR_")) {
                     logger.info("upsertClinicalPrivilege() Adding AccessRule "+arName+" to privilege "+priv.getName());
@@ -510,7 +500,6 @@ public class FENCEAuthenticationService {
     
     private Collection<? extends AccessRule> getTopmedRestrictedSubRules() {
     	Set<AccessRule> rules = new HashSet<AccessRule>();
-    	//categorical filters will always contain at least one entry (for the consent groups); it will never be empty
     	rules.add(upsertTopmedRestrictedSubRule("CATEGORICAL", "$.query.variantInfoFilters[*].categoryVariantInfoFilters.*"));
     	rules.add(upsertTopmedRestrictedSubRule("NUMERIC", "$.query.variantInfoFilters[*].numericVariantInfoFilters.*"));
     	
@@ -556,7 +545,10 @@ public class FENCEAuthenticationService {
 	}
 	
 
-	//generate and return a set of rules that disallow access to phenotype data
+	/**
+	 * generate and return a set of rules that disallow access to phenotype data (only genomic filters allowed)
+	 * @return
+	 */
 	private Collection<? extends AccessRule> getPhenotypeRestrictedSubRules() {
     	
     	Set<AccessRule> rules = new HashSet<AccessRule>();
@@ -583,22 +575,21 @@ public class FENCEAuthenticationService {
     	return rules;
 	}
 
-
+	/**
+	 * Return a set of gates that identify which consent values have been provided.  the boolean parameters indicate
+	 * if a value in the specified consent location should allow this gate to pass.
+	 * @param parent
+	 * @param harmonized
+	 * @param topmed
+	 * @return
+	 */
 	private Collection<? extends AccessRule> getGates(boolean parent, boolean harmonized, boolean topmed) {
     	
     	Set<AccessRule> gates = new HashSet<AccessRule>();
-//    	gates.add(upsertConsentGate("PARENT_CONSENT", "$..categoryFilters.['" + fence_parent_consent_group_concept_path + "']", parent, "parent study data"));
-//    	gates.add(upsertConsentGate("HARMONIZED_CONSENT", "$..categoryFilters.['" + fence_harmonized_consent_group_concept_path + "']", harmonized, "harmonized data"));
-//    	gates.add(upsertConsentGate("TOPMED_CONSENT", "$..categoryFilters.['" + fence_topmed_consent_group_concept_path + "']", topmed, "Topmed data"));
-   		
-    	
-    	//nc - do we need to escape these?s
-    	
     	gates.add(upsertConsentGate("PARENT_CONSENT", "$..categoryFilters." + fence_parent_consent_group_concept_path + "[*]", parent, "parent study data"));
     	gates.add(upsertConsentGate("HARMONIZED_CONSENT", "$..categoryFilters." + fence_harmonized_consent_group_concept_path + "[*]", harmonized, "harmonized data"));
     	gates.add(upsertConsentGate("TOPMED_CONSENT", "$..categoryFilters." + fence_topmed_consent_group_concept_path + "[*]", topmed, "Topmed data"));
    		
-    	
 		return gates;
 	}
 	
@@ -659,7 +650,7 @@ public class FENCEAuthenticationService {
            	logger.debug(consent_concept_path);
            }
             
-            // TOOD: Change this to a mustache template
+            // TODO: Change this to a mustache template
             String queryTemplateText = "{\"categoryFilters\": {\""
                     +consent_concept_path
                     +"\":\""
@@ -728,7 +719,6 @@ public class FENCEAuthenticationService {
                 		ar.getSubAccessRule().addAll(getAllowVariantAnnotationsSubRules());
                 		accessruleRepo.merge(ar);
                     }
-                    
                     accessrules.add(ar);
                     
                     
@@ -748,7 +738,6 @@ public class FENCEAuthenticationService {
                 		ar.getSubAccessRule().add(upsertConsentAccessRule(project_name, consent_group, "HARMONIZED_SUB_RULE", fence_harmonized_consent_group_concept_path));
                 		accessruleRepo.merge(ar);
                     }
-                    
                     accessrules.add(ar);
                 }
             	
@@ -794,9 +783,6 @@ public class FENCEAuthenticationService {
         ar.setName(ar_name);
         ar.setDescription("FENCE AR for "+project_name+"/"+consent_group + " clinical concepts");
         StringBuilder ruleText = new StringBuilder();
-//        ruleText.append("$..categoryFilters.['");
-//        ruleText.append(consent_path);
-//        ruleText.append("'][*]");
         ruleText.append("$..categoryFilters.");
         ruleText.append(consent_path);
         ruleText.append("[*]");
@@ -829,9 +815,6 @@ public class FENCEAuthenticationService {
         ar.setName(ar_name);
         ar.setDescription("FENCE AR for "+project_name+"/"+consent_group + " Topmed data");
         StringBuilder ruleText = new StringBuilder();
-//        ruleText.append("$..categoryFilters.['");
-//        ruleText.append(fence_topmed_consent_group_concept_path);
-//        ruleText.append("'][*]");
         ruleText.append("$..categoryFilters.");
         ruleText.append(fence_topmed_consent_group_concept_path);
         ruleText.append("[*]");
@@ -850,8 +833,8 @@ public class FENCEAuthenticationService {
     }
 
     /**
-     * Insert a new gate if it doesn't exist yet.  
-     * return an existing gate named GATE_{gateName} if it exists.
+     * Insert a new gate (if it doesn't exist yet) to identify if consent values are present in the query.   
+     * return an existing gate named GATE_{gateName}_(PRESENT|MISSING) if it exists.
      */
 	private AccessRule upsertConsentGate(String gateName, String rule, boolean is_present, String description) {
 		
@@ -879,9 +862,6 @@ public class FENCEAuthenticationService {
 		return gate;
 	}
 	
-	private static Map<String, Map> _projectMap;
-
-	
 	private Map getFENCEMappingforProjectAndConsent(String projectId, String consent_group) {
 	
 		String consentVal = projectId + "." + consent_group;
@@ -895,41 +875,6 @@ public class FENCEAuthenticationService {
 		}
 		return null;
 	}
-//	
-//	/**
-//	 * Get the mappings of fence privileges
-//	 * 
-//	 * 
-//	 * 
-//	 */
-//	private Collection<Map> getFENCEMappingforProject(String projectId) {
-//		
-//		if(_parsed_fence_mapping == null) {
-//			try {
-//				
-//				_parsed_fence_mapping = JsonPath.parse(new File(String.join(File.separator,
-//						new String[] {JAXRSConfiguration.templatePath ,"fence_mapping.json"})));
-//				
-//			} catch (IOException e) {
-//				logger.error("fence_mapping.json not found at "+JAXRSConfiguration.templatePath);
-//				return new ArrayList<Map>();
-//			}
-//		}
-//		
-//		//find all objects that have the right project ID.  There could be several, one for each consent group
-//		// key is "study_identifier"
-//		String matchProjectJsonPath = "$..[?(@.study_identifer=='"+ projectId+"')]";
-//		
-//		Object projects = _parsed_fence_mapping.read(matchProjectJsonPath);
-//		
-//		if( ! (projects instanceof Collection) ) {
-//			//this should not happen
-//			logger.error("parsed json data does not contain study "+projectId);
-//			return new ArrayList<Map>();
-//		}
-//		
-//		return (Collection)projects;
-//	}
 	
 	private Map<String, Map> getFENCEMapping(){
 		if(_projectMap == null || _projectMap.isEmpty()) {
