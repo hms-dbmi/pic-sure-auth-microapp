@@ -411,15 +411,19 @@ public class FENCEAuthenticationService {
             // TOOD: Change this to a mustache template
             String queryTemplateText = "{\"categoryFilters\": {\""
                     +consent_concept_path
-                    +"\":\""
+                    +"\":[\""
                     +project_name+"."+consent_group
-                    +"\"},"
+                    +"\"]},"
                     +"\"numericFilters\":{},\"requiredFields\":[],"
                     +"\"variantInfoFilters\":[{\"categoryVariantInfoFilters\":{},\"numericVariantInfoFilters\":{}}],"
                     +"\"expectedResultType\": \"COUNT\""
                     +"}";
             priv.setQueryTemplate(queryTemplateText);
-            priv.setQueryScope("[\"" + conceptPath + "\"]");
+            if(isHarmonized) {
+            	priv.setQueryScope("[\"" + conceptPath + "\",\"" + fence_harmonized_concept_path + "\"]");
+            } else {
+            	priv.setQueryScope("[\"" + conceptPath + "\"]");
+            }
 
             Set<AccessRule> accessrules = new HashSet<AccessRule>();
             
@@ -653,16 +657,35 @@ public class FENCEAuthenticationService {
             // TODO: Change this to a mustache template
             String queryTemplateText = "{\"categoryFilters\": {\""
                     +consent_concept_path
-                    +"\":\""
+                    +"\":[\""
                     +project_name+"."+consent_group
-                    +"\"},"
+                    +"\"]},"
                     +"\"numericFilters\":{},\"requiredFields\":[],"
                     +"\"variantInfoFilters\":[{\"categoryVariantInfoFilters\":{},\"numericVariantInfoFilters\":{}}],"
                     +"\"expectedResultType\": \"COUNT\""
                     +"}";
             priv.setQueryTemplate(queryTemplateText);
             //need a non-null scope that is a list of strings
-            priv.setQueryScope("[]");
+            
+            
+
+    		String variantColumns = JAXRSConfiguration.variantAnnotationColumns;
+    		if(variantColumns == null || variantColumns.isEmpty()) {
+    			 priv.setQueryScope("[]");
+    		} else {
+    			StringBuilder builder = new StringBuilder();
+	    		for(String annotationPath : variantColumns.split(",")) {
+	    			if(builder.length() == 0) {
+	    				builder.append("[");
+	    			} else {
+	    				builder.append(",");
+	    			}
+	    			builder.append("\""+annotationPath+"\"");
+	    		}
+	    		builder.append("]");
+	    		priv.setQueryScope(builder.toString());
+    		}
+           
             
             Set<AccessRule> accessrules = new HashSet<AccessRule>();
             
