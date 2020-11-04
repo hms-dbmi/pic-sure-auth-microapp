@@ -121,6 +121,19 @@ define(["backbone","handlebars", 'picSure/settings', "text!header/header.hbs", "
             localStorage.clear();
         },
         render: function () {
+            // disable links for any applications that are not accessible 
+            setTimeout(function() {
+                links = $('#applications-dropdown a');
+                for (idx = 0; idx < links.length; idx++) {
+                    $.ajax({
+                        "url": links[idx].href,
+                        "timeout":"2000",
+                        "error": (function(e) {
+                            $(this).hide();
+                        }).bind(links[idx])
+                    })
+                }
+            }, 500);
             if (window.location.pathname !== "/psamaui/tos") {
                 if (window.location.pathname == "/psamaui/userProfile"){
                     applicationFunctions.fetchApplications(this, function(applications){
