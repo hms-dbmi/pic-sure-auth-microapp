@@ -206,8 +206,8 @@ public class FENCEAuthenticationService {
         claims.put("email", current_user.getEmail());
         claims.put("sub", current_user.getSubject());
         HashMap<String, String> responseMap = authUtil.getUserProfileResponse(claims);
+        logger.info("LOGIN SUCCESS ___ " + current_user.getEmail() + ":" + current_user.getUuid().toString() + " ___ Authorization will expire at  ___ " + responseMap.get("expirationDate") + "___");
         logger.debug("getFENCEProfile() UserProfile response object has been generated");
-
         logger.debug("getFENCEToken() finished");
         return PICSUREResponse.success(responseMap);
     }
