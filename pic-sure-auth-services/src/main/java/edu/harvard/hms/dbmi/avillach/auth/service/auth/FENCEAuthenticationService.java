@@ -334,7 +334,7 @@ public class FENCEAuthenticationService {
         
         if(projectMetadata == null || projectMetadata.size() == 0) {
         	//no privileges means no access to this project.  just return existing set of privs.
-        	logger.debug("NO metadata available for project " + project_name + " : " + consent_group);
+        	logger.warn("No metadata available for project " + project_name + "." + consent_group);
         	return privs;
         }
         
@@ -434,6 +434,7 @@ public class FENCEAuthenticationService {
                 //if this is a new rule, we need to populate it
                 if(ar.getGates().size() == 0) {
                 	ar.getGates().addAll(getGates(true, true, false));
+                	ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
                 	ar.getSubAccessRule().addAll(getPhenotypeSubRules(conceptPath));
             		ar.getSubAccessRule().addAll(getPhenotypeSubRules(fence_harmonized_concept_path));
             		ar.getSubAccessRule().addAll(getTopmedRestrictedSubRules());
@@ -448,6 +449,7 @@ public class FENCEAuthenticationService {
 	            //if this is a new rule, we need to populate it
 	            if(ar.getGates().size() == 0) {
 	            	ar.getGates().addAll(getGates(false, true, false));
+	            	ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
 	            	ar.getSubAccessRule().addAll(getPhenotypeSubRules(fence_harmonized_concept_path));
 	            	ar.getSubAccessRule().addAll(getTopmedRestrictedSubRules());
 	            	accessruleRepo.merge(ar);
@@ -458,9 +460,6 @@ public class FENCEAuthenticationService {
             	//just need one AR for parent study
 	            AccessRule ar = upsertConsentAccessRule(project_name, consent_group, "PARENT", fence_parent_consent_group_concept_path);
 	            
-	            logger.debug("AR" + ar);
-	            logger.debug("gates" + ar.getGates());
-	            logger.debug("sub rules " + ar.getSubAccessRule());
 	            //if this is a new rule, we need to populate it
 	            if(ar.getGates() == null) {
 	            	ar.setGates(new HashSet<AccessRule>());
@@ -469,6 +468,7 @@ public class FENCEAuthenticationService {
 	            	if(ar.getSubAccessRule() == null) {
 	            		ar.setSubAccessRule(new HashSet<AccessRule>());
 	            	}
+	            	ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
 	            	ar.getSubAccessRule().addAll(getPhenotypeSubRules(conceptPath));
 	            	ar.getSubAccessRule().addAll(getTopmedRestrictedSubRules());
 	            	accessruleRepo.merge(ar);
@@ -502,7 +502,35 @@ public class FENCEAuthenticationService {
         return priv;
     }
     
-    private Collection<? extends AccessRule> getTopmedRestrictedSubRules() {
+    private Set<AccessRule> getAllowedQueryTypeRules() {
+    	Set<AccessRule> rules = new HashSet<AccessRule>();
+    	String[] allowedTypes = JAXRSConfiguration.fence_allowed_query_types.split(",");
+    	for(String queryType : allowedTypes) {
+    		
+    		String ar_name = "AR_ALLOW_" + queryType ;
+ 	        AccessRule ar = accessruleRepo.getUniqueResultByColumn("name", ar_name);
+ 	        if (ar == null) {
+	 	        logger.info("upsertPhenotypeSubRule() Creating new access rule "+ar_name);
+	 	        ar = new AccessRule();
+	 	        ar.setName(ar_name);
+	 	        ar.setDescription("FENCE SUB AR to allow " + queryType + " Queries");
+	 	        ar.setRule( "$..expectedResultType");
+	 	        ar.setType(AccessRule.TypeNaming.ALL_CONTAINS);
+	 	        ar.setValue(queryType);
+	 	        ar.setCheckMapKeyOnly(false);
+	 	        ar.setCheckMapNode(false);
+	 	        ar.setEvaluateOnlyByGates(false);
+	 	        ar.setGateAnyRelation(false); 
+	
+	 	        accessruleRepo.persist(ar);
+ 	        }
+ 	       rules.add(ar);
+    		
+    	}
+    	return rules;
+	}
+
+	private Collection<? extends AccessRule> getTopmedRestrictedSubRules() {
     	Set<AccessRule> rules = new HashSet<AccessRule>();
     	rules.add(upsertTopmedRestrictedSubRule("CATEGORICAL", "$.query.variantInfoFilters[*].categoryVariantInfoFilters.*"));
     	rules.add(upsertTopmedRestrictedSubRule("NUMERIC", "$.query.variantInfoFilters[*].numericVariantInfoFilters.*"));
@@ -699,6 +727,7 @@ public class FENCEAuthenticationService {
             	if(ar.getSubAccessRule() == null) {
             		ar.setSubAccessRule(new HashSet<AccessRule>());
             	}
+            	ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
         		ar.getSubAccessRule().addAll(getPhenotypeRestrictedSubRules());
         		ar.getSubAccessRule().addAll(getAllowVariantAnnotationsSubRules());
         		accessruleRepo.merge(ar);
@@ -717,6 +746,7 @@ public class FENCEAuthenticationService {
                 	if(ar.getSubAccessRule() == null) {
                 		ar.setSubAccessRule(new HashSet<AccessRule>());
                 	}
+                	ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
             		ar.getSubAccessRule().addAll(getPhenotypeSubRules(parentConceptPath));
             		ar.getSubAccessRule().add(upsertConsentAccessRule(project_name, consent_group, "PARENT_SUB_RULE", fence_parent_consent_group_concept_path));
             		ar.getSubAccessRule().addAll(getAllowVariantAnnotationsSubRules());
@@ -737,6 +767,7 @@ public class FENCEAuthenticationService {
                      	if(ar.getSubAccessRule() == null) {
                      		ar.setSubAccessRule(new HashSet<AccessRule>());
                      	}
+                     	ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
                 		ar.getSubAccessRule().addAll(getPhenotypeSubRules(fence_harmonized_concept_path));
                 		ar.getSubAccessRule().add(upsertConsentAccessRule(project_name, consent_group, "HARMONIZED_SUB_RULE", fence_harmonized_consent_group_concept_path));
                 		ar.getSubAccessRule().addAll(getAllowVariantAnnotationsSubRules());
@@ -755,6 +786,7 @@ public class FENCEAuthenticationService {
                       	if(ar.getSubAccessRule() == null) {
                       		ar.setSubAccessRule(new HashSet<AccessRule>());
                       	}
+                      	ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
                     	ar.getSubAccessRule().addAll(getPhenotypeSubRules(parentConceptPath));
                 		ar.getSubAccessRule().addAll(getPhenotypeSubRules(fence_harmonized_concept_path));
                 		ar.getSubAccessRule().add(upsertConsentAccessRule(project_name, consent_group, "PARENT_SUB_RULE", fence_parent_consent_group_concept_path));
@@ -872,7 +904,7 @@ public class FENCEAuthenticationService {
         logger.info("upsertClinicalGate() Creating new access rule "+gateName);
         gate = new AccessRule();
         gate.setName(gateName);
-        gate.setDescription("FENCE GATE for " + description + " consent present");
+        gate.setDescription("FENCE GATE for " + description + " consent " + (is_present ? "present" : "missing"));
         gate.setRule(rule);
         gate.setType(is_present ? AccessRule.TypeNaming.IS_NOT_EMPTY : AccessRule.TypeNaming.IS_EMPTY );
         gate.setValue(null);  
@@ -893,7 +925,7 @@ public class FENCEAuthenticationService {
 		Object projectMetadata = getFENCEMapping().get(consentVal);
 		if( projectMetadata instanceof Map) {
 			return (Map)projectMetadata;
-		} else {
+		} else if (projectMetadata != null) {
 			logger.info("getFENCEMappingforProjectAndConsent() Obj instance of " + projectMetadata.getClass().getCanonicalName());	
 		}
 		return null;
@@ -907,7 +939,7 @@ public class FENCEAuthenticationService {
 								new String[] {JAXRSConfiguration.templatePath ,"fence_mapping.json"}))
 						, Map.class);
 				List<Map> projects = (List<Map>) fenceMapping.get("bio_data_catalyst");
-				logger.debug("getFENCEMapping: found FENCE mapping with " + fenceMapping.size() + " entries");
+				logger.debug("getFENCEMapping: found FENCE mapping with " + projects.size() + " entries");
 				_projectMap = new HashMap<String, Map>(projects.size());
 				for(Map project : projects) {
 					String consentVal = "" + project.get("study_identifier") + "." + project.get("consent_group_code");

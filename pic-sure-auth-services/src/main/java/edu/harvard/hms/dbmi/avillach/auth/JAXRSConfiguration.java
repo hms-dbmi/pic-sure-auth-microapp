@@ -94,7 +94,7 @@ public class JAXRSConfiguration extends Application {
     
     @Resource(lookup = "java:global/variantAnnotationColumns")
     public static String variantAnnotationColumns;
-
+    
     // See checkIDPProvider method for setting these variables
     public static String idp_provider;
     public static String idp_provider_uri;
@@ -106,7 +106,9 @@ public class JAXRSConfiguration extends Application {
     public static String fence_harmonized_concept_path;
     public static String fence_harmonized_consent_group_concept_path;
     public static String fence_topmed_consent_group_concept_path;
-
+    public static String fence_allowed_query_types;
+    
+    
     public static String defaultAdminRoleName = "PIC-SURE Top Admin";
 
     public static long tokenExpirationTime;
@@ -222,6 +224,15 @@ public class JAXRSConfiguration extends Application {
                     logger.error("checkIDPProvider() Empty access rules from standalone.xml. Using defaults.");
                     fence_standard_access_rules = "GATE_ONLY_INFO,GATE_ONLY_QUERY,GATE_ONLY_SEARCH,GATE_FENCE_CONSENT_REQUIRED";
                 }
+                
+                
+                
+                fence_allowed_query_types = (String) ctx.lookup("java:global/fence_allowed_query_types");
+                if (fence_allowed_query_types.isEmpty()) {
+                    logger.error("checkIDPProvider() Empty access rules from standalone.xml. Using defaults.");
+                    fence_allowed_query_types = "COUNT,CROSS_COUNT";
+                }
+                
 
                 fence_harmonized_concept_path = (String) ctx.lookup("java:global/fence_harmonized_concept_path");
                 if (fence_harmonized_concept_path.isEmpty()) {
