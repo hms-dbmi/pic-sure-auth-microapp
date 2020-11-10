@@ -341,7 +341,7 @@ public class FENCEAuthenticationService {
         logger.info("addPrivileges() This is a new privilege");
         
         String dataType = (String) projectMetadata.get("data_type");
-        Boolean isHarmonized = "Y".equals(projectMetadata.get("isHarmonized"));
+        Boolean isHarmonized = "Y".equals(projectMetadata.get("is_harmonized"));
         String concept_path = (String) projectMetadata.get("top_level_path");
         
         //we need to add escape sequence back in to the path for parsing later (also need to double escape the regex)
