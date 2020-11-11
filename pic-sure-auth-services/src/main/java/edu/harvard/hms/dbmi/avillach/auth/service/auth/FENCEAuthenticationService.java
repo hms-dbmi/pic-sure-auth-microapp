@@ -408,6 +408,13 @@ public class FENCEAuthenticationService {
             	consent_concept_path = consent_concept_path.replaceAll("\\\\", "\\\\\\\\");
             	logger.debug(consent_concept_path);
             }
+            if(fence_harmonized_concept_path != null && !fence_harmonized_concept_path.contains("\\\\")){
+	          	 //these have to be escaped again so that jaxson can convert it correctly
+	        	fence_harmonized_concept_path = fence_harmonized_concept_path.replaceAll("\\\\", "\\\\\\\\");
+	           	logger.debug("upsertTopmedPrivilege(): escaped harmonized consent path" + fence_harmonized_concept_path);
+           }
+            
+            
             // TOOD: Change this to a mustache template
             String queryTemplateText = "{\"categoryFilters\": {\""
                     +consent_concept_path
@@ -432,8 +439,15 @@ public class FENCEAuthenticationService {
             	AccessRule ar = upsertConsentAccessRule(project_name, consent_group, "PARENT_HARMONIZED", fence_harmonized_consent_group_concept_path);
                 
                 //if this is a new rule, we need to populate it
-                if(ar.getGates().size() == 0) {
+
+            	//if this is a new rule, we need to populate it
+                if(ar.getGates() == null) {
+                	ar.setGates(new HashSet<AccessRule>());
                 	ar.getGates().addAll(getGates(true, true, false));
+                	
+                	if(ar.getSubAccessRule() == null) {
+                  		ar.setSubAccessRule(new HashSet<AccessRule>());
+                  	}
                 	ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
                 	ar.getSubAccessRule().addAll(getPhenotypeSubRules(conceptPath));
             		ar.getSubAccessRule().addAll(getPhenotypeSubRules(fence_harmonized_concept_path));
@@ -447,8 +461,13 @@ public class FENCEAuthenticationService {
 				ar = upsertConsentAccessRule(project_name, consent_group, "HARMONIZED_ONLY", fence_harmonized_consent_group_concept_path);
 	                
 	            //if this is a new rule, we need to populate it
-	            if(ar.getGates().size() == 0) {
+				 if(ar.getGates() == null) {
+                	ar.setGates(new HashSet<AccessRule>());
 	            	ar.getGates().addAll(getGates(false, true, false));
+	            	
+	            	if(ar.getSubAccessRule() == null) {
+                  		ar.setSubAccessRule(new HashSet<AccessRule>());
+                  	}
 	            	ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
 	            	ar.getSubAccessRule().addAll(getPhenotypeSubRules(fence_harmonized_concept_path));
 	            	ar.getSubAccessRule().addAll(getTopmedRestrictedSubRules());
@@ -679,8 +698,14 @@ public class FENCEAuthenticationService {
             if(!consent_concept_path.contains("\\\\")){
            	 //these have to be escaped again so that jaxson can convert it correctly
            	consent_concept_path = consent_concept_path.replaceAll("\\\\", "\\\\\\\\");
-           	logger.debug(consent_concept_path);
+           	logger.debug("upsertTopmedPrivilege(): escaped parent consent path" + consent_concept_path);
            }
+            
+            if(fence_harmonized_concept_path != null && !fence_harmonized_concept_path.contains("\\\\")){
+	          	 //these have to be escaped again so that jaxson can convert it correctly
+	        	fence_harmonized_concept_path = fence_harmonized_concept_path.replaceAll("\\\\", "\\\\\\\\");
+	           	logger.debug("upsertTopmedPrivilege(): escaped harmonized consent path" + fence_harmonized_concept_path);
+            }
             
             // TODO: Change this to a mustache template
             String queryTemplateText = "{\"categoryFilters\": {\""
