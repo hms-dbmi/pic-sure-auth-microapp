@@ -349,6 +349,8 @@ public class FENCEAuthenticationService {
         //
         // OK... so, we need to do this for the query Template and scopes, but should NOT do this for the rules.
         //
+        // NOTE: I'm leaving this in here for now and removing the escaped values later.  TODO: fix me!
+        //
         if(concept_path != null) {
         	concept_path = concept_path.replaceAll("\\\\", "\\\\\\\\");
         }
@@ -601,10 +603,10 @@ public class FENCEAuthenticationService {
 	private Collection<? extends AccessRule> getPhenotypeRestrictedSubRules(String studyIdentifier, String consentCode, String alias, AccessRule parentRule) {
     	
     	Set<AccessRule> rules = new HashSet<AccessRule>();
-    	//Categorical filters not included, because they will always have the consent values (and possibly variant annotations)
-    	rules.add(createPhenotypeSubRule("DISALLOW_NUMERIC", alias + "_" + studyIdentifier+ "_" + consentCode, "$..numericFilters.[*]", AccessRule.TypeNaming.IS_EMPTY, "NUMERIC", false, parentRule));
-    	rules.add(createPhenotypeSubRule("DISALLOW_FIELDS", alias + "_" + studyIdentifier+ "_" + consentCode, "$..fields.[*]", AccessRule.TypeNaming.IS_EMPTY, "FIELDS", false, parentRule));
-    	rules.add(createPhenotypeSubRule("DISALLOW_REQUIRED_FIELDS", alias + "_" + studyIdentifier+ "_" + consentCode, "$..requiredFields.[*]", AccessRule.TypeNaming.IS_EMPTY, "REQUIRED_FIELDS", false, parentRule));
+    	//Categorical filters not included, because they will always have the consent values
+    	rules.add(createPhenotypeSubRule(null, alias + "_" + studyIdentifier+ "_" + consentCode, "$..numericFilters.[*]", AccessRule.TypeNaming.IS_EMPTY, "DISALLOW_NUMERIC", false, parentRule));
+    	rules.add(createPhenotypeSubRule(null, alias + "_" + studyIdentifier+ "_" + consentCode, "$..fields.[*]", AccessRule.TypeNaming.IS_EMPTY, "DISALLOW FIELDS", false, parentRule));
+    	rules.add(createPhenotypeSubRule(null, alias + "_" + studyIdentifier+ "_" + consentCode, "$..requiredFields.[*]", AccessRule.TypeNaming.IS_EMPTY, "DISALLOW_REQUIRED_FIELDS", false, parentRule));
     	
     	return rules;
 	}
@@ -643,7 +645,14 @@ public class FENCEAuthenticationService {
 	}
 	
 	 private AccessRule createPhenotypeSubRule(String conceptPath, String alias, String rule, int ruleType, String label, boolean useMapKey, AccessRule parentRule) {
-	        String ar_name = "AR_PHENO_"+alias + "_" + label;
+	        
+		 //remove double escape sequence from path evaluation expression
+		 	if(conceptPath != null && conceptPath.contains("\\\\")) {
+		 		//replaceall regex needs to be double escaped (again)
+		 		conceptPath = conceptPath.replaceAll("\\\\\\\\", "\\\\");
+		 	}
+		 
+		 	String ar_name = "AR_PHENO_"+alias + "_" + label;
 	        logger.info("upsertPhenotypeSubRule() Creating new access rule "+ar_name);
 	        AccessRule ar = new AccessRule();
 	        ar.setName(ar_name);
