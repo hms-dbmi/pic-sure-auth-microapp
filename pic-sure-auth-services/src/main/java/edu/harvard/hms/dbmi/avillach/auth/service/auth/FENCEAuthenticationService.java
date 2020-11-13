@@ -363,8 +363,6 @@ public class FENCEAuthenticationService {
         if(dataType != null && dataType.contains("P")) {
         	//insert clinical privs
             logger.info("addPrivileges() project:"+project_name+" consent_group:"+consent_group+" concept_path:"+concept_path);
-
-            // Add new privilege PRIV_FENCE_phs######_c# and PRIV_FENCE_phs######_c#_HARMONIZED
             privs.add(upsertClinicalPrivilege(project_name, projectAlias, consent_group, concept_path, false));
             
             //if harmonized study, also create harmonized privileges
@@ -451,7 +449,7 @@ public class FENCEAuthenticationService {
             		ar.setSubAccessRule(new HashSet<AccessRule>());
             	}
             	ar.getSubAccessRule().addAll(getAllowedQueryTypeRules(studyIdentifier, consent_group, projectAlias, ar));
-            	ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, consent_group, conceptPath, fence_parent_consent_group_concept_path, projectAlias, ar));
+            	ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, consent_group, conceptPath, projectAlias, ar));
             	ar.getSubAccessRule().addAll(getTopmedRestrictedSubRules(studyIdentifier, consent_group, projectAlias, ar));
             	accessruleRepo.merge(ar);
             }
@@ -462,8 +460,6 @@ public class FENCEAuthenticationService {
             	//harmonized data adds two ARs; one for _only_ harmonized, and one for a mix of harmonized and parent concepts
             	ar = createConsentAccessRule(studyIdentifier, consent_group, "PARENT_HARMONIZED", fence_harmonized_consent_group_concept_path, null);
                 
-                //if this is a new rule, we need to populate it
-
             	//if this is a new rule, we need to populate it
                 if(ar.getGates() == null) {
                 	ar.setGates(new HashSet<AccessRule>());
@@ -473,10 +469,9 @@ public class FENCEAuthenticationService {
                   		ar.setSubAccessRule(new HashSet<AccessRule>());
                   	}
                 	ar.getSubAccessRule().addAll(getAllowedQueryTypeRules(studyIdentifier, consent_group, projectAlias, ar));
-                	ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, consent_group,conceptPath, fence_parent_consent_group_concept_path, projectAlias, ar));
-            		ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, consent_group,fence_harmonized_concept_path, fence_harmonized_consent_group_concept_path, projectAlias, ar));
+                	ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, consent_group,conceptPath, projectAlias, ar));
+            		ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, consent_group,fence_harmonized_concept_path, projectAlias, ar));
             		ar.getSubAccessRule().addAll(getTopmedRestrictedSubRules(studyIdentifier, projectAlias, consent_group,ar));
-            		ar.getSubAccessRule().add(createConsentAccessRule(studyIdentifier, consent_group, "HARMONIZED_SUB_RULE", fence_harmonized_consent_group_concept_path, ar));
             		accessruleRepo.merge(ar);
                 }
                 accessrules.add(ar);
@@ -493,7 +488,7 @@ public class FENCEAuthenticationService {
                   		ar.setSubAccessRule(new HashSet<AccessRule>());
                   	}
 	            	ar.getSubAccessRule().addAll(getAllowedQueryTypeRules(studyIdentifier, projectAlias, consent_group, ar));
-	            	ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, consent_group, fence_harmonized_concept_path, fence_harmonized_consent_group_concept_path, projectAlias, ar));
+	            	ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, consent_group, fence_harmonized_concept_path, projectAlias, ar));
 	            	ar.getSubAccessRule().addAll(getTopmedRestrictedSubRules(studyIdentifier, consent_group, projectAlias, ar));
 	            	accessruleRepo.merge(ar);
 	            }
@@ -581,12 +576,16 @@ public class FENCEAuthenticationService {
         return ar;
     }
 
-	private Collection<? extends AccessRule> getPhenotypeSubRules(String studyIdentifier, String consentCode, String conceptPath, String consentPath, String alias, AccessRule parentRule) {
+	private Collection<? extends AccessRule> getPhenotypeSubRules(String studyIdentifier, String consentCode, String conceptPath, String alias, AccessRule parentRule) {
     	
-		
     	Set<AccessRule> rules = new HashSet<AccessRule>();
     	//categorical filters will always contain at least one entry (for the consent groups); it will never be empty
-    	rules.add(createPhenotypeSubRule(consentPath, alias+ "_" + studyIdentifier+ "_" + consentCode, "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CONSENTS", true, parentRule));
+    	rules.add(createPhenotypeSubRule(fence_parent_consent_group_concept_path, "ALLOW_PARENT_CONSENT", "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CONSENTS", true, parentRule));
+    	rules.add(createPhenotypeSubRule(fence_harmonized_consent_group_concept_path, "ALLOW_HARMONIZED_CONSENT", "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CONSENTS", true, parentRule));
+    	rules.add(createPhenotypeSubRule(fence_topmed_consent_group_concept_path, "ALLOW_TOPMED_CONSENT", "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CONSENTS", true, parentRule));
+    	
+    	
+    	
     	rules.add(createPhenotypeSubRule(conceptPath, alias+ "_" + studyIdentifier+ "_" + consentCode, "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true, parentRule));
     	rules.add(createPhenotypeSubRule(conceptPath, alias+ "_" + studyIdentifier+ "_" + consentCode, "$..numericFilters", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "NUMERIC", true, parentRule));
     	rules.add(createPhenotypeSubRule(conceptPath, alias+ "_" + studyIdentifier+ "_" + consentCode, "$..fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false, parentRule));
@@ -611,21 +610,6 @@ public class FENCEAuthenticationService {
     	return rules;
 	}
 	
-	private Collection<? extends AccessRule> getAllowVariantAnnotationsSubRules(String studyIdentifier, String consentCode, String alias, AccessRule parentRule) {
-		Set<AccessRule> rules = new HashSet<AccessRule>();
-		
-		String variantColumns = JAXRSConfiguration.variantAnnotationColumns;
-		if(variantColumns == null || variantColumns.isEmpty()) {
-			logger.debug("getAllowVariantAnnotationsSubRules(): No variant annotations: " + variantColumns);
-			return rules;
-		}
-		
-		for(String annotationPath : variantColumns.split(",")) {
-			rules.add(createPhenotypeSubRule(annotationPath, alias + "_" + studyIdentifier+ "_" + consentCode, "$..variantInfoFilters.[*]", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true, parentRule));
-		}
-    	return rules;
-	}
-
 	/**
 	 * Return a set of gates that identify which consent values have been provided.  the boolean parameters indicate
 	 * if a value in the specified consent location should allow this gate to pass.
@@ -756,7 +740,6 @@ public class FENCEAuthenticationService {
             	}
             	ar.getSubAccessRule().addAll(getAllowedQueryTypeRules(studyIdentifier, consent_group, projectAlias, ar));
         		ar.getSubAccessRule().addAll(getPhenotypeRestrictedSubRules(studyIdentifier, consent_group, projectAlias, ar));
-        		ar.getSubAccessRule().addAll(getAllowVariantAnnotationsSubRules(studyIdentifier, consent_group, projectAlias, ar));
         		accessruleRepo.merge(ar);
             }
             accessrules.add(ar);
@@ -773,9 +756,7 @@ public class FENCEAuthenticationService {
                 		ar.setSubAccessRule(new HashSet<AccessRule>());
                 	}
                 	ar.getSubAccessRule().addAll(getAllowedQueryTypeRules(studyIdentifier, consent_group, projectAlias, ar));
-            		ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, consent_group, parentConceptPath, fence_parent_consent_group_concept_path, projectAlias, ar));
-            		ar.getSubAccessRule().add(createConsentAccessRule(studyIdentifier, consent_group, "PARENT_SUB_RULE", fence_parent_consent_group_concept_path, ar));
-            		ar.getSubAccessRule().addAll(getAllowVariantAnnotationsSubRules(studyIdentifier, consent_group, projectAlias, ar));
+            		ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, consent_group, parentConceptPath, projectAlias, ar));
             		accessruleRepo.merge(ar);
                 }
                 accessrules.add(ar);
@@ -794,9 +775,7 @@ public class FENCEAuthenticationService {
                      		ar.setSubAccessRule(new HashSet<AccessRule>());
                      	}
                      	ar.getSubAccessRule().addAll(getAllowedQueryTypeRules(studyIdentifier, consent_group, projectAlias, ar));
-                		ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, consent_group, fence_harmonized_concept_path, fence_harmonized_consent_group_concept_path, projectAlias, ar));
-                		ar.getSubAccessRule().add(createConsentAccessRule(studyIdentifier, consent_group, "HARMONIZED_SUB_RULE", fence_harmonized_consent_group_concept_path, ar));
-                		ar.getSubAccessRule().addAll(getAllowVariantAnnotationsSubRules(studyIdentifier, consent_group, projectAlias, ar));
+                		ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, consent_group, fence_harmonized_concept_path, projectAlias, ar));
                 		accessruleRepo.merge(ar);
                     }
                     accessrules.add(ar);
@@ -813,10 +792,8 @@ public class FENCEAuthenticationService {
                       		ar.setSubAccessRule(new HashSet<AccessRule>());
                       	}
                       	ar.getSubAccessRule().addAll(getAllowedQueryTypeRules(studyIdentifier, consent_group, projectAlias, ar));
-                    	ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, consent_group, parentConceptPath,  fence_parent_consent_group_concept_path, projectAlias, ar));
-                		ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, consent_group, fence_harmonized_concept_path,  fence_harmonized_consent_group_concept_path, projectAlias, ar));
-                		ar.getSubAccessRule().add(createConsentAccessRule(studyIdentifier, consent_group, "PARENT_SUB_RULE", fence_parent_consent_group_concept_path, ar));
-                		ar.getSubAccessRule().add(createConsentAccessRule(studyIdentifier, consent_group, "HARMONIZED_SUB_RULE", fence_harmonized_consent_group_concept_path, ar));
+                    	ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, consent_group, parentConceptPath,  projectAlias, ar));
+                		ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, consent_group, fence_harmonized_concept_path,  projectAlias, ar));
                 		accessruleRepo.merge(ar);
                     }
                     accessrules.add(ar);

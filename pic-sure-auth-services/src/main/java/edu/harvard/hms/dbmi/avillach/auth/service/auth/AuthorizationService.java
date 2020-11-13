@@ -268,7 +268,6 @@ public class AuthorizationService {
             AccessRule accessRule = null;
 //            logger.debug("XXXX  merging " + accessRulesSet.size() + " elements from map entry");
             for (AccessRule innerAccessRule : accessRulesSet){
-            	logger.trace("merging rule " + innerAccessRule.getName());
                 accessRule = mergeAccessRules(accessRule, innerAccessRule);
             }
             // if the new merged accessRule exists, add it into the final result set
