@@ -1,18 +1,18 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.auth;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jayway.jsonpath.JsonPath;
-import com.jayway.jsonpath.PathNotFoundException;
-import edu.harvard.hms.dbmi.avillach.auth.data.entity.AccessRule;
-import edu.harvard.hms.dbmi.avillach.auth.data.entity.Application;
-import edu.harvard.hms.dbmi.avillach.auth.data.entity.Privilege;
-import edu.harvard.hms.dbmi.avillach.auth.data.entity.User;
+import java.util.*;
+import java.util.stream.Collectors;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jayway.jsonpath.*;
+
+import edu.harvard.hms.dbmi.avillach.auth.data.entity.*;
+import net.minidev.json.JSONArray;
+import net.minidev.json.JSONObject;
 
 /**
  * This class handles authorization activities in the project. It decides
@@ -320,11 +320,11 @@ public class AuthorizationService {
      * <br>
      * All rules (rules and subAccessRules) under one accessRule are AND relationship .
      *
-     * @param parsedRequestBody
+     * @param requestBody
      * @param accessRule
      * @return
      */
-	protected boolean evaluateAccessRule(Object parsedRequestBody, AccessRule accessRule) {
+	protected boolean evaluateAccessRule(Object requestBody, AccessRule accessRule) {
 //	    logger.debug("evaluateAccessRule() starting with:");
 //	    logger.debug(parsedRequestBody.toString());
 	    logger.debug("evaluateAccessRule()  access rule:"+accessRule.getName());
@@ -347,7 +347,7 @@ public class AuthorizationService {
 		        // All gates are AND relationship
                 // means one fails all fail
                 for (AccessRule gate : gates){
-                    if (!evaluateAccessRule(parsedRequestBody, gate)){
+                    if (!evaluateAccessRule(requestBody, gate)){
                         logger.error("evaluateAccessRule() gate "+gate.getName()+" failed: " + gate.getRule() + " ____ " + gate.getValue());
                         gatesPassed = false;
                         break;
@@ -362,7 +362,7 @@ public class AuthorizationService {
                 // means one passes all pass
 		        gatesPassed = false;
                 for (AccessRule gate : gates){
-                    if (evaluateAccessRule(parsedRequestBody, gate)){
+                    if (evaluateAccessRule(requestBody, gate)){
                         logger.debug("evaluateAccessRule() gate "+gate.getName()+" passed ");
                         gatesPassed = true;
                         break;
@@ -381,8 +381,8 @@ public class AuthorizationService {
         }
 
         if (gatesPassed) {
-        	logger.debug("Gates passed.  Request Body: " + parsedRequestBody);
-            if (extractAndCheckRule(accessRule, parsedRequestBody) == false) {
+        	logger.debug("Gates passed.  Request Body: " + requestBody);
+            if (extractAndCheckRule(accessRule, requestBody) == false) {
             	logger.debug("Query Rejected by rule " + accessRule.getRule() + " :: " + accessRule.getType() + " :: " + accessRule.getValue() );
                 return false;
             }
@@ -391,7 +391,7 @@ public class AuthorizationService {
                 	//Now we neeed to merge the sub rules; they can overlap as well!
                     Set<AccessRule> mergedSubRules = preProcessARBySortedKeys(accessRule.getSubAccessRule());
                     for (AccessRule subAccessRule : mergedSubRules) {
-                        if (extractAndCheckRule(subAccessRule, parsedRequestBody) == false) {
+                        if (extractAndCheckRule(subAccessRule, requestBody) == false) {
                         	logger.debug("Query Rejected by rule " + subAccessRule.getRule() + " :: " + subAccessRule.getType() + " :: " + subAccessRule.getValue() );
                             return false;
                         }
@@ -415,24 +415,40 @@ public class AuthorizationService {
      * Note: if rule is empty, the check will always return true
      *
      * @param accessRule
-     * @param parsedRequestBody
+     * @param requestBody
      * @return
      */
-	private boolean extractAndCheckRule(AccessRule accessRule, Object parsedRequestBody){
+	private boolean extractAndCheckRule(AccessRule accessRule, Object requestBody){
         String rule = accessRule.getRule();
 
         if (rule == null || rule.isEmpty())
             return true;
 
-        Object requestBodyValue;
+        Object parsedRequest;
 
         try {
         	logger.debug("extractAndCheckRule() " + accessRule.getMergedName()
         			+ ": "
         			+ "rule: " + rule );
-            requestBodyValue = JsonPath.parse(parsedRequestBody).read(rule);
+        	
+        	parsedRequest = JsonPath.parse(requestBody).read(rule);
+        	
+        	//OK, so jsonpath will always return a list even when we want a map (to check keys)
+        	// so here's some janky code!
+        	if(accessRule.getCheckMapNode()) {
+//	        	Configuration conf = Configuration.defaultConfiguration();
+//	        	conf.addOptions(Option.AS_PATH_LIST);
+//	        	parsedRequest = JsonPath.using(conf).parse(requestBody).read(rule);
+        		
+        		if(parsedRequest instanceof JSONArray 
+        				&& ((JSONArray)parsedRequest).size() == 1 
+        				&& ((JSONArray)parsedRequest).get(0) instanceof JSONObject) {
+        				parsedRequest = ((JSONArray)parsedRequest).get(0);
+        		}
+        		
+        	}
         } catch (PathNotFoundException ex){
-            logger.debug("extractAndCheckRule() -> JsonPath.parse().read() throws exception with parsedRequestBody - {} : {} - {}", parsedRequestBody, ex.getClass().getSimpleName(), ex.getMessage());
+            logger.debug("extractAndCheckRule() -> JsonPath.parse().read() throws exception with parsedRequestBody - {} : {} - {}", requestBody, ex.getClass().getSimpleName(), ex.getMessage());
             return false;
         }
 
@@ -441,10 +457,10 @@ public class AuthorizationService {
         int accessRuleType = accessRule.getType();
         if (accessRuleType == AccessRule.TypeNaming.IS_EMPTY
                 || accessRuleType == AccessRule.TypeNaming.IS_NOT_EMPTY){
-            if (requestBodyValue == null
-                    || (requestBodyValue instanceof String && ((String)requestBodyValue).isEmpty())
-                    || (requestBodyValue instanceof Collection && ((Collection)requestBodyValue).isEmpty())
-                    || (requestBodyValue instanceof Map && ((Map)requestBodyValue).isEmpty())){
+            if (parsedRequest == null
+                    || (parsedRequest instanceof String && ((String)parsedRequest).isEmpty())
+                    || (parsedRequest instanceof Collection && ((Collection)parsedRequest).isEmpty())
+                    || (parsedRequest instanceof Map && ((Map)parsedRequest).isEmpty())){
                 if (accessRuleType == AccessRule.TypeNaming.IS_EMPTY)
                     return true;
                 else
@@ -457,7 +473,7 @@ public class AuthorizationService {
             }
         }
 
-        return evaluateNode(requestBodyValue, accessRule);
+        return evaluateNode(parsedRequest, accessRule);
     }
 
 
