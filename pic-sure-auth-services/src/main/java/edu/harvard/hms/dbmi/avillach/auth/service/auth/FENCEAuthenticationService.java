@@ -548,8 +548,8 @@ public class FENCEAuthenticationService {
 
 	private Collection<? extends AccessRule> getTopmedRestrictedSubRules(String studyIdentifier, String consentCode, String alias,  AccessRule parentRule) {
     	Set<AccessRule> rules = new HashSet<AccessRule>();
-    	rules.add(createTopmedRestrictedSubRule(alias+ "_" + studyIdentifier+ "_" + consentCode, "CATEGORICAL", "$.query.variantInfoFilters[*].categoryVariantInfoFilters.*", parentRule));
-    	rules.add(createTopmedRestrictedSubRule(alias+ "_" + studyIdentifier+ "_" + consentCode, "NUMERIC", "$.query.variantInfoFilters[*].numericVariantInfoFilters.*", parentRule));
+    	rules.add(createTopmedRestrictedSubRule(alias+ "_" + studyIdentifier+ "_" + consentCode, "CATEGORICAL", "$..variantInfoFilters[*].categoryVariantInfoFilters.*", parentRule));
+    	rules.add(createTopmedRestrictedSubRule(alias+ "_" + studyIdentifier+ "_" + consentCode, "NUMERIC", "$..variantInfoFilters[*].numericVariantInfoFilters.*", parentRule));
     	
     	return rules;
 	}
@@ -578,11 +578,12 @@ public class FENCEAuthenticationService {
 
 	private Collection<? extends AccessRule> getPhenotypeSubRules(String studyIdentifier, String consentCode, String conceptPath, String consentPath, String alias, AccessRule parentRule) {
     	
+		
     	Set<AccessRule> rules = new HashSet<AccessRule>();
     	//categorical filters will always contain at least one entry (for the consent groups); it will never be empty
-    	rules.add(createPhenotypeSubRule(consentPath, alias+ "_" + studyIdentifier+ "_" + consentCode, "$..categoryFilters.[*]", AccessRule.TypeNaming.ALL_CONTAINS, "CONSENTS", true, parentRule));
-    	rules.add(createPhenotypeSubRule(conceptPath, alias+ "_" + studyIdentifier+ "_" + consentCode, "$..categoryFilters.[*]", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true, parentRule));
-    	rules.add(createPhenotypeSubRule(conceptPath, alias+ "_" + studyIdentifier+ "_" + consentCode, "$..numericFilters.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "NUMERIC", true, parentRule));
+    	rules.add(createPhenotypeSubRule(consentPath, alias+ "_" + studyIdentifier+ "_" + consentCode, "$..categoryFilters.[*]", AccessRule.TypeNaming.ALL_CONTAINS, "CONSENTS", false, parentRule));
+    	rules.add(createPhenotypeSubRule(conceptPath, alias+ "_" + studyIdentifier+ "_" + consentCode, "$..categoryFilters.[*]", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", false, parentRule));
+    	rules.add(createPhenotypeSubRule(conceptPath, alias+ "_" + studyIdentifier+ "_" + consentCode, "$..numericFilters.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "NUMERIC", false, parentRule));
     	rules.add(createPhenotypeSubRule(conceptPath, alias+ "_" + studyIdentifier+ "_" + consentCode, "$..fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false, parentRule));
     	rules.add(createPhenotypeSubRule(conceptPath, alias+ "_" + studyIdentifier+ "_" + consentCode, "$..requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQUIRED_FIELDS", false, parentRule));
     	
@@ -615,7 +616,7 @@ public class FENCEAuthenticationService {
 		}
 		
 		for(String annotationPath : variantColumns.split(",")) {
-			rules.add(createPhenotypeSubRule(annotationPath, alias + "_" + studyIdentifier+ "_" + consentCode, "$..categoryFilters.[*]", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true, parentRule));
+			rules.add(createPhenotypeSubRule(annotationPath, alias + "_" + studyIdentifier+ "_" + consentCode, "$..variantInfoFilters.[*]", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", false, parentRule));
 		}
     	return rules;
 	}
