@@ -274,11 +274,6 @@ public class AuthorizationService {
             // if the new merged accessRule exists, add it into the final result set
             if (accessRule != null) {
                 accessRules.add(accessRule);
-                
-                //Now we neeed to merge the sub rules; they can overlap as well!
-                if(!accessRule.getSubAccessRule().isEmpty()) {
-                	accessRule.setMergedSubRules(preProcessARBySortedKeys(accessRule.getSubAccessRule()));
-                }
             }
         }
 
@@ -393,7 +388,9 @@ public class AuthorizationService {
             }
             else {
                 if (accessRule.getSubAccessRule() != null) {
-                    for (AccessRule subAccessRule : accessRule.getSubAccessRule()) {
+                	//Now we neeed to merge the sub rules; they can overlap as well!
+                    Set<AccessRule> mergedSubRules = preProcessARBySortedKeys(accessRule.getSubAccessRule());
+                    for (AccessRule subAccessRule : mergedSubRules) {
                         if (extractAndCheckRule(subAccessRule, parsedRequestBody) == false) {
                         	logger.debug("Query Rejected by rule " + subAccessRule.getRule() + " :: " + subAccessRule.getType() + " :: " + subAccessRule.getValue() );
                             return false;
