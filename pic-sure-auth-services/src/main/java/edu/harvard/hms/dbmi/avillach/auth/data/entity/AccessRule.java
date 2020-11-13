@@ -110,11 +110,6 @@ public class AccessRule extends BaseEntity {
     @Transient
     private Set<String> mergedValues = new HashSet<>();
     
-    
-    @JsonIgnore
-    @Transient
-    private Set<AccessRule> mergedSubRules = new HashSet<>();
-
     /**
      * This attribute will not be seen by either endpoint users or database.
      * It is a intermediate product that generated on the fly for supporting
@@ -281,14 +276,6 @@ public class AccessRule extends BaseEntity {
         this.mergedValues = mergedValues;
     }
     
-    public Set<AccessRule> getMergedSubRules() {
-		return this.mergedSubRules;
-	}
-    
-	public void setMergedSubRules(Set<AccessRule> mergedSubRules) {
-		this.mergedSubRules = mergedSubRules;
-	}
-
     public String getMergedName() {
         return mergedName;
     }

@@ -225,8 +225,6 @@ public class JAXRSConfiguration extends Application {
                     fence_standard_access_rules = "GATE_ONLY_INFO,GATE_ONLY_QUERY,GATE_ONLY_SEARCH,GATE_FENCE_CONSENT_REQUIRED";
                 }
                 
-                
-                
                 fence_allowed_query_types = (String) ctx.lookup("java:global/fence_allowed_query_types");
                 if (fence_allowed_query_types.isEmpty()) {
                     logger.error("checkIDPProvider() Empty access rules from standalone.xml. Using defaults.");
