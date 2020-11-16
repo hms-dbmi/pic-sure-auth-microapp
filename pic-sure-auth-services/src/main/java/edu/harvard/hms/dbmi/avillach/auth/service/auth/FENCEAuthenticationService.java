@@ -64,8 +64,8 @@ public class FENCEAuthenticationService {
     //read the fence_mapping.json into this object to improve lookup speeds
     private static Map<String, Map> _projectMap;
     
-    private static final String parentAccessionField = "_Parent Study Accession with Subject ID";
-    private static final String topmedAccessionField = "_Topmed Study Accession with Subject ID";
+    private static final String parentAccessionField = "\\\\_Parent Study Accession with Subject ID\\\\";
+    private static final String topmedAccessionField = "\\\\_Topmed Study Accession with Subject ID\\\\";
 
     @PostConstruct
 	public void initializeFenceService() {
