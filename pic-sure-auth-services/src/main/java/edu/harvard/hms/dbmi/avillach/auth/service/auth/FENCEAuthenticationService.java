@@ -1,13 +1,13 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.auth;
 
-import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_parent_consent_group_concept_path;
 import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_harmonized_concept_path;
 import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_harmonized_consent_group_concept_path;
+import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_parent_consent_group_concept_path;
 import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_standard_access_rules;
 import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_topmed_consent_group_concept_path;
+import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_no_access_role_name;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.*;
 
 import javax.annotation.PostConstruct;
@@ -23,9 +23,6 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.jayway.jsonpath.DocumentContext;
-import com.jayway.jsonpath.JsonPath;
 
 import edu.harvard.dbmi.avillach.util.HttpClientUtil;
 import edu.harvard.dbmi.avillach.util.response.PICSUREResponse;
@@ -35,7 +32,7 @@ import edu.harvard.hms.dbmi.avillach.auth.data.repository.*;
 import edu.harvard.hms.dbmi.avillach.auth.utils.AuthUtils;
 
 public class FENCEAuthenticationService {
-    private Logger logger = LoggerFactory.getLogger(FENCEAuthenticationService.class);
+	private Logger logger = LoggerFactory.getLogger(FENCEAuthenticationService.class);
 
     @Inject
     UserRepository userRepo;
@@ -66,6 +63,9 @@ public class FENCEAuthenticationService {
     
     //read the fence_mapping.json into this object to improve lookup speeds
     private static Map<String, Map> _projectMap;
+    
+    private static final String parentAccessionField = "_Parent Study Accession with Subject ID";
+    private static final String topmedAccessionField = "_Topmed Study Accession with Subject ID";
 
     @PostConstruct
 	public void initializeFenceService() {
@@ -218,6 +218,22 @@ public class FENCEAuthenticationService {
                 //It is a an array of strings, like this: ["read-storage","read"]
                 //logger.debug("getFENCEProfile() object:"+role_object.toString());
         }
+        
+        if(current_user.getRoles() != null && current_user.getRoles().size() == 0) {
+        	//User was authorized by fence, but has no study access.
+        	//add role to allow login, but deny all queries
+        	
+        	
+        	// Create the Role in the repository, if it does not exist. Otherwise, add it.
+            Role noAccessRole = roleRepo.getUniqueResultByColumn("name", fence_no_access_role_name);
+            if (noAccessRole != null) {
+                // Role already exists
+            	current_user.getRoles().add(noAccessRole);
+            } else {
+            	logger.warn("Unable to fine fence NO ACCESS role");
+            }
+        }
+        
         try {
             userRepo.changeRole(current_user, current_user.getRoles());
             logger.debug("upsertRole() updated user, who now has "+current_user.getRoles().size()+" roles.");
@@ -425,6 +441,7 @@ public class FENCEAuthenticationService {
                     +studyIdentifier+"."+consent_group
                     +"\"]},"
                     +"\"numericFilters\":{},\"requiredFields\":[],"
+                    +"\"fields\":[\"" + parentAccessionField + "\"],"
                     +"\"variantInfoFilters\":[{\"categoryVariantInfoFilters\":{},\"numericVariantInfoFilters\":{}}],"
                     +"\"expectedResultType\": \"COUNT\""
                     +"}";
@@ -584,6 +601,8 @@ public class FENCEAuthenticationService {
     	rules.add(createPhenotypeSubRule(fence_harmonized_consent_group_concept_path, "ALLOW_HARMONIZED_CONSENT", "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CONSENTS", true, parentRule));
     	rules.add(createPhenotypeSubRule(fence_topmed_consent_group_concept_path, "ALLOW_TOPMED_CONSENT", "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CONSENTS", true, parentRule));
     	
+    	rules.add(createPhenotypeSubRule(parentAccessionField, alias+ "_" + studyIdentifier+ "_" + consentCode, "$..fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false, parentRule));
+    	rules.add(createPhenotypeSubRule(topmedAccessionField, alias+ "_" + studyIdentifier+ "_" + consentCode, "$..fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false, parentRule));
     	
     	
     	rules.add(createPhenotypeSubRule(conceptPath, alias+ "_" + studyIdentifier+ "_" + consentCode, "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true, parentRule));
@@ -602,9 +621,16 @@ public class FENCEAuthenticationService {
 	private Collection<? extends AccessRule> getPhenotypeRestrictedSubRules(String studyIdentifier, String consentCode, String alias, AccessRule parentRule) {
     	
     	Set<AccessRule> rules = new HashSet<AccessRule>();
-    	//Categorical filters not included, because they will always have the consent values
+    	//categorical filters will always contain at least one entry (for the consent groups); it will never be empty
+    	rules.add(createPhenotypeSubRule(fence_parent_consent_group_concept_path, "ALLOW_PARENT_CONSENT", "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CONSENTS", true, parentRule));
+    	rules.add(createPhenotypeSubRule(fence_harmonized_consent_group_concept_path, "ALLOW_HARMONIZED_CONSENT", "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CONSENTS", true, parentRule));
+    	rules.add(createPhenotypeSubRule(fence_topmed_consent_group_concept_path, "ALLOW_TOPMED_CONSENT", "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CONSENTS", true, parentRule));
+    	
+    	rules.add(createPhenotypeSubRule(parentAccessionField, alias+ "_" + studyIdentifier+ "_" + consentCode, "$..fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false, parentRule));
+    	rules.add(createPhenotypeSubRule(topmedAccessionField, alias+ "_" + studyIdentifier+ "_" + consentCode, "$..fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false, parentRule));
+    	
     	rules.add(createPhenotypeSubRule(null, alias + "_" + studyIdentifier+ "_" + consentCode, "$..numericFilters.[*]", AccessRule.TypeNaming.IS_EMPTY, "DISALLOW_NUMERIC", false, parentRule));
-    	rules.add(createPhenotypeSubRule(null, alias + "_" + studyIdentifier+ "_" + consentCode, "$..fields.[*]", AccessRule.TypeNaming.IS_EMPTY, "DISALLOW FIELDS", false, parentRule));
+//    	rules.add(createPhenotypeSubRule(null, alias + "_" + studyIdentifier+ "_" + consentCode, "$..fields.[*]", AccessRule.TypeNaming.IS_EMPTY, "DISALLOW FIELDS", false, parentRule));
     	rules.add(createPhenotypeSubRule(null, alias + "_" + studyIdentifier+ "_" + consentCode, "$..requiredFields.[*]", AccessRule.TypeNaming.IS_EMPTY, "DISALLOW_REQUIRED_FIELDS", false, parentRule));
     	
     	return rules;
@@ -698,8 +724,9 @@ public class FENCEAuthenticationService {
                     +consent_concept_path
                     +"\":[\""
                     +studyIdentifier+"."+consent_group
-                    +"\"]},"
+                    +"\"]}," 
                     +"\"numericFilters\":{},\"requiredFields\":[],"
+                    +"\"fields\":[\"" + topmedAccessionField + "\"],"
                     +"\"variantInfoFilters\":[{\"categoryVariantInfoFilters\":{},\"numericVariantInfoFilters\":{}}],"
                     +"\"expectedResultType\": \"COUNT\""
                     +"}";
