@@ -275,12 +275,14 @@ public class UserService extends BaseEntityService<User> {
         if (privileges != null && !privileges.isEmpty()){
             Set<String> scopes = new TreeSet<>();
             privileges.stream().forEach(privilege -> {
-                try {
-                    Arrays.stream(objectMapper.readValue(privilege.getQueryScope(), String[].class))
-                            .forEach(scopeList-> scopes.addAll(Arrays.asList(scopeList)));
-                } catch (JsonProcessingException e) {
-                    logger.error("Parsing issue for privilege " + privilege.getUuid() + " queryScope", e);
-                }
+            	if(privilege.getQueryScope() != null && !privilege.getQueryScope().isEmpty()) {
+	                try {
+	                    Arrays.stream(objectMapper.readValue(privilege.getQueryScope(), String[].class))
+	                            .forEach(scopeList-> scopes.addAll(Arrays.asList(scopeList)));
+	                } catch (JsonProcessingException e) {
+	                    logger.error("Parsing issue for privilege " + privilege.getUuid() + " queryScope", e);
+	                }
+            	}
             });
             userForDisplay.setQueryScopes(scopes);
         }
