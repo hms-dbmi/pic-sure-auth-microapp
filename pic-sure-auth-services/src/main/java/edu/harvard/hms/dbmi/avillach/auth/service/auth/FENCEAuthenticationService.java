@@ -66,6 +66,19 @@ public class FENCEAuthenticationService {
     
     private static final String parentAccessionField = "\\\\_Parent Study Accession with Subject ID\\\\";
     private static final String topmedAccessionField = "\\\\_Topmed Study Accession with Subject ID\\\\";
+    
+    private static final String[] underscoreFields = new String[] {
+    		parentAccessionField,
+    		topmedAccessionField,
+    		fence_harmonized_consent_group_concept_path,
+    		fence_parent_consent_group_concept_path,
+    		fence_topmed_consent_group_concept_path,
+    		"\\\\_VCF Sample Id\\\\",
+    		"\\\\_studies\\\\",
+    		"\\\\_parent_consents\\\\",  //parent consents not used for auth (use combined _consents)
+    		"\\\\_Consents\\\\"   ///old _Consents\Short Study... path no longer used, but still present in examples.
+    	
+    };
 
     @PostConstruct
 	public void initializeFenceService() {
@@ -601,9 +614,9 @@ public class FENCEAuthenticationService {
     	rules.add(createPhenotypeSubRule(fence_harmonized_consent_group_concept_path, "ALLOW_HARMONIZED_CONSENT", "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CONSENTS", true, parentRule));
     	rules.add(createPhenotypeSubRule(fence_topmed_consent_group_concept_path, "ALLOW_TOPMED_CONSENT", "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CONSENTS", true, parentRule));
     	
-    	rules.add(createPhenotypeSubRule(parentAccessionField, alias+ "_" + studyIdentifier+ "_" + consentCode, "$..fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false, parentRule));
-    	rules.add(createPhenotypeSubRule(topmedAccessionField, alias+ "_" + studyIdentifier+ "_" + consentCode, "$..fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false, parentRule));
-    	
+    	for(String underscorePath : underscoreFields ) {
+    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW_UNDERSCORE_FIELDS", "$..fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false, parentRule));
+    	}
     	
     	rules.add(createPhenotypeSubRule(conceptPath, alias+ "_" + studyIdentifier+ "_" + consentCode, "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true, parentRule));
     	rules.add(createPhenotypeSubRule(conceptPath, alias+ "_" + studyIdentifier+ "_" + consentCode, "$..numericFilters", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "NUMERIC", true, parentRule));
@@ -626,8 +639,9 @@ public class FENCEAuthenticationService {
     	rules.add(createPhenotypeSubRule(fence_harmonized_consent_group_concept_path, "ALLOW_HARMONIZED_CONSENT", "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CONSENTS", true, parentRule));
     	rules.add(createPhenotypeSubRule(fence_topmed_consent_group_concept_path, "ALLOW_TOPMED_CONSENT", "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CONSENTS", true, parentRule));
     	
-    	rules.add(createPhenotypeSubRule(parentAccessionField, alias+ "_" + studyIdentifier+ "_" + consentCode, "$..fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false, parentRule));
-    	rules.add(createPhenotypeSubRule(topmedAccessionField, alias+ "_" + studyIdentifier+ "_" + consentCode, "$..fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false, parentRule));
+    	for(String underscorePath : underscoreFields ) {
+    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW_UNDERSCORE_FIELDS", "$..fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false, parentRule));
+    	}
     	
     	rules.add(createPhenotypeSubRule(null, alias + "_" + studyIdentifier+ "_" + consentCode, "$..numericFilters.[*]", AccessRule.TypeNaming.IS_EMPTY, "DISALLOW_NUMERIC", false, parentRule));
 //    	rules.add(createPhenotypeSubRule(null, alias + "_" + studyIdentifier+ "_" + consentCode, "$..fields.[*]", AccessRule.TypeNaming.IS_EMPTY, "DISALLOW FIELDS", false, parentRule));
