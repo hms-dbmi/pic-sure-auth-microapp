@@ -1,7 +1,6 @@
 package edu.harvard.hms.dbmi.avillach.auth.data.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import edu.harvard.dbmi.avillach.data.entity.BaseEntity;
 
 import javax.persistence.*;
@@ -154,13 +153,14 @@ public class AccessRule extends BaseEntity {
     @Column(name = "isEvaluateOnlyByGates")
     private Boolean evaluateOnlyByGates;
 
-    @ManyToOne
-    private AccessRule subAccessRuleParent;
 
     /**
      * introduce sub-accessRule to enable the ability of more complex problem
      */
-    @OneToMany(mappedBy = "subAccessRuleParent")
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(name = "accessRule_subRule",
+            joinColumns = {@JoinColumn(name = "accessRule_id", nullable = false, updatable = false)},
+            inverseJoinColumns = {@JoinColumn(name = "subRule_id", nullable = false, updatable = false)})
     private Set<AccessRule> subAccessRule;
 
     /**
@@ -216,16 +216,6 @@ public class AccessRule extends BaseEntity {
 
     public void setDescription(String description) {
         this.description = description;
-    }
-
-    @JsonIgnore
-    public AccessRule getSubAccessRuleParent() {
-        return subAccessRuleParent;
-    }
-
-    @JsonProperty("subAccessRuleParent")
-    public void setSubAccessRuleParent(AccessRule subAccessRuleParent) {
-        this.subAccessRuleParent = subAccessRuleParent;
     }
 
     public Set<AccessRule> getGates() {
