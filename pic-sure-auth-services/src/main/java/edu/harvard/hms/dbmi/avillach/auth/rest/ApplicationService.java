@@ -38,7 +38,7 @@ import static edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming.AuthRoleNaming
 @Path("/application")
 public class ApplicationService extends BaseEntityService<Application> {
 
-	private static final long ONE_YEAR = 1000L * 60 * 60 * 24 * 365;
+//	private static final long ONE_YEAR = 1000L * 60 * 60 * 24 * 365;
 
 	Logger logger = LoggerFactory.getLogger(ApplicationService.class);
 
@@ -78,7 +78,7 @@ public class ApplicationService extends BaseEntityService<Application> {
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Path("/")
 	public Response addApplication(
-            @ApiParam(required = true, value = "A list of AccessRule in JSON format")
+            @ApiParam(required = true, value = "A list of Applications in JSON format")
             List<Application> applications){
 		checkAssociation(applications);
 		List<Application> appEntities = addOrUpdate(applications, true, applicationRepo);
@@ -101,7 +101,7 @@ public class ApplicationService extends BaseEntityService<Application> {
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Path("/")
 	public Response updateApplication(
-            @ApiParam(required = true, value = "A list of AccessRule with fields to be updated in JSON format")
+            @ApiParam(required = true, value = "A list of Applications with fields to be updated in JSON format")
             List<Application> applications){
 		checkAssociation(applications);
 		return updateEntity(applications, applicationRepo);
