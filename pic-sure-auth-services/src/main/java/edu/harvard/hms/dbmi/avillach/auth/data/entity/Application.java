@@ -1,5 +1,6 @@
 package edu.harvard.hms.dbmi.avillach.auth.data.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import edu.harvard.dbmi.avillach.data.entity.BaseEntity;
 
@@ -23,6 +24,7 @@ public class Application extends BaseEntity implements Principal {
     private String url;
     private boolean enable = true;
 
+    @JsonIgnore  //IGNORE this is BDC json - it's not used in the front end at all and takes ages to load
     @OneToMany(mappedBy = "application",
             fetch = FetchType.LAZY,
             cascade = CascadeType.ALL,
