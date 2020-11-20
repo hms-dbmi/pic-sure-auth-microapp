@@ -2,6 +2,9 @@ package edu.harvard.hms.dbmi.avillach.auth.rest;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+
 import edu.harvard.dbmi.avillach.util.exception.ApplicationException;
 import edu.harvard.dbmi.avillach.util.exception.ProtocolException;
 import edu.harvard.dbmi.avillach.util.response.PICSUREResponse;
@@ -31,6 +34,9 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.*;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.*;
@@ -45,6 +51,12 @@ import static edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming.AuthRoleNaming
 public class UserService extends BaseEntityService<User> {
 
     Logger logger = LoggerFactory.getLogger(UserService.class);
+    
+    //simple time-out cache refresh
+    private static final Cache<String, String> mergedTemplateCache = 
+    		CacheBuilder.newBuilder()
+    		.maximumSize(100)
+    		.expireAfterAccess(60, TimeUnit.MINUTES).build();
 
     @Context
     SecurityContext securityContext;
@@ -348,43 +360,53 @@ public class UserService extends BaseEntityService<User> {
 
 
     private String mergeTemplate(User user, Application application) {
-        String resultJSON = null;
-        Map mergedTemplateMap = null;
-        for (Privilege privilege : user.getPrivilegesByApplication(application)){
-            String template = privilege.getQueryTemplate();
-//            logger.debug("mergeTemplate() processing template:"+template);
-            if (template == null || template.trim().isEmpty()){
-                continue;
-            }
-            Map<String, Object> templateMap = null;
-            try {
-                templateMap = objectMapper.readValue(template, Map.class);
-            } catch (IOException ex){
-                logger.error("mergeTemplate() cannot convert stored queryTemplate using Jackson, the queryTemplate is: " + template, ex);
-                throw new ApplicationException("Inner application error, please contact admin.");
-            }
+    	
+    	try {
+			return mergedTemplateCache.get(user.getEmail(), new Callable<String>() {
+				@Override
+				public String call() throws Exception {
+					 String resultJSON = null;
+				        Map mergedTemplateMap = null;
+				        for (Privilege privilege : user.getPrivilegesByApplication(application)){
+				            String template = privilege.getQueryTemplate();
+				            if (template == null || template.trim().isEmpty()){
+				                continue;
+				            }
+				            Map<String, Object> templateMap = null;
+				            try {
+				                templateMap = objectMapper.readValue(template, Map.class);
+				            } catch (IOException ex){
+				                logger.error("mergeTemplate() cannot convert stored queryTemplate using Jackson, the queryTemplate is: " + template, ex);
+				                throw new ApplicationException("Inner application error, please contact admin.");
+				            }
 
-            if (templateMap == null) {
-                continue;
-            }
+				            if (templateMap == null) {
+				                continue;
+				            }
 
-            if (mergedTemplateMap == null){
-                mergedTemplateMap = templateMap;
-                continue;
-            }
+				            if (mergedTemplateMap == null){
+				                mergedTemplateMap = templateMap;
+				                continue;
+				            }
 
-            mergedTemplateMap = JsonUtils.mergeTemplateMap(mergedTemplateMap, templateMap);
-        }
+				            mergedTemplateMap = JsonUtils.mergeTemplateMap(mergedTemplateMap, templateMap);
+				        }
 
-        try {
-            resultJSON = objectMapper.writeValueAsString(mergedTemplateMap);
-        } catch (JsonProcessingException ex) {
-            logger.error("mergeTemplate() cannot convert map to json string. The map mergedTemplate is: " + mergedTemplateMap);
-            throw new ApplicationException("Inner application error, please contact admin.");
-        }
+				        try {
+				            resultJSON = objectMapper.writeValueAsString(mergedTemplateMap);
+				        } catch (JsonProcessingException ex) {
+				            logger.error("mergeTemplate() cannot convert map to json string. The map mergedTemplate is: " + mergedTemplateMap);
+				            throw new ApplicationException("Inner application error, please contact admin.");
+				        }
 
-        return resultJSON;
-
+				        return resultJSON;
+				}
+			});
+		} catch (ExecutionException e) {
+			logger.error("error populating or retrieving data from cache: ", e);
+			return null;
+		}
+    	
     }
 
     /**

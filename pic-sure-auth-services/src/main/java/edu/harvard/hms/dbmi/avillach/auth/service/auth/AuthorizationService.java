@@ -1,6 +1,9 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.auth;
 
 import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -8,7 +11,10 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jayway.jsonpath.*;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.PathNotFoundException;
 
 import edu.harvard.hms.dbmi.avillach.auth.data.entity.*;
 import net.minidev.json.JSONArray;
@@ -39,6 +45,12 @@ import net.minidev.json.JSONObject;
 public class AuthorizationService {
 	private Logger logger = LoggerFactory.getLogger(AuthorizationService.class);
 
+	//this is manually invalidated whenever a user makes an unauthorized request.  Also has an auto timeout
+	private static final Cache<String, Set<AccessRule>> mergedRulesCache = 
+			CacheBuilder.newBuilder()
+			.maximumSize(100)
+			.expireAfterAccess(60, TimeUnit.MINUTES).build();
+	
 	/**
 	 * Checking based on AccessRule in Privilege
      * <br><br>
@@ -68,6 +80,15 @@ public class AuthorizationService {
 	 * @see AccessRule
 	 */
 	public boolean isAuthorized(Application application , Object requestBody, User user){
+		boolean authorized = _isAuthorized(application, requestBody, user);
+		if(!authorized) {
+			mergedRulesCache.invalidate(user.getEmail());
+		}
+		return authorized;
+	}
+	
+	
+	private boolean _isAuthorized(Application application , Object requestBody, User user){
 
         String applicationName = application.getName();
 		//in some cases, we don't go through the evaluation
@@ -81,18 +102,13 @@ public class AuthorizationService {
 
 		String formattedQuery = null;
 		try {
-			
-			/**
-			 * NC - TODO this formatted query can sometimes mask data.  We should be using the raw data
-			 */
-			
+			 // NC - this formatted query can sometimes mask data, but it's just used for logging
 			formattedQuery = (String) ((Map)requestBody).get("formattedQuery");
 			
 			if(formattedQuery == null) {
 				//fallback in case no formatted query info present
 				formattedQuery = new ObjectMapper().writeValueAsString(requestBody);
 			}
-			
 		} catch (ClassCastException | JsonProcessingException e1) {
 			e1.printStackTrace();
 			logger.info("ACCESS_LOG ___ " + user.getUuid().toString() + "," + user.getEmail() + "," + user.getName() + 
@@ -101,28 +117,13 @@ public class AuthorizationService {
 			return false;
 		}
 
-		Set<Privilege> privileges = user.getPrivilegesByApplication(application);
-
-		// If the user doesn't have any privileges associated to the application,
-        // it will return false. The logic is if there are any privileges associated with the application,
-        // a user needs to have at least one privilege under the same application,
-        // or be denied.
-        // The check if the application has privileges or not should be outside this function.
-        // Here we assume that the application has at least one privilege
-		if (privileges == null || privileges.isEmpty()) {
-		    logger.info("ACCESS_LOG ___ " + user.getUuid().toString() + "," + user.getEmail() + "," + user.getName() +
-                    " ___ has been denied access to execute query ___ " + formattedQuery + " ___ in application ___ " + applicationName
-                    + " __ USER HAS NO PRIVILEGES ASSOCIATED TO THE APPLICATION, BUT APPLICATION HAS PRIVILEGES");
-            return false;
-        }
-
-        Set<AccessRule> accessRules = preProcessAccessRules(privileges);
-
-		if (accessRules == null || accessRules.isEmpty()) {
+		Set<AccessRule> accessRules = getAccessRulesForUserAndApp(user, application);
+		
+		if(accessRules == null || accessRules.isEmpty()) {
 			logger.info("ACCESS_LOG ___ " + user.getUuid().toString() + "," + user.getEmail() + "," + user.getName() + 
 					" ___ has been denied access to execute query ___ " + formattedQuery + " ___ in application ___ " + applicationName
                     + " ___ NO ACCESS RULES EVALUATED");
-			return false;        	
+			return false;
 		}
 
          // loop through all accessRules
@@ -166,7 +167,30 @@ public class AuthorizationService {
 		return result;
 	}
 
-    /**
+    private Set<AccessRule> getAccessRulesForUserAndApp(User user, Application application) {
+    	try {
+			return mergedRulesCache.get(user.getEmail(), new Callable<Set<AccessRule>>() {
+				@Override
+				public Set<AccessRule> call() throws Exception {
+			    	Set<Privilege> privileges = user.getPrivilegesByApplication(application);
+
+					// If the user doesn't have any privileges associated to the application,
+			        // it will return null. The logic is if there are any privileges associated with the application,
+			        // a user needs to have at least one privilege under the same application, or be denied.
+					if (privileges == null || privileges.isEmpty()) {
+			            return null;
+			        }
+
+			        return preProcessAccessRules(privileges);
+				}
+			});
+		} catch (ExecutionException e) {
+			logger.error("error populating or retrieving data from cache: ", e);
+			return null;
+		}
+	}
+
+	/**
      * This class is for preparing for a set of accessRule that used by the further checking
      *
      * Currently it contains a merge function
@@ -175,7 +199,7 @@ public class AuthorizationService {
      * @return
      */
 	private Set<AccessRule> preProcessAccessRules(Set<Privilege> privileges){
-
+		logger.debug("preProcessAccessRules() merging rules");
         Set<AccessRule> accessRules = new HashSet<>();
         for (Privilege privilege : privileges) {
             accessRules.addAll(privilege.getAccessRules());
