@@ -24,24 +24,29 @@ public class User extends BaseEntity implements Serializable, Principal {
 	private String subject;
 
 	@ManyToMany(fetch = FetchType.EAGER)
-	@JoinTable(name = "user_role",
-			joinColumns = {@JoinColumn(name = "user_id", nullable = false, updatable = false)},
-			inverseJoinColumns = {@JoinColumn(name = "role_id", nullable = false, updatable = false)})
+	@JoinTable(name = "user_role", joinColumns = {
+			@JoinColumn(name = "user_id", nullable = false, updatable = false) }, inverseJoinColumns = {
+					@JoinColumn(name = "role_id", nullable = false, updatable = false) })
 	private Set<Role> roles;
 
 	private String email;
 
-
 	/**
-	 * <p>NOTICE</p>
-	 * <br><p>
-	 * When you update or create a user,
-	 * please use connection.id as the input. The UserService is specifically using connection.id.
+	 * <p>
+	 * NOTICE
 	 * </p>
 	 * <br>
-	 * <p><b>
-	 * Note: This is because of the checkAssociation() method in UserService.
-	 * </b></p><br>
+	 * <p>
+	 * When you update or create a user, please use connection.id as the input. The
+	 * UserService is specifically using connection.id.
+	 * </p>
+	 * <br>
+	 * <p>
+	 * <b> Note: This is because of the checkAssociation() method in UserService.
+	 * </b>
+	 * </p>
+	 * <br>
+	 * 
 	 * @see edu.harvard.hms.dbmi.avillach.auth.rest.UserService
 	 */
 	@ManyToOne
@@ -86,10 +91,11 @@ public class User extends BaseEntity implements Serializable, Principal {
 
 	/**
 	 * return all privileges in the roles as a set
+	 * 
 	 * @return
 	 */
 	@JsonIgnore
-	public Set<Privilege> getTotalPrivilege(){
+	public Set<Privilege> getTotalPrivilege() {
 		if (roles == null)
 			return null;
 
@@ -100,17 +106,16 @@ public class User extends BaseEntity implements Serializable, Principal {
 
 	/**
 	 * return all privileges in the roles as a set
+	 * 
 	 * @return
 	 */
 	@JsonIgnore
-	public Set<AccessRule> getTotalAccessRule(){
+	public Set<AccessRule> getTotalAccessRule() {
 		if (roles == null)
 			return null;
 
 		Set<AccessRule> accessRules = new HashSet<>();
-		roles.stream().
-				forEach(r -> r.getPrivileges().stream().
-						forEach(p -> accessRules.addAll(p.getAccessRules())));
+		roles.stream().forEach(r -> r.getPrivileges().stream().forEach(p -> accessRules.addAll(p.getAccessRules())));
 		return accessRules;
 	}
 
@@ -120,7 +125,7 @@ public class User extends BaseEntity implements Serializable, Principal {
 	 * @return
 	 */
 	@JsonIgnore
-	public Set<String> getPrivilegeNameSet(){
+	public Set<String> getPrivilegeNameSet() {
 		Set<Privilege> totalPrivilegeSet = getTotalPrivilege();
 
 		if (totalPrivilegeSet == null)
@@ -137,7 +142,7 @@ public class User extends BaseEntity implements Serializable, Principal {
 	 * @return
 	 */
 	@JsonIgnore
-	public Set<String> getPrivilegeNameSetByApplication(Application application){
+	public Set<String> getPrivilegeNameSetByApplication(Application application) {
 		Set<Privilege> totalPrivilegeSet = getTotalPrivilege();
 
 		if (totalPrivilegeSet == null)
@@ -162,8 +167,8 @@ public class User extends BaseEntity implements Serializable, Principal {
 	 * @return
 	 */
 	@JsonIgnore
-	public Set<Privilege> getPrivilegesByApplication(Application application){
-		if (application == null || application.getUuid() == null){
+	public Set<Privilege> getPrivilegesByApplication(Application application) {
+		if (application == null || application.getUuid() == null) {
 			return getTotalPrivilege();
 		}
 
@@ -171,19 +176,16 @@ public class User extends BaseEntity implements Serializable, Principal {
 			return null;
 
 		Set<Privilege> privileges = new HashSet<>();
-		roles.stream().
-				forEach(r -> privileges.addAll(r.getPrivileges()
-						.stream()
+		roles.stream()
+				.forEach(r -> privileges.addAll(r.getPrivileges().stream()
 						.filter(p -> application.getUuid()
-                                .equals((p.getApplication()==null)?
-                                        null:
-                                        p.getApplication().getUuid()))
+								.equals((p.getApplication() == null) ? null : p.getApplication().getUuid()))
 						.collect(Collectors.toSet())));
 		return privileges;
 	}
 
 	@JsonIgnore
-	public String getPrivilegeString(){
+	public String getPrivilegeString() {
 		Set<Privilege> totalPrivilegeSet = getTotalPrivilege();
 
 		if (totalPrivilegeSet == null)
@@ -193,9 +195,8 @@ public class User extends BaseEntity implements Serializable, Principal {
 	}
 
 	@JsonIgnore
-	public String getRoleString(){
-		return (roles==null)?null:roles.stream().map(r -> r.name)
-				.collect(Collectors.joining(","));
+	public String getRoleString() {
+		return (roles == null) ? null : roles.stream().map(r -> r.name).collect(Collectors.joining(","));
 	}
 
 	public String getAuth0metadata() {
@@ -272,24 +273,26 @@ public class User extends BaseEntity implements Serializable, Principal {
 	}
 
 	/**
-	 * <p>Inner class defining limited user attributes returned from the User endpoint.</p>
+	 * <p>
+	 * Inner class defining limited user attributes returned from the User endpoint.
+	 * </p>
 	 */
 	@JsonInclude(JsonInclude.Include.NON_EMPTY)
-	public static class UserForDisaply {
+	public static class UserForDisplay {
 		String uuid;
 		String email;
 		Set<String> privileges;
 		String token;
 		Set<String> queryScopes;
 
-		public UserForDisaply() {
+		public UserForDisplay() {
 		}
 
 		public String getEmail() {
 			return email;
 		}
 
-		public UserForDisaply setEmail(String email) {
+		public UserForDisplay setEmail(String email) {
 			this.email = email;
 			return this;
 		}
@@ -298,7 +301,7 @@ public class User extends BaseEntity implements Serializable, Principal {
 			return privileges;
 		}
 
-		public UserForDisaply setPrivileges(Set<String> privileges) {
+		public UserForDisplay setPrivileges(Set<String> privileges) {
 			this.privileges = privileges;
 			return this;
 		}
@@ -307,7 +310,7 @@ public class User extends BaseEntity implements Serializable, Principal {
 			return uuid;
 		}
 
-		public UserForDisaply setUuid(String uuid) {
+		public UserForDisplay setUuid(String uuid) {
 			this.uuid = uuid;
 			return this;
 		}
@@ -316,7 +319,7 @@ public class User extends BaseEntity implements Serializable, Principal {
 			return token;
 		}
 
-		public UserForDisaply setToken(String token) {
+		public UserForDisplay setToken(String token) {
 			this.token = token;
 			return this;
 		}
@@ -331,6 +334,7 @@ public class User extends BaseEntity implements Serializable, Principal {
 	}
 
 	public String toString() {
-		return uuid.toString() + " ___ " + subject + " ___ " + email + " ___ " + generalMetadata + " ___ " + auth0metadata + " ___ {" + ((connection==null)?null:connection.toString()) + "}";
+		return uuid.toString() + " ___ " + subject + " ___ " + email + " ___ " + generalMetadata + " ___ "
+				+ auth0metadata + " ___ {" + ((connection == null) ? null : connection.toString()) + "}";
 	}
 }

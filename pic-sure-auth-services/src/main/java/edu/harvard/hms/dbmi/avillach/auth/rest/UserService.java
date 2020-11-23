@@ -275,7 +275,7 @@ public class UserService extends BaseEntityService<User> {
             return PICSUREResponse.applicationError("Inner application error, please contact admin.");
         }
 
-        User.UserForDisaply userForDisplay = new User.UserForDisaply()
+        User.UserForDisplay userForDisplay = new User.UserForDisplay()
                 .setEmail(user.getEmail())
                 .setPrivileges(user.getPrivilegeNameSet())
                 .setUuid(user.getUuid().toString());
