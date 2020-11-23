@@ -20,9 +20,11 @@ public class Application extends BaseEntity implements Principal {
     @Column(unique = true)
     private String name;
     private String description;
-    private String token;
     private String url;
     private boolean enable = true;
+    
+    @JsonIgnore  //do not show the token to the front end
+    private String token;
 
     @JsonIgnore  //IGNORE this is BDC json - it's not used in the front end at all and takes ages to load
     @OneToMany(mappedBy = "application",
