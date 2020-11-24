@@ -47,10 +47,10 @@ public class AuthorizationService {
 	private Logger logger = LoggerFactory.getLogger(AuthorizationService.class);
 
 	//this is manually invalidated whenever a user makes an unauthorized request.  Also has an auto timeout
-	private static final Cache<String, Set<AccessRule>> mergedRulesCache = 
-			CacheBuilder.newBuilder()
-			.maximumSize(100)
-			.expireAfterAccess(60, TimeUnit.MINUTES).build();
+//	private static final Cache<String, Set<AccessRule>> mergedRulesCache = 
+//			CacheBuilder.newBuilder()
+//			.maximumSize(100)
+//			.expireAfterAccess(60, TimeUnit.MINUTES).build();
 	
 	/**
 	 * Checking based on AccessRule in Privilege
@@ -84,7 +84,7 @@ public class AuthorizationService {
 		boolean authorized = _isAuthorized(application, requestBody, user);
 		if(!authorized) {
 			logger.warn("isAuthorized() User " + user.getEmail() + " not authorized, clearing merged rules entry");
-			mergedRulesCache.invalidate(user.getEmail());
+//			mergedRulesCache.invalidate(user.getEmail());
 		}
 		return authorized;
 	}
@@ -170,14 +170,14 @@ public class AuthorizationService {
 	}
 
 	public static void clearCache(User user) {
-		mergedRulesCache.invalidate(user.getEmail());
+//		mergedRulesCache.invalidate(user.getEmail());
 	}
 	
     private Set<AccessRule> getAccessRulesForUserAndApp(User user, Application application) {
-    	try {
-			return mergedRulesCache.get(user.getEmail(), new Callable<Set<AccessRule>>() {
-				@Override
-				public Set<AccessRule> call() throws Exception {
+//    	try {
+//			return mergedRulesCache.get(user.getEmail(), new Callable<Set<AccessRule>>() {
+//				@Override
+//				public Set<AccessRule> call() throws Exception {
 			    	Set<Privilege> privileges = user.getPrivilegesByApplication(application);
 
 					// If the user doesn't have any privileges associated to the application,
@@ -188,15 +188,15 @@ public class AuthorizationService {
 			        }
 
 			        return preProcessAccessRules(privileges);
-				}
-			});
-		} catch (ExecutionException e) {
-			logger.error("error populating or retrieving data from cache: ", e);
-		} catch (InvalidCacheLoadException e) {
-			//probably no user (typically while debugging);  just return null
-			logger.debug("Cache Miss (and unable to load user) " + user.getEmail(), e);
-		}
-    	return null;
+//				}
+//			});
+//		} catch (ExecutionException e) {
+//			logger.error("error populating or retrieving data from cache: ", e);
+//		} catch (InvalidCacheLoadException e) {
+//			//probably no user (typically while debugging);  just return null
+//			logger.debug("Cache Miss (and unable to load user) " + user.getEmail(), e);
+//		}
+//    	return null;
 	}
 
 	/**
