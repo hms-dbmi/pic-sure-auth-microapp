@@ -13,6 +13,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader.InvalidCacheLoadException;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.PathNotFoundException;
 
@@ -82,6 +83,7 @@ public class AuthorizationService {
 	public boolean isAuthorized(Application application , Object requestBody, User user){
 		boolean authorized = _isAuthorized(application, requestBody, user);
 		if(!authorized) {
+			logger.warn("isAuthorized() User " + user.getEmail() + " not authorized, clearing merged rules entry");
 			mergedRulesCache.invalidate(user.getEmail());
 		}
 		return authorized;
@@ -141,7 +143,7 @@ public class AuthorizationService {
 				passByRule = accessRule;
 				break;
 			} else {
-				logger.warn("accessRule " + accessRule.getMergedName() + "FAILS");
+				logger.warn("accessRule " + accessRule.getName() + "FAILS");
 			    failedRules.add(accessRule);
             }
 		}
@@ -167,6 +169,10 @@ public class AuthorizationService {
 		return result;
 	}
 
+	public static void clearCache(User user) {
+		mergedRulesCache.invalidate(user.getEmail());
+	}
+	
     private Set<AccessRule> getAccessRulesForUserAndApp(User user, Application application) {
     	try {
 			return mergedRulesCache.get(user.getEmail(), new Callable<Set<AccessRule>>() {
@@ -186,8 +192,11 @@ public class AuthorizationService {
 			});
 		} catch (ExecutionException e) {
 			logger.error("error populating or retrieving data from cache: ", e);
-			return null;
+		} catch (InvalidCacheLoadException e) {
+			//probably no user (typically while debugging);  just return null
+			logger.debug("Cache Miss (and unable to load user) " + user.getEmail(), e);
 		}
+    	return null;
 	}
 
 	/**
@@ -350,7 +359,7 @@ public class AuthorizationService {
 	protected boolean evaluateAccessRule(Object requestBody, AccessRule accessRule) {
 //	    logger.debug("evaluateAccessRule() starting with:");
 //	    logger.debug(parsedRequestBody.toString());
-	    logger.debug("evaluateAccessRule()  access rule:"+accessRule.getName());
+	    logger.debug("evaluateAccessRule() (possibly merged) access rule: "+accessRule.getName());
 
 		Set<AccessRule> gates = accessRule.getGates();
 
@@ -404,7 +413,7 @@ public class AuthorizationService {
         }
 
         if (gatesPassed) {
-        	logger.debug("Gates passed.  Request Body: " + requestBody);
+//        	logger.debug("Gates passed.  Request Body: " + requestBody);
             if (extractAndCheckRule(accessRule, requestBody) == false) {
             	logger.debug("Query Rejected by rule " + accessRule.getRule() + " :: " + accessRule.getType() + " :: " + accessRule.getValue() );
                 return false;
@@ -425,7 +434,7 @@ public class AuthorizationService {
         } 
 
         // if gates not applied, this accessRule will consider deny
-        logger.debug("Gates failed for " + accessRule.getMergedName() );
+        logger.debug("Gates failed for (possibly merged) " + accessRule.getName());
         
 	    return false;
 	}

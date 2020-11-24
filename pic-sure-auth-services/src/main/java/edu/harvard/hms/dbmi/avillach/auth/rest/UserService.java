@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader.InvalidCacheLoadException;
 
 import edu.harvard.dbmi.avillach.util.exception.ApplicationException;
 import edu.harvard.dbmi.avillach.util.exception.ProtocolException;
@@ -358,6 +359,9 @@ public class UserService extends BaseEntityService<User> {
         return getQueryTemplate(JAXRSConfiguration.defaultApplicationUUID);
     }
 
+    public static void clearCache(User user) {
+    	mergedTemplateCache.invalidate(user.getEmail());
+	}
 
     private String mergeTemplate(User user, Application application) {
     	
@@ -404,9 +408,11 @@ public class UserService extends BaseEntityService<User> {
 			});
 		} catch (ExecutionException e) {
 			logger.error("error populating or retrieving data from cache: ", e);
-			return null;
+		} catch (InvalidCacheLoadException e) {
+			//probably no user;  just return null
+			logger.debug("Cache Miss (and unable to load user) " + user.getEmail(), e);
 		}
-    	
+    	return null;
     }
 
     /**

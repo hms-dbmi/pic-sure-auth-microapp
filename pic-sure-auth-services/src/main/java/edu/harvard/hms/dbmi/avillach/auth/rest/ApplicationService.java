@@ -68,6 +68,7 @@ public class ApplicationService extends BaseEntityService<Application> {
     @GET
 	@Path("")
 	public Response getApplicationAll() {
+    	
 		return getEntityAll(applicationRepo);
 	}
 

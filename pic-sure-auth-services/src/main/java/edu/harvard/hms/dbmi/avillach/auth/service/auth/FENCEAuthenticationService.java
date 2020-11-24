@@ -29,6 +29,7 @@ import edu.harvard.dbmi.avillach.util.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration;
 import edu.harvard.hms.dbmi.avillach.auth.data.entity.*;
 import edu.harvard.hms.dbmi.avillach.auth.data.repository.*;
+import edu.harvard.hms.dbmi.avillach.auth.rest.UserService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.AuthUtils;
 
 public class FENCEAuthenticationService {
@@ -174,6 +175,10 @@ public class FENCEAuthenticationService {
                     +current_user.getEmail()
                     +" and subject:"
                     +current_user.getSubject());
+            
+            //clear some cache entries if we register a new login
+            AuthorizationService.clearCache(current_user);
+            UserService.clearCache(current_user);
 
         } catch (Exception ex) {
             logger.error("getFENCEToken() Could not persist the user information, because "+ex.getMessage());
