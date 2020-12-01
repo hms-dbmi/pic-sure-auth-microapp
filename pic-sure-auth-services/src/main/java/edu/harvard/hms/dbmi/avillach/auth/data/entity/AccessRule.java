@@ -105,7 +105,7 @@ public class AccessRule extends BaseEntity {
      * This field should neither be saved to database
      * nor seen by a user
      */
-    @JsonIgnore
+//    @JsonIgnore
     @Transient
     private Set<String> mergedValues = new HashSet<>();
     
@@ -114,7 +114,7 @@ public class AccessRule extends BaseEntity {
      * It is a intermediate product that generated on the fly for supporting
      * auto-merging functionality of accessRules when doing authorization.
      */
-    @JsonIgnore
+//    @JsonIgnore
     @Transient
     private String mergedName = "";
 

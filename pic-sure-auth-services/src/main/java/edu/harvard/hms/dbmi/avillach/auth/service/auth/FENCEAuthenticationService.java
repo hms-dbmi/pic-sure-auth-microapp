@@ -78,7 +78,6 @@ public class FENCEAuthenticationService {
     		"\\\\_studies\\\\",
     		"\\\\_parent_consents\\\\",  //parent consents not used for auth (use combined _consents)
     		"\\\\_Consents\\\\"   ///old _Consents\Short Study... path no longer used, but still present in examples.
-    	
     };
 
     @PostConstruct
@@ -837,6 +836,9 @@ public class FENCEAuthenticationService {
                 	}
                 	ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
             		ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, parentConceptPath, projectAlias));
+            		//this is added in the 'getPhenotypeRestrictedSubRules()' which is not called in this path
+            		ar.getSubAccessRule().add(createPhenotypeSubRule(fence_topmed_consent_group_concept_path, "ALLOW_TOPMED_CONSENT", "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
+                	
             		accessruleRepo.merge(ar);
                 }
                 accessrules.add(ar);
@@ -856,6 +858,9 @@ public class FENCEAuthenticationService {
                      	}
                      	ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
                 		ar.getSubAccessRule().addAll(getHarmonizedSubRules());
+                		//this is added in the 'getPhenotypeRestrictedSubRules()' which is not called in this path
+                		ar.getSubAccessRule().add(createPhenotypeSubRule(fence_topmed_consent_group_concept_path, "ALLOW_TOPMED_CONSENT", "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
+                    	
                 		accessruleRepo.merge(ar);
                     }
                     accessrules.add(ar);
