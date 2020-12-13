@@ -464,9 +464,9 @@ public class FENCEAuthenticationService {
                     +"}";
             priv.setQueryTemplate(queryTemplateText);
             if(isHarmonized) {
-            	priv.setQueryScope("[\"" + conceptPath + "\",\"" + fence_harmonized_concept_path + "\"]");
+            	priv.setQueryScope("[\"" + conceptPath + "\",\"_\",\"" + fence_harmonized_concept_path + "\"]");
             } else {
-            	priv.setQueryScope("[\"" + conceptPath + "\"]");
+            	priv.setQueryScope("[\"" + conceptPath + "\",\"_\"]");
             }
 
             Set<AccessRule> accessrules = new HashSet<AccessRule>();
@@ -633,6 +633,8 @@ public class FENCEAuthenticationService {
     	
     	for(String underscorePath : underscoreFields ) {
     		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$..fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false));
+    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "CATEGORICAL", true));
+    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$..requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQ_FIELDS", false));
     	}
     	
     	rules.add(createPhenotypeSubRule(conceptPath, alias+ "_" + studyIdentifier, "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true));
@@ -659,6 +661,8 @@ public class FENCEAuthenticationService {
     	
     	for(String underscorePath : underscoreFields ) {
     		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$..fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false));
+    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "CATEGORICAL", true));
+    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$..requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQ_FIELDS", false));
     	}
     	
     	rules.add(createPhenotypeSubRule(fence_harmonized_concept_path, "HARMONIZED", "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true));
@@ -682,6 +686,8 @@ public class FENCEAuthenticationService {
     	
     	for(String underscorePath : underscoreFields ) {
     		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$..fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false));
+    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "CATEGORICAL", true));
+    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$..requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQ_FIELDS", false));
     	}
     	
     	rules.add(createPhenotypeSubRule(null, alias + "_" + studyIdentifier+ "_" + consentCode, "$..numericFilters.[*]", AccessRule.TypeNaming.IS_EMPTY, "DISALLOW_NUMERIC", false));
@@ -798,7 +804,7 @@ public class FENCEAuthenticationService {
 
     		String variantColumns = JAXRSConfiguration.variantAnnotationColumns;
     		if(variantColumns == null || variantColumns.isEmpty()) {
-    			 priv.setQueryScope("[]");
+    			 priv.setQueryScope("[\"_\"]");
     		} else {
     			StringBuilder builder = new StringBuilder();
 	    		for(String annotationPath : variantColumns.split(",")) {
@@ -809,6 +815,7 @@ public class FENCEAuthenticationService {
 	    			}
 	    			builder.append("\""+annotationPath+"\"");
 	    		}
+	    		builder.append(",\"_\"");
 	    		builder.append("]");
 	    		priv.setQueryScope(builder.toString());
     		}
