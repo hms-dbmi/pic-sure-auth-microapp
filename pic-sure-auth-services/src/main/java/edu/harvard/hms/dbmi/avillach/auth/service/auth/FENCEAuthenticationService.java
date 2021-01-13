@@ -633,7 +633,7 @@ public class FENCEAuthenticationService {
     	
     	for(String underscorePath : underscoreFields ) {
     		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$..fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false));
-    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "CATEGORICAL", true));
+    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true));
     		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$..requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQ_FIELDS", false));
     	}
     	
@@ -661,7 +661,7 @@ public class FENCEAuthenticationService {
     	
     	for(String underscorePath : underscoreFields ) {
     		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$..fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false));
-    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "CATEGORICAL", true));
+    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true));
     		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$..requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQ_FIELDS", false));
     	}
     	
@@ -686,7 +686,7 @@ public class FENCEAuthenticationService {
     	
     	for(String underscorePath : underscoreFields ) {
     		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$..fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false));
-    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "CATEGORICAL", true));
+    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true));
     		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$..requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQ_FIELDS", false));
     	}
     	
