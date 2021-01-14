@@ -352,7 +352,7 @@ public class FENCEAuthenticationService {
 
         //each project can have up to three privileges: Parent  |  Harmonized  | Topmed
         //harmonized has 2 ARs for parent + harminized and harmonized only
-        //Topmed has up to four ARs for topmed / topmed + parent / topmed + harmonized / topmed + parent + harmonized
+        //Topmed has up to three ARs for topmed / topmed + parent / topmed + harmonized 
         Set<Privilege> privs = r.getPrivileges();
         if (privs == null) { privs = new HashSet<Privilege>();}
         
@@ -405,6 +405,9 @@ public class FENCEAuthenticationService {
         }
         
         //projects without G or P in data_type are skipped
+        if(dataType == null || (!dataType.contains("P")  && !dataType.contains("G"))){
+        	logger.warn("Missing study type for " + project_name + " " + consent_group);
+        }
             
         logger.info("addPrivileges() Finished");
         return privs;
