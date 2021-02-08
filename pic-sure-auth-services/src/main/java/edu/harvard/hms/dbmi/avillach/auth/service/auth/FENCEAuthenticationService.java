@@ -247,7 +247,7 @@ public class FENCEAuthenticationService {
                 // Role already exists
             	current_user.getRoles().add(noAccessRole);
             } else {
-            	logger.warn("Unable to fine fence NO ACCESS role");
+            	logger.warn("Unable to find fence NO ACCESS role");
             }
         }
         
@@ -493,27 +493,28 @@ public class FENCEAuthenticationService {
             
             accessrules.add(ar);
             
+            // here we add a rule to allow querying a parent study if genomic filters are included.  This goes on all studies;
+            // if the study has no genomic data or the user is not authorizzed for genomic studies, there will be 0 patients returned.
+        	ar = upsertTopmedAccessRule(studyIdentifier, consent_group, "TOPMED+PARENT");
+            
+            //if this is a new rule, we need to populate it
+        	 if(ar.getGates() == null) {
+             	ar.setGates(new HashSet<AccessRule>());
+            	ar.getGates().addAll(getGates(true, false, true));
+            	if(ar.getSubAccessRule() == null) {
+            		ar.setSubAccessRule(new HashSet<AccessRule>());
+            	}
+            	ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
+        		ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, conceptPath, projectAlias));
+        		//this is added in the 'getPhenotypeRestrictedSubRules()' which is not called in this path
+        		ar.getSubAccessRule().add(createPhenotypeSubRule(fence_topmed_consent_group_concept_path, "ALLOW_TOPMED_CONSENT", "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
+            	
+        		accessruleRepo.merge(ar);
+            }
+            accessrules.add(ar);
+            
             if(isHarmonized) {
-//            	//harmonized data adds two ARs; one for _only_ harmonized, and one for a mix of harmonized and parent concepts
-//            	ar = createConsentAccessRule(studyIdentifier, consent_group, "PARENT_HARMONIZED", fence_harmonized_consent_group_concept_path);
-//                
-//            	//if this is a new rule, we need to populate it
-//                if(ar.getGates() == null) {
-//                	ar.setGates(new HashSet<AccessRule>());
-//                	ar.getGates().addAll(getGates(true, true, false));
-//                	
-//                	if(ar.getSubAccessRule() == null) {
-//                  		ar.setSubAccessRule(new HashSet<AccessRule>());
-//                  	}
-//                	ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
-//                	ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, conceptPath, projectAlias));
-//            		ar.getSubAccessRule().addAll(getHarmonizedSubRules());
-//            		ar.getSubAccessRule().addAll(getTopmedRestrictedSubRules());
-//            		accessruleRepo.merge(ar);
-//                }
-//                accessrules.add(ar);
-                
-				//also add another rule for accessing only harmonized data
+				//add a rule for accessing only harmonized data
 				ar = createConsentAccessRule(studyIdentifier, consent_group, "HARMONIZED", fence_harmonized_consent_group_concept_path);
 	                
 	            //if this is a new rule, we need to populate it
