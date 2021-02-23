@@ -49,7 +49,7 @@ public class AuthService {
         logger.debug("authentication() starting...");
         if (JAXRSConfiguration.idp_provider.equalsIgnoreCase("fence")) {
             logger.debug("authentication() FENCE authentication");
-            return fenceAuthenticationService.getFENCEProfile("https://" + uriInfo.getBaseUri().getHost() + "/psamaui/login/", authRequest);
+            return fenceAuthenticationService.getFENCEProfile("https://" + uriInfo.getBaseUri().getHost() + "/picsureui/login/", authRequest);
         } else {
             logger.debug("authentication() default authentication");
             return authenticationService.getToken(authRequest);
