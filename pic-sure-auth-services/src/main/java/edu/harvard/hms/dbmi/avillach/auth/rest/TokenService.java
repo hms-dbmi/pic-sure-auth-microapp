@@ -263,8 +263,9 @@ public class TokenService {
         // If the current application has at least one privilege, the user must have one privilege associated to the application
         // pass the accessRule check if there is any accessRules associated with.
         if (application.getPrivileges() == null || application.getPrivileges().isEmpty()){
+        	logger.warn("_inspectToken APPLICATION HAS NO PRIVILEGES. deny all access.");
             // if no privileges associated
-            isAuthorizationPassed = true;
+            isAuthorizationPassed = false;
         } else if (user != null
                 && !isLongTermTokenCompromised
                 && user.getRoles() != null

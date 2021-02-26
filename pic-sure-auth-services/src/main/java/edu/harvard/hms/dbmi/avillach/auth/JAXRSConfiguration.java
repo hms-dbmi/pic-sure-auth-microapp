@@ -91,17 +91,26 @@ public class JAXRSConfiguration extends Application {
 
     @Resource(lookup = "java:global/deniedEmailEnabled")
     public static String deniedEmailEnabled;
-
+    
+    @Resource(lookup = "java:global/variantAnnotationColumns")
+    public static String variantAnnotationColumns;
+    
+    
     // See checkIDPProvider method for setting these variables
     public static String idp_provider;
     public static String idp_provider_uri;
     public static String fence_client_id;
     public static String fence_client_secret;
     public static String fence_redirect_url;
-    public static String fence_consent_group_concept_path;
+    public static String fence_parent_consent_group_concept_path;
     public static String fence_standard_access_rules;
     public static String fence_harmonized_concept_path;
-
+    public static String fence_harmonized_consent_group_concept_path;
+    public static String fence_topmed_consent_group_concept_path;
+    public static String fence_allowed_query_types;
+    public static String fence_no_access_role_name;
+    
+    
     public static String defaultAdminRoleName = "PIC-SURE Top Admin";
 
     public static long tokenExpirationTime;
@@ -194,10 +203,22 @@ public class JAXRSConfiguration extends Application {
                 fence_client_secret = (String) ctx.lookup("java:global/fence_client_secret");
                 fence_redirect_url = (String) ctx.lookup("java:global/fence_redirect_url");
 
-                fence_consent_group_concept_path = (String) ctx.lookup("java:global/fence_consent_group_concept_path");
-                if (fence_consent_group_concept_path == null) {
-                    logger.error("checkIDPProvider() Empty consent group concept path from standalone.xml. Using default!");
-                    fence_consent_group_concept_path = "\\\\_Consents\\\\Short Study Accession with Consent code\\\\";
+                fence_parent_consent_group_concept_path = (String) ctx.lookup("java:global/fence_parent_consent_group_concept_path");
+                if (fence_parent_consent_group_concept_path == null) {
+                    logger.error("checkIDPProvider() Empty parent consent group concept path from standalone.xml. Using default!");
+                    fence_parent_consent_group_concept_path = "\\\\_Consents\\\\Short Study Accession with Consent code\\\\";
+                }
+                
+                fence_harmonized_consent_group_concept_path = (String) ctx.lookup("java:global/fence_harmonized_consent_group_concept_path");
+                if (fence_harmonized_consent_group_concept_path == null) {
+                    logger.error("checkIDPProvider() Empty harmonized consent group concept path from standalone.xml. Using default!");
+                    fence_harmonized_consent_group_concept_path = "\\\\_Consents\\\\Short Study Accession with Consent code\\\\";
+                }
+                
+                fence_topmed_consent_group_concept_path = (String) ctx.lookup("java:global/fence_topmed_consent_group_concept_path");
+                if (fence_topmed_consent_group_concept_path == null) {
+                    logger.error("checkIDPProvider() Empty topmed consent group concept path from standalone.xml. Using default!");
+                    fence_topmed_consent_group_concept_path = "\\\\_Consents\\\\Short Study Accession with Consent code\\\\";
                 }
 
                 fence_standard_access_rules = (String) ctx.lookup("java:global/fence_standard_access_rules");
@@ -205,6 +226,20 @@ public class JAXRSConfiguration extends Application {
                     logger.error("checkIDPProvider() Empty access rules from standalone.xml. Using defaults.");
                     fence_standard_access_rules = "GATE_ONLY_INFO,GATE_ONLY_QUERY,GATE_ONLY_SEARCH,GATE_FENCE_CONSENT_REQUIRED";
                 }
+                
+                fence_no_access_role_name = (String) ctx.lookup("java:global/fence_no_access_role_name");
+                if (fence_no_access_role_name.isEmpty()) {
+                    logger.error("checkIDPProvider() Empty access rules from standalone.xml. Using defaults.");
+                    fence_no_access_role_name = "FENCE_NO_ACCESS_ROLE";
+                }
+                
+                fence_allowed_query_types = (String) ctx.lookup("java:global/fence_allowed_query_types");
+                if (fence_allowed_query_types.isEmpty()) {
+                    logger.error("checkIDPProvider() Empty access rules from standalone.xml. Using defaults.");
+                    fence_allowed_query_types = "COUNT,CROSS_COUNT";
+                }
+                
+                
 
                 fence_harmonized_concept_path = (String) ctx.lookup("java:global/fence_harmonized_concept_path");
                 if (fence_harmonized_concept_path.isEmpty()) {
@@ -230,7 +265,7 @@ public class JAXRSConfiguration extends Application {
 
                 // For debugging purposes, here is a dump of most of the FENCE variables
                 logger.info("checkIDPProvider() fence_standard_access_rules        "+fence_standard_access_rules);
-                logger.info("checkIDPProvider() fence_consent_group_concept_path   "+fence_consent_group_concept_path);
+                logger.info("checkIDPProvider() fence_consent_group_concept_path   "+fence_parent_consent_group_concept_path);
                 logger.info("checkIDPProvider() fence_harmonized_concept_path      "+fence_harmonized_concept_path);
 
             } catch (Exception ex) {

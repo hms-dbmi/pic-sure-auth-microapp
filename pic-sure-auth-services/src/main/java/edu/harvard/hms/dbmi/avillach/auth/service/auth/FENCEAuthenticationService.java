@@ -1,23 +1,19 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.auth;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_harmonized_concept_path;
+import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_harmonized_consent_group_concept_path;
+import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_parent_consent_group_concept_path;
+import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_standard_access_rules;
+import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_topmed_consent_group_concept_path;
+import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_no_access_role_name;
 
-import edu.harvard.dbmi.avillach.util.HttpClientUtil;
-import edu.harvard.dbmi.avillach.util.response.PICSUREResponse;
-import edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration;
-import edu.harvard.hms.dbmi.avillach.auth.data.entity.AccessRule;
-import edu.harvard.hms.dbmi.avillach.auth.data.entity.Application;
-import edu.harvard.hms.dbmi.avillach.auth.data.entity.Connection;
-import edu.harvard.hms.dbmi.avillach.auth.data.entity.Privilege;
-import edu.harvard.hms.dbmi.avillach.auth.data.entity.Role;
-import edu.harvard.hms.dbmi.avillach.auth.data.entity.User;
-import edu.harvard.hms.dbmi.avillach.auth.data.repository.AccessRuleRepository;
-import edu.harvard.hms.dbmi.avillach.auth.data.repository.ApplicationRepository;
-import edu.harvard.hms.dbmi.avillach.auth.data.repository.ConnectionRepository;
-import edu.harvard.hms.dbmi.avillach.auth.data.repository.PrivilegeRepository;
-import edu.harvard.hms.dbmi.avillach.auth.data.repository.RoleRepository;
-import edu.harvard.hms.dbmi.avillach.auth.data.repository.UserRepository;
-import edu.harvard.hms.dbmi.avillach.auth.utils.AuthUtils;
+import java.io.File;
+import java.util.*;
+
+import javax.annotation.PostConstruct;
+import javax.inject.Inject;
+import javax.ws.rs.NotAuthorizedException;
+import javax.ws.rs.core.Response;
 
 import org.apache.http.Header;
 import org.apache.http.entity.StringEntity;
@@ -25,21 +21,19 @@ import org.apache.http.message.BasicHeader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.PostConstruct;
-import javax.inject.Inject;
-import javax.ws.rs.NotAuthorizedException;
-import javax.ws.rs.core.Response;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
-import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_consent_group_concept_path;
-import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_harmonized_concept_path;
-import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_standard_access_rules;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.*;
+import edu.harvard.dbmi.avillach.util.HttpClientUtil;
+import edu.harvard.dbmi.avillach.util.response.PICSUREResponse;
+import edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration;
+import edu.harvard.hms.dbmi.avillach.auth.data.entity.*;
+import edu.harvard.hms.dbmi.avillach.auth.data.repository.*;
+import edu.harvard.hms.dbmi.avillach.auth.rest.UserService;
+import edu.harvard.hms.dbmi.avillach.auth.utils.AuthUtils;
 
 public class FENCEAuthenticationService {
-    private Logger logger = LoggerFactory.getLogger(FENCEAuthenticationService.class);
+	private Logger logger = LoggerFactory.getLogger(FENCEAuthenticationService.class);
 
     @Inject
     UserRepository userRepo;
@@ -67,13 +61,29 @@ public class FENCEAuthenticationService {
 
     private Application picSureApp;
     private Connection fenceConnection;
-    private Map<String, String> fenceMapping;
+    
+    //read the fence_mapping.json into this object to improve lookup speeds
+    private static Map<String, Map> _projectMap;
+    
+    private static final String parentAccessionField = "\\\\_Parent Study Accession with Subject ID\\\\";
+    private static final String topmedAccessionField = "\\\\_Topmed Study Accession with Subject ID\\\\";
+    
+    private static final String[] underscoreFields = new String[] {
+    		parentAccessionField,
+    		topmedAccessionField,
+    		fence_harmonized_consent_group_concept_path,
+    		fence_parent_consent_group_concept_path,
+    		fence_topmed_consent_group_concept_path,
+    		"\\\\_VCF Sample Id\\\\",
+    		"\\\\_studies\\\\",
+    		"\\\\_parent_consents\\\\",  //parent consents not used for auth (use combined _consents)
+    		"\\\\_Consents\\\\"   ///old _Consents\Short Study... path no longer used, but still present in examples.
+    };
 
     @PostConstruct
 	public void initializeFenceService() {
 		 picSureApp = applicationRepo.getUniqueResultByColumn("name", "PICSURE");
 		 fenceConnection = connectionRepo.getUniqueResultByColumn("label", "FENCE");
-		 fenceMapping = getFENCEMapping();
     }
 
     private JsonNode getFENCEUserProfile(String access_token) {
@@ -123,7 +133,7 @@ public class FENCEAuthenticationService {
         } catch (Exception ex) {
             logger.error("getFENCEAccessToken() failed to call FENCE token service, "+ex.getMessage());
         }
-        logger.debug("getFENCEAccessToken() finished. "+resp.asText());
+        logger.debug("getFENCEAccessToken() finished: "+resp.asText());
         return resp;
     }
 
@@ -137,12 +147,20 @@ public class FENCEAuthenticationService {
         try {
             logger.debug("getFENCEProfile() query FENCE for user profile with code");
             fence_user_profile = getFENCEUserProfile(getFENCEAccessToken(callback_url, fence_code).get("access_token").asText());
-            logger.debug("getFENCEProfile() user profile structure:"+fence_user_profile.asText());
+           
+            if(logger.isTraceEnabled()){
+	            // create object mapper instance
+	            ObjectMapper mapper = new ObjectMapper();
+	            // `JsonNode` to JSON string
+	            String prettyString = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(fence_user_profile);
+	            
+	            logger.trace("getFENCEProfile() user profile structure:"+  prettyString);
+            }
             logger.debug("getFENCEProfile() .username:" + fence_user_profile.get("username"));
             logger.debug("getFENCEProfile() .user_id:" + fence_user_profile.get("user_id"));
             logger.debug("getFENCEProfile() .email:" + fence_user_profile.get("email"));
         } catch (Exception ex) {
-            logger.error("getFENCEToken() could not retrieve the user profile from the auth provider, because "+ex.getMessage(), ex);
+            logger.error("getFENCEProfile() could not retrieve the user profile from the auth provider, because "+ex.getMessage(), ex);
             throw new NotAuthorizedException("Could not get the user profile "+
                     "from the Gen3 authentication provider."+ex.getMessage());
         }
@@ -156,6 +174,10 @@ public class FENCEAuthenticationService {
                     +current_user.getEmail()
                     +" and subject:"
                     +current_user.getSubject());
+            
+            //clear some cache entries if we register a new login
+            AuthorizationService.clearCache(current_user);
+            UserService.clearCache(current_user);
 
         } catch (Exception ex) {
             logger.error("getFENCEToken() Could not persist the user information, because "+ex.getMessage());
@@ -167,13 +189,31 @@ public class FENCEAuthenticationService {
         Iterator<String> access_role_names = fence_user_profile.get("project_access").fieldNames();
         while (access_role_names.hasNext()) {
             String access_role_name = access_role_names.next();
-
+            logger.debug("getFENCEProfile() AccessRole:"+access_role_name);
+            
             // These two special access does not matter. We are not using it.
             if (access_role_name.equals("admin") || access_role_name.equals("parent")) {
+            	logger.info("SKIPPING ACCESS ROLE: " + access_role_name);
                 continue;
             }
-
-            logger.debug("getFENCEProfile() AccessRole:"+access_role_name);
+            //topmed ==> access to all studies (not just topmed)
+            if (access_role_name.equals("topmed") ) {
+            	Map<String, Map> projects = getFENCEMapping();
+            	for(Map projectMetadata : projects.values()) {
+					String projectId = (String) projectMetadata.get("study_identifier");
+					String consentCode = (String) projectMetadata.get("consent_group_code");
+					String newRoleName =  "FENCE_"+projectId+"_"+consentCode;
+					
+					 if (upsertRole(current_user, newRoleName, "FENCE role "+newRoleName)) {
+	                    logger.info("getFENCEProfile() Updated TOPMED user role. Now it includes `"+newRoleName+"`");
+	                } else {
+	                    logger.error("getFENCEProfile() could not add roles to TOPMED user's profile");
+	                }
+            	}
+            	continue;
+            }
+            
+           
             String[] parts = access_role_name.split("\\.");
 
             String newRoleName;
@@ -195,6 +235,22 @@ public class FENCEAuthenticationService {
                 //It is a an array of strings, like this: ["read-storage","read"]
                 //logger.debug("getFENCEProfile() object:"+role_object.toString());
         }
+        
+        if(current_user.getRoles() != null && current_user.getRoles().size() == 0) {
+        	//User was authorized by fence, but has no study access.
+        	//add role to allow login, but deny all queries
+        	
+        	
+        	// Create the Role in the repository, if it does not exist. Otherwise, add it.
+            Role noAccessRole = roleRepo.getUniqueResultByColumn("name", fence_no_access_role_name);
+            if (noAccessRole != null) {
+                // Role already exists
+            	current_user.getRoles().add(noAccessRole);
+            } else {
+            	logger.warn("Unable to find fence NO ACCESS role");
+            }
+        }
+        
         try {
             userRepo.changeRole(current_user, current_user.getRoles());
             logger.debug("upsertRole() updated user, who now has "+current_user.getRoles().size()+" roles.");
@@ -275,14 +331,14 @@ public class FENCEAuthenticationService {
                 r.setDescription(roleDescription);
                 // Since this is a new Role, we need to ensure that the
                 // corresponding Privilege (with gates) and AccessRule is added.
-                //r.setPrivileges(upsertPrivilege(u, r));
+                r.setPrivileges(addFENCEPrivileges(u, r));
                 roleRepo.persist(r);
                 logger.info("upsertRole() created new role");
             }
             u.getRoles().add(r);
             status = true;
         } catch (Exception ex) {
-            logger.error("upsertRole() Could not inser/update role "+roleName+" to repo, because "+ex.getMessage());
+            logger.error("upsertRole() Could not inser/update role "+roleName+" to repo", ex);
         }
 
 
@@ -290,78 +346,211 @@ public class FENCEAuthenticationService {
         return status;
     }
 
-    private Set<Privilege> upsertPrivilege(User u, Role r) {
+    private Set<Privilege> addFENCEPrivileges(User u, Role r) {
         String roleName = r.getName();
-        logger.info("upsertPrivilege() starting, adding privilege to role "+roleName);
+        logger.info("addFENCEPrivileges() starting, adding privilege(s) to role "+roleName);
 
+        //each project can have up to three privileges: Parent  |  Harmonized  | Topmed
+        //harmonized has 2 ARs for parent + harminized and harmonized only
+        //Topmed has up to three ARs for topmed / topmed + parent / topmed + harmonized 
+        Set<Privilege> privs = r.getPrivileges();
+        if (privs == null) { privs = new HashSet<Privilege>();}
+        
+        //e.g. FENCE_phs0000xx_c2
         String[] parts = roleName.split("_");
         String project_name = parts[1];
         String consent_group = parts[2];
-        // TODO: How to alert when the mapping is not in the list.
-        String concept_path = fenceMapping.get(project_name);
-
-        // Get privilege and assign it to this role.
-        String privilegeName = r.getName().replaceFirst("FENCE_*","PRIV_FENCE_");
-        logger.info("upsertPrivilege() Looking for privilege, with name : "+privilegeName);
-
-        Set<Privilege> privs = r.getPrivileges();
-        if (privs == null) { privs = new HashSet<Privilege>();}
-
-        Privilege p = privilegeRepo.getUniqueResultByColumn("name", privilegeName);
-        if (p != null) {
-            logger.info("upsertPrivilege() Assigning privilege "+p.getName()+" to role "+r.getName());
-            privs.add(p);
-
-        } else {
-            logger.info("upsertPrivilege() This is a new privilege");
-            logger.info("upsertPrivilege() project:"+project_name+" consent_group:"+consent_group+" concept_path:"+concept_path);
-
-            // Add new privilege PRIV_FENCE_phs######_c# and PRIV_FENCE_phs######_c#_HARMONIZED
-            privs.add(createNewPrivilege(project_name, consent_group, concept_path, false));
-            privs.add(createNewPrivilege(project_name, consent_group, fence_harmonized_concept_path, true));
+        
+        
+        // Look up the metadata by consent group.
+       Map projectMetadata = getFENCEMappingforProjectAndConsent(project_name, consent_group);
+        
+        if(projectMetadata == null || projectMetadata.size() == 0) {
+        	//no privileges means no access to this project.  just return existing set of privs.
+        	logger.warn("No metadata available for project " + project_name + "." + consent_group);
+        	return privs;
         }
-        logger.info("upsertPrivilege() Finished");
+        
+        logger.info("addPrivileges() This is a new privilege");
+        
+        String dataType = (String) projectMetadata.get("data_type");
+        Boolean isHarmonized = "Y".equals(projectMetadata.get("is_harmonized"));
+        String concept_path = (String) projectMetadata.get("top_level_path");
+        String projectAlias = (String) projectMetadata.get("abbreviated_name");
+        
+        //we need to add escape sequence back in to the path for parsing later (also need to double escape the regex)
+        //
+        // OK... so, we need to do this for the query Template and scopes, but should NOT do this for the rules.
+        //
+        // NOTE: I'm leaving this in here for now and removing the escaped values later.  TODO: fix me!
+        //
+        if(concept_path != null) {
+        	concept_path = concept_path.replaceAll("\\\\", "\\\\\\\\");
+        }
+        
+        if(dataType != null && dataType.contains("G")) {
+        	//insert genomic/topmed privs - this will also add rules for including harmonized & parent data if applicable
+        	privs.add(upsertTopmedPrivilege(project_name, projectAlias, consent_group, concept_path, isHarmonized));
+        }
+        
+        if(dataType != null && dataType.contains("P")) {
+        	//insert clinical privs
+            logger.info("addPrivileges() project:"+project_name+" consent_group:"+consent_group+" concept_path:"+concept_path);
+            privs.add(upsertClinicalPrivilege(project_name, projectAlias, consent_group, concept_path, false));
+            
+            //if harmonized study, also create harmonized privileges
+            if(Boolean.TRUE.equals(isHarmonized)) {
+            	privs.add(upsertClinicalPrivilege(project_name, projectAlias, consent_group, concept_path, true));
+            }
+        }
+        
+        //projects without G or P in data_type are skipped
+        if(dataType == null || (!dataType.contains("P")  && !dataType.contains("G"))){
+        	logger.warn("Missing study type for " + project_name + " " + consent_group);
+        }
+            
+        logger.info("addPrivileges() Finished");
         return privs;
     }
 
-    private Privilege createNewPrivilege(String project_name, String consent_group, String queryScopeConceptPath, boolean isHarmonized) {
-        Privilege priv = new Privilege();
+    /**
+     * Creates a privilege with a set of access rules that allow queries containing a consent group to pass if the query only contains valid entries that match conceptPath.  If the study is harmonized, 
+     * this also creates an access rule to allow access when using the harmonized consent concept path.
+     * 
+     * Privileges created with this method will deny access if any genomic filters (topmed data) are included.
+     * 
+     * @param studyIdentifier
+     * @param consent_group
+     * @param conceptPath
+     * @param isHarmonized
+     * @return
+     */
+    private Privilege upsertClinicalPrivilege(String studyIdentifier, String projectAlias, String consent_group, String conceptPath, boolean isHarmonized) {
+    	
+    	String privilegeName = "PRIV_FENCE_"+studyIdentifier+"_"+consent_group+(isHarmonized?"_HARMONIZED":"");
+    	Privilege priv = privilegeRepo.getUniqueResultByColumn("name", privilegeName);
+    	if(priv !=  null) {
+    		 logger.info("upsertClinicalPrivilege() " + privilegeName + " already exists");
+    		return priv;
+    	}
+    	
+        priv = new Privilege();
 
-        // Build Privilege Object
         try {
             priv.setApplication(picSureApp);
-            priv.setName("PRIV_FENCE_"+project_name+"_"+consent_group+(isHarmonized?"_HARMONIZED":""));
-            priv.setDescription("FENCE privilege for "+project_name+"/"+consent_group);
-            priv.setQueryScope(queryScopeConceptPath);
+            priv.setName(privilegeName);
 
-            String consent_concept_path = fence_consent_group_concept_path;
+            String consent_concept_path = isHarmonized ? fence_harmonized_consent_group_concept_path : fence_parent_consent_group_concept_path;
+           
+            if(!consent_concept_path.contains("\\\\")){
+            	 //these have to be escaped again so that jaxson can convert it correctly
+            	consent_concept_path = consent_concept_path.replaceAll("\\\\", "\\\\\\\\");
+            	logger.debug(consent_concept_path);
+            }
+            if(fence_harmonized_concept_path != null && !fence_harmonized_concept_path.contains("\\\\")){
+	          	 //these have to be escaped again so that jaxson can convert it correctly
+	        	fence_harmonized_concept_path = fence_harmonized_concept_path.replaceAll("\\\\", "\\\\\\\\");
+	           	logger.debug("upsertTopmedPrivilege(): escaped harmonized consent path" + fence_harmonized_concept_path);
+           }
+            
+            
             // TOOD: Change this to a mustache template
             String queryTemplateText = "{\"categoryFilters\": {\""
                     +consent_concept_path
-                    +"\":\""
-                    +project_name+"."+consent_group
-                    +"\"},"
+                    +"\":[\""
+                    +studyIdentifier+"."+consent_group
+                    +"\"]},"
                     +"\"numericFilters\":{},\"requiredFields\":[],"
+                    +"\"fields\":[\"" + parentAccessionField + "\"],"
                     +"\"variantInfoFilters\":[{\"categoryVariantInfoFilters\":{},\"numericVariantInfoFilters\":{}}],"
                     +"\"expectedResultType\": \"COUNT\""
                     +"}";
             priv.setQueryTemplate(queryTemplateText);
-            priv.setQueryScope(queryScopeConceptPath);
+            if(isHarmonized) {
+            	priv.setQueryScope("[\"" + conceptPath + "\",\"_\",\"" + fence_harmonized_concept_path + "\"]");
+            } else {
+            	priv.setQueryScope("[\"" + conceptPath + "\",\"_\"]");
+            }
 
-            AccessRule ar = upsertAccessRule(project_name, consent_group);
-            if (ar != null) {
-                Set<AccessRule> accessrules = new HashSet<AccessRule>();
-                accessrules.add(ar);
-                // Add additionanl access rules
-                for(String arName: fence_standard_access_rules.split(",")) {
-                    if (arName.startsWith("AR_")) {
-                        logger.info("Adding AccessRule "+arName+" to privilege "+priv.getName());
-                        accessrules.add(accessruleRepo.getUniqueResultByColumn("name",arName));
+            Set<AccessRule> accessrules = new HashSet<AccessRule>();
+            
+        	//just need one AR for parent study
+            AccessRule ar = createConsentAccessRule(studyIdentifier, consent_group, "PARENT", fence_parent_consent_group_concept_path);
+            
+            //if this is a new rule, we need to populate it
+            if(ar.getGates() == null) {
+            	ar.setGates(new HashSet<AccessRule>());
+            	ar.getGates().addAll(getGates(true, false, false));
+            	
+            	if(ar.getSubAccessRule() == null) {
+            		ar.setSubAccessRule(new HashSet<AccessRule>());
+            	}
+            	ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
+            	ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, conceptPath, projectAlias));
+            	ar.getSubAccessRule().addAll(getTopmedRestrictedSubRules());
+            	accessruleRepo.merge(ar);
+            }
+            
+            accessrules.add(ar);
+            
+            // here we add a rule to allow querying a parent study if genomic filters are included.  This goes on all studies;
+            // if the study has no genomic data or the user is not authorizzed for genomic studies, there will be 0 patients returned.
+        	ar = upsertTopmedAccessRule(studyIdentifier, consent_group, "TOPMED+PARENT");
+            
+            //if this is a new rule, we need to populate it
+        	 if(ar.getGates() == null) {
+             	ar.setGates(new HashSet<AccessRule>());
+            	ar.getGates().addAll(getGates(true, false, true));
+            	if(ar.getSubAccessRule() == null) {
+            		ar.setSubAccessRule(new HashSet<AccessRule>());
+            	}
+            	ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
+        		ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, conceptPath, projectAlias));
+        		//this is added in the 'getPhenotypeRestrictedSubRules()' which is not called in this path
+        		ar.getSubAccessRule().add(createPhenotypeSubRule(fence_topmed_consent_group_concept_path, "ALLOW_TOPMED_CONSENT", "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
+            	
+        		accessruleRepo.merge(ar);
+            }
+            accessrules.add(ar);
+            
+            if(isHarmonized) {
+				//add a rule for accessing only harmonized data
+				ar = createConsentAccessRule(studyIdentifier, consent_group, "HARMONIZED", fence_harmonized_consent_group_concept_path);
+	                
+	            //if this is a new rule, we need to populate it
+				 if(ar.getGates() == null) {
+                	ar.setGates(new HashSet<AccessRule>());
+//	            	ar.getGates().addAll(getGates(false, true, false));
+                	ar.getGates().add(upsertConsentGate("HARMONIZED_CONSENT", "$..categoryFilters." + fence_harmonized_consent_group_concept_path + "[*]", true, "harmonized data"));
+             	
+	            	if(ar.getSubAccessRule() == null) {
+                  		ar.setSubAccessRule(new HashSet<AccessRule>());
+                  	}
+	            	ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
+	            	ar.getSubAccessRule().addAll(getHarmonizedSubRules());
+	            	
+	            	ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, conceptPath, projectAlias));
+//	            	ar.getSubAccessRule().addAll(getTopmedRestrictedSubRules());
+	            	accessruleRepo.merge(ar);
+	            }
+	            accessrules.add(ar);
+            }
+            
+            // Add additional access rules;   (these are still created through that SQL script)
+            for(String arName: fence_standard_access_rules.split(",")) {
+                if (arName.startsWith("AR_")) {
+                    logger.info("upsertClinicalPrivilege() Adding AccessRule "+arName+" to privilege "+priv.getName());
+                    ar = accessruleRepo.getUniqueResultByColumn("name",arName);
+                    if(ar != null) {
+                    	accessrules.add(ar);
+                    }
+                    else {
+                    	logger.warn("upsertClinicalPrivilege() unable to find an access rule with name " + arName);
                     }
                 }
-                priv.setAccessRules(accessrules);
-                logger.info("createNewPrivilege() Added "+accessrules.size()+" access_rules to privilege");
             }
+            priv.setAccessRules(accessrules);
+            logger.info("createNewPrivilege() Added "+accessrules.size()+" access_rules to privilege");
 
             privilegeRepo.persist(priv);
             logger.info("createNewPrivilege() Added new privilege "+priv.getName()+" to DB");
@@ -371,65 +560,544 @@ public class FENCEAuthenticationService {
         }
         return priv;
     }
+    
+    private Set<AccessRule> getAllowedQueryTypeRules() {
+    	Set<AccessRule> rules = new HashSet<AccessRule>();
+    	String[] allowedTypes = JAXRSConfiguration.fence_allowed_query_types.split(",");
+    	for(String queryType : allowedTypes) {
+    		
+    		String ar_name = "AR_ALLOW_" + queryType ;
+    		
+    		AccessRule ar = accessruleRepo.getUniqueResultByColumn("name", ar_name);
+            if(ar != null) {
+            	logger.debug("createTopmedRestrictedSubRule() Found existing rule: " + ar.getName());
+            	rules.add(ar);
+            	continue;
+            }
+    		
+ 	        logger.info("upsertPhenotypeSubRule() Creating new access rule "+ar_name);
+ 	        ar = new AccessRule();
+ 	        ar.setName(ar_name);
+ 	        ar.setDescription("FENCE SUB AR to allow " + queryType + " Queries");
+ 	        ar.setRule( "$..expectedResultType");
+ 	        ar.setType(AccessRule.TypeNaming.ALL_EQUALS);
+ 	        ar.setValue(queryType);
+ 	        ar.setCheckMapKeyOnly(false);
+ 	        ar.setCheckMapNode(false);
+ 	        ar.setEvaluateOnlyByGates(false);
+ 	        ar.setGateAnyRelation(false); 
+ 	       
+ 	        accessruleRepo.persist(ar);
+ 	       rules.add(ar);
+    		
+    	}
+    	return rules;
+	}
 
-    private AccessRule upsertAccessRule(String project_name, String consent_group) {
-        logger.debug("upsertAccessRule() starting");
-        String ar_name = "AR_"+project_name+"_"+consent_group;
+	private Collection<? extends AccessRule> getTopmedRestrictedSubRules() {
+    	Set<AccessRule> rules = new HashSet<AccessRule>();
+    	rules.add(upsertTopmedRestrictedSubRule("CATEGORICAL", "$..variantInfoFilters[*].categoryVariantInfoFilters.*"));
+    	rules.add(upsertTopmedRestrictedSubRule("NUMERIC", "$..variantInfoFilters[*].numericVariantInfoFilters.*"));
+    	
+    	return rules;
+	}
+    
+    //topmed restriction rules don't need much configuration.  Just deny all access.
+    private AccessRule upsertTopmedRestrictedSubRule(String type, String rule) {
+        String ar_name = "AR_TOPMED_RESTRICTED_" + type;
+
         AccessRule ar = accessruleRepo.getUniqueResultByColumn("name", ar_name);
-        if (ar != null) {
-            logger.info("upsertAccessRule() AccessRule "+ar_name+" already exists.");
-            return ar;
+        if(ar != null) {
+        	logger.debug("createTopmedRestrictedSubRule() Found existing rule: " + ar.getName());
+        	return ar;
         }
-
-        logger.info("upsertAccessRule() Creating new access rule "+ar_name);
+        
+        logger.info("upsertTopmedRestrictedSubRule() Creating new access rule "+ar_name);
         ar = new AccessRule();
         ar.setName(ar_name);
-        ar.setDescription("FENCE AR for "+project_name+"/"+consent_group);
-        StringBuilder ruleText = new StringBuilder();
-        ruleText.append("$..categoryFilters.['");
-        ruleText.append(fence_consent_group_concept_path);
-        ruleText.append("']");
-        ar.setRule(ruleText.toString());
-        ar.setType(AccessRule.TypeNaming.ALL_EQUALS);
-        ar.setValue(project_name+"."+consent_group);
+        ar.setDescription("FENCE SUB AR for retricting " + type + " genomic concepts");
+        ar.setRule(rule);
+        ar.setType(AccessRule.TypeNaming.IS_EMPTY);
+        ar.setValue(null);
         ar.setCheckMapKeyOnly(false);
-        ar.setCheckMapNode(true);
+        ar.setCheckMapNode(false);
         ar.setEvaluateOnlyByGates(false);
-        ar.setGateAnyRelation(false);
-
-        // Assign all GATE_ access rules to this AR access rule.
-        Set<AccessRule> gates = new HashSet<AccessRule>();
-        for (String accessruleName : fence_standard_access_rules.split("\\,")) {
-            if (accessruleName.startsWith("GATE_")) {
-                logger.info("upsertAccessRule() Assign gate " + accessruleName +
-                		" to access_rule "+ar.getName());
-                gates.add(accessruleRepo.getUniqueResultByColumn("name",accessruleName));
-            } else {
-                continue;
-            }
-        }
-        ar.setGates(gates);
-
+        ar.setGateAnyRelation(false); 
+        
         accessruleRepo.persist(ar);
 
-        logger.debug("upsertAccessRule() finished");
         return ar;
     }
 
-	/*
-	 * Get the mappings of fence privileges to paths
-	 */
-	@SuppressWarnings("unchecked")
-	private Map<String, String> getFENCEMapping() {
-		try {
-			return JAXRSConfiguration.objectMapper.readValue(
-					new File(String.join(File.separator,
-							new String[] {JAXRSConfiguration.templatePath ,"fence_mapping.json"}))
-					, Map.class);
-		} catch (IOException e) {
-			logger.error("fence_mapping.json not found at "+JAXRSConfiguration.templatePath);
-		}
-		return Map.of();
+	private Collection<? extends AccessRule> getPhenotypeSubRules(String studyIdentifier, String conceptPath, String alias) {
+    	
+    	Set<AccessRule> rules = new HashSet<AccessRule>();
+    	//categorical filters will always contain at least one entry (for the consent groups); it will never be empty
+    	rules.add(createPhenotypeSubRule(fence_parent_consent_group_concept_path, "ALLOW_PARENT_CONSENT", "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
+    	
+    	for(String underscorePath : underscoreFields ) {
+    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$..fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false));
+    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true));
+    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$..requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQ_FIELDS", false));
+    	}
+    	
+    	rules.add(createPhenotypeSubRule(conceptPath, alias+ "_" + studyIdentifier, "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true));
+    	rules.add(createPhenotypeSubRule(conceptPath, alias+ "_" + studyIdentifier, "$..numericFilters", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "NUMERIC", true));
+    	rules.add(createPhenotypeSubRule(conceptPath, alias+ "_" + studyIdentifier, "$..fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false));
+    	rules.add(createPhenotypeSubRule(conceptPath, alias+ "_" + studyIdentifier, "$..requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQUIRED_FIELDS", false));
+    	
+    	return rules;
 	}
+	
+	/**
+	 * Harmonized rules should allow the user to supply paretn and top med consent groups;  this allows a single harmonized 
+	 * rules instead of splitting between a topmed+harmonized and parent+harmonized  
+	 * 
+	 * @return
+	 */
+	private Collection<? extends AccessRule> getHarmonizedSubRules() {
+    	
+    	Set<AccessRule> rules = new HashSet<AccessRule>();
+    	//categorical filters will always contain at least one entry (for the consent groups); it will never be empty
+    	rules.add(createPhenotypeSubRule(fence_parent_consent_group_concept_path, "ALLOW_PARENT_CONSENT", "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
+    	rules.add(createPhenotypeSubRule(fence_harmonized_consent_group_concept_path, "ALLOW_HARMONIZED_CONSENT", "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
+    	rules.add(createPhenotypeSubRule(fence_topmed_consent_group_concept_path, "ALLOW_TOPMED_CONSENT", "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
+    	
+    	for(String underscorePath : underscoreFields ) {
+    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$..fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false));
+    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true));
+    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$..requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQ_FIELDS", false));
+    	}
+    	
+    	rules.add(createPhenotypeSubRule(fence_harmonized_concept_path, "HARMONIZED", "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true));
+    	rules.add(createPhenotypeSubRule(fence_harmonized_concept_path, "HARMONIZED", "$..numericFilters", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "NUMERIC", true));
+    	rules.add(createPhenotypeSubRule(fence_harmonized_concept_path, "HARMONIZED", "$..fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false));
+    	rules.add(createPhenotypeSubRule(fence_harmonized_concept_path, "HARMONIZED", "$..requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQUIRED_FIELDS", false));
+    	
+    	return rules;
+	}
+	
 
+	/**
+	 * generate and return a set of rules that disallow access to phenotype data (only genomic filters allowed)
+	 * @return
+	 */
+	private Collection<? extends AccessRule> getPhenotypeRestrictedSubRules(String studyIdentifier, String consentCode, String alias) {
+    	
+    	Set<AccessRule> rules = new HashSet<AccessRule>();
+    	//categorical filters will always contain at least one entry (for the consent groups); it will never be empty
+    	rules.add(createPhenotypeSubRule(fence_topmed_consent_group_concept_path, "ALLOW_TOPMED_CONSENT", "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
+    	
+    	for(String underscorePath : underscoreFields ) {
+    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$..fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false));
+    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true));
+    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$..requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQ_FIELDS", false));
+    	}
+    	
+    	rules.add(createPhenotypeSubRule(null, alias + "_" + studyIdentifier+ "_" + consentCode, "$..numericFilters.[*]", AccessRule.TypeNaming.IS_EMPTY, "DISALLOW_NUMERIC", false));
+//    	rules.add(createPhenotypeSubRule(null, alias + "_" + studyIdentifier+ "_" + consentCode, "$..fields.[*]", AccessRule.TypeNaming.IS_EMPTY, "DISALLOW FIELDS", false, parentRule));
+    	rules.add(createPhenotypeSubRule(null, alias + "_" + studyIdentifier+ "_" + consentCode, "$..requiredFields.[*]", AccessRule.TypeNaming.IS_EMPTY, "DISALLOW_REQUIRED_FIELDS", false));
+    	
+    	return rules;
+	}
+	
+	/**
+	 * Return a set of gates that identify which consent values have been provided.  the boolean parameters indicate
+	 * if a value in the specified consent location should allow this gate to pass.
+	 * @param parent
+	 * @param harmonized
+	 * @param topmed
+	 * @return
+	 */
+	private Collection<? extends AccessRule> getGates(boolean parent, boolean harmonized, boolean topmed) {
+    	
+    	Set<AccessRule> gates = new HashSet<AccessRule>();
+    	gates.add(upsertConsentGate("PARENT_CONSENT", "$..categoryFilters." + fence_parent_consent_group_concept_path + "[*]", parent, "parent study data"));
+    	gates.add(upsertConsentGate("HARMONIZED_CONSENT", "$..categoryFilters." + fence_harmonized_consent_group_concept_path + "[*]", harmonized, "harmonized data"));
+    	gates.add(upsertConsentGate("TOPMED_CONSENT", "$..categoryFilters." + fence_topmed_consent_group_concept_path + "[*]", topmed, "Topmed data"));
+   		
+		return gates;
+	}
+	
+	 private AccessRule createPhenotypeSubRule(String conceptPath, String alias, String rule, int ruleType, String label, boolean useMapKey) {
+	        
+		 	//remove double escape sequence from path evaluation expression
+		 	if(conceptPath != null && conceptPath.contains("\\\\")) {
+		 		//replaceall regex needs to be double escaped (again)
+		 		conceptPath = conceptPath.replaceAll("\\\\\\\\", "\\\\");
+		 	}
+		 
+		 	String ar_name = "AR_PHENO_"+alias + "_" + label;
+		 	
+		 	AccessRule ar = accessruleRepo.getUniqueResultByColumn("name", ar_name);
+	        if(ar != null) {
+	        	logger.debug("createPhenotypeSubRule() Found existing rule: " + ar.getName());
+	        	return ar;
+	        }
+		 	
+	        logger.info("createPhenotypeSubRule() Creating new access rule "+ar_name);
+	        ar = new AccessRule();
+	        ar.setName(ar_name);
+	        ar.setDescription("FENCE SUB AR for " + alias + " " + label + " clinical concepts");
+	        ar.setRule(rule);
+	        ar.setType(ruleType);
+	        ar.setValue(ruleType == AccessRule.TypeNaming.IS_NOT_EMPTY ? null : conceptPath);
+	        ar.setCheckMapKeyOnly(useMapKey);
+	        ar.setCheckMapNode(useMapKey);
+	        ar.setEvaluateOnlyByGates(false);
+	        ar.setGateAnyRelation(false); 
+	        
+	        accessruleRepo.persist(ar);
+
+	        return ar;
+	    }
+	 
+
+	/**
+	 * Creates a privilege for Topmed access.  This has (up to) three access rules - 1) topmed only 2) topmed + parent 3) topmed+ hermonized  (??)
+	 * @param studyIdentifier
+	 * @param consent_group
+	 * @return
+	 */
+	private Privilege upsertTopmedPrivilege(String studyIdentifier, String projectAlias, String consent_group, String parentConceptPath, boolean isHarmonized) {
+		
+    	String privilegeName = "PRIV_FENCE_"+studyIdentifier+"_"+consent_group + "_TOPMED";
+    	Privilege priv = privilegeRepo.getUniqueResultByColumn("name", privilegeName);
+    	if(priv !=  null) {
+    		 logger.info("upsertTopmedPrivilege() " + privilegeName + " already exists");
+    		return priv;
+    	}
+    	
+        priv = new Privilege();
+
+
+        // Build Privilege Object
+        try {
+            priv.setApplication(picSureApp);
+            priv.setName(privilegeName);
+            priv.setDescription("FENCE privilege for Topmed "+studyIdentifier+"."+consent_group);
+
+            String consent_concept_path = fence_topmed_consent_group_concept_path;
+            if(!consent_concept_path.contains("\\\\")){
+           	 //these have to be escaped again so that jaxson can convert it correctly
+           	consent_concept_path = consent_concept_path.replaceAll("\\\\", "\\\\\\\\");
+           	logger.debug("upsertTopmedPrivilege(): escaped parent consent path" + consent_concept_path);
+           }
+            
+            if(fence_harmonized_concept_path != null && !fence_harmonized_concept_path.contains("\\\\")){
+	          	 //these have to be escaped again so that jaxson can convert it correctly
+	        	fence_harmonized_concept_path = fence_harmonized_concept_path.replaceAll("\\\\", "\\\\\\\\");
+	           	logger.debug("upsertTopmedPrivilege(): escaped harmonized consent path" + fence_harmonized_concept_path);
+            }
+            
+            // TODO: Change this to a mustache template
+            String queryTemplateText = "{\"categoryFilters\": {\""
+                    +consent_concept_path
+                    +"\":[\""
+                    +studyIdentifier+"."+consent_group
+                    +"\"]}," 
+                    +"\"numericFilters\":{},\"requiredFields\":[],"
+                    +"\"fields\":[\"" + topmedAccessionField + "\"],"
+                    +"\"variantInfoFilters\":[{\"categoryVariantInfoFilters\":{},\"numericVariantInfoFilters\":{}}],"
+                    +"\"expectedResultType\": \"COUNT\""
+                    +"}";
+            priv.setQueryTemplate(queryTemplateText);
+            //need a non-null scope that is a list of strings
+            
+            
+
+    		String variantColumns = JAXRSConfiguration.variantAnnotationColumns;
+    		if(variantColumns == null || variantColumns.isEmpty()) {
+    			 priv.setQueryScope("[\"_\"]");
+    		} else {
+    			StringBuilder builder = new StringBuilder();
+	    		for(String annotationPath : variantColumns.split(",")) {
+	    			if(builder.length() == 0) {
+	    				builder.append("[");
+	    			} else {
+	    				builder.append(",");
+	    			}
+	    			builder.append("\""+annotationPath+"\"");
+	    		}
+	    		builder.append(",\"_\"");
+	    		builder.append("]");
+	    		priv.setQueryScope(builder.toString());
+    		}
+           
+            
+            Set<AccessRule> accessrules = new HashSet<AccessRule>();
+            
+            AccessRule ar = upsertTopmedAccessRule(studyIdentifier, consent_group, "TOPMED");
+            
+            //if this is a new rule, we need to populate it
+            if(ar.getGates() == null) {
+            	ar.setGates(new HashSet<AccessRule>());
+            	ar.getGates().addAll(getGates(false, false, true));
+            	
+            	if(ar.getSubAccessRule() == null) {
+            		ar.setSubAccessRule(new HashSet<AccessRule>());
+            	}
+            	ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
+        		ar.getSubAccessRule().addAll(getPhenotypeRestrictedSubRules(studyIdentifier, consent_group, projectAlias));
+        		accessruleRepo.merge(ar);
+            }
+            accessrules.add(ar);
+            
+            if(parentConceptPath != null) {
+            	
+            	ar = upsertTopmedAccessRule(studyIdentifier, consent_group, "TOPMED+PARENT");
+                
+                //if this is a new rule, we need to populate it
+            	 if(ar.getGates() == null) {
+                 	ar.setGates(new HashSet<AccessRule>());
+                	ar.getGates().addAll(getGates(true, false, true));
+                	if(ar.getSubAccessRule() == null) {
+                		ar.setSubAccessRule(new HashSet<AccessRule>());
+                	}
+                	ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
+            		ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, parentConceptPath, projectAlias));
+            		//this is added in the 'getPhenotypeRestrictedSubRules()' which is not called in this path
+            		ar.getSubAccessRule().add(createPhenotypeSubRule(fence_topmed_consent_group_concept_path, "ALLOW_TOPMED_CONSENT", "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
+                	
+            		accessruleRepo.merge(ar);
+                }
+                accessrules.add(ar);
+                
+                
+                if(isHarmonized) {
+                	ar = upsertHarmonizedAccessRule(studyIdentifier, consent_group, "HARMONIZED");
+                    
+                    //if this is a new rule, we need to populate it
+                	 if(ar.getGates() == null) {
+                      	ar.setGates(new HashSet<AccessRule>());
+//                      	ar.getGates().addAll(getGates(true, true, false));
+                      	ar.getGates().add(upsertConsentGate("HARMONIZED_CONSENT", "$..categoryFilters." + fence_harmonized_consent_group_concept_path + "[*]", true, "harmonized data"));
+                     	
+                     	if(ar.getSubAccessRule() == null) {
+                     		ar.setSubAccessRule(new HashSet<AccessRule>());
+                     	}
+                     	ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
+                		ar.getSubAccessRule().addAll(getHarmonizedSubRules());
+                		ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, parentConceptPath, projectAlias));
+                		accessruleRepo.merge(ar);
+                    }
+                    accessrules.add(ar);
+                    
+                    
+//                	ar = upsertHarmonizedAccessRule(studyIdentifier, consent_group, "TOPMED+HARMONIZED+PARENT");
+//                    
+//                    //if this is a new rule, we need to populate it
+//                	 if(ar.getGates() == null) {
+//                       	ar.setGates(new HashSet<AccessRule>());
+//                       	ar.getGates().addAll(getGates(true, true, true));
+//                      	
+//                      	if(ar.getSubAccessRule() == null) {
+//                      		ar.setSubAccessRule(new HashSet<AccessRule>());
+//                      	}
+//                      	ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
+//                    	ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, parentConceptPath,  projectAlias));
+//                		ar.getSubAccessRule().addAll(getHarmonizedSubRules());
+//                		ar.getSubAccessRule().add(createPhenotypeSubRule(fence_topmed_consent_group_concept_path, "ALLOW_TOPMED_CONSENT", "$..categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
+//                    	
+//                		accessruleRepo.merge(ar);
+//                    }
+//                    accessrules.add(ar);
+                }
+            	
+            }
+            
+            // Add additional access rules;  
+            for(String arName: fence_standard_access_rules.split(",")) {
+                if (arName.startsWith("AR_")) {
+                    logger.info("upsertTopmedPrivilege() Adding AccessRule "+arName+" to privilege "+priv.getName());
+                    ar = accessruleRepo.getUniqueResultByColumn("name",arName);
+                    if(ar != null) {
+                    	accessrules.add(ar);
+                    }
+                    else {
+                    	logger.warn("uupsertTopmedPrivilege() nable to find an access rule with name " + arName);
+                    }
+                }
+            }
+            priv.setAccessRules(accessrules);
+            logger.info("upsertTopmedPrivilege() Added "+accessrules.size()+" access_rules to privilege");
+
+            privilegeRepo.persist(priv);
+            logger.info("upsertTopmedPrivilege() Added new privilege "+priv.getName()+" to DB");
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            logger.error("upsertTopmedPrivilege() could not save privilege");
+        }
+        return priv;
+    }
+
+    //Generates Main rule only; gates & sub rules attached after calling this
+	// prentRule should be null if this is the main rule, or the appropriate value if this is a sub rule
+    private AccessRule createConsentAccessRule(String studyIdentifier, String consent_group, String label, String consent_path) {
+        logger.debug("upsertConsentAccessRule() starting");
+        String ar_name = "AR_CONSENT_" + studyIdentifier+"_"+consent_group+ "_" +label;
+
+        AccessRule ar = accessruleRepo.getUniqueResultByColumn("name", ar_name);
+        if(ar != null) {
+        	logger.debug("upsertConsentAccessRule() Found existing rule: " + ar.getName());
+        	return ar;
+        }
+        
+        
+        
+        logger.info("upsertConsentAccessRule() Creating new access rule "+ar_name);
+        ar = new AccessRule();
+        ar.setName(ar_name);
+        ar.setDescription("FENCE AR for "+studyIdentifier+"."+consent_group + " clinical concepts");
+        StringBuilder ruleText = new StringBuilder();
+        ruleText.append("$..categoryFilters.");
+        ruleText.append(consent_path);
+        ruleText.append("[*]");
+        ar.setRule(ruleText.toString());
+        ar.setType(AccessRule.TypeNaming.ALL_CONTAINS);
+        ar.setValue(studyIdentifier+"."+consent_group);
+        ar.setCheckMapKeyOnly(false);
+        ar.setCheckMapNode(false);
+        ar.setEvaluateOnlyByGates(false);
+        ar.setGateAnyRelation(false); 
+
+        accessruleRepo.persist(ar);
+
+        logger.debug("upsertConsentAccessRule() finished");
+        return ar;
+    }
+    
+    // Generates Main Rule only; gates & sub rules attached by calling method
+    private AccessRule upsertTopmedAccessRule(String project_name, String consent_group, String label ) {
+        logger.debug("upsertTopmedAccessRule() starting");
+        String ar_name = "AR_TOPMED_"+project_name+"_"+consent_group + "_" + label;
+        AccessRule ar = accessruleRepo.getUniqueResultByColumn("name", ar_name);
+        if (ar != null) {
+            logger.info("upsertTopmedAccessRule() AccessRule "+ar_name+" already exists.");
+            return ar;
+        }
+
+        logger.info("upsertTopmedAccessRule() Creating new access rule "+ar_name);
+        ar = new AccessRule();
+        ar.setName(ar_name);
+        ar.setDescription("FENCE AR for "+project_name+"."+consent_group + " Topmed data");
+        StringBuilder ruleText = new StringBuilder();
+        ruleText.append("$..categoryFilters.");
+        ruleText.append(fence_topmed_consent_group_concept_path);
+        ruleText.append("[*]");
+        ar.setRule(ruleText.toString());
+        ar.setType(AccessRule.TypeNaming.ALL_CONTAINS);
+        ar.setValue(project_name+"."+consent_group);
+        ar.setCheckMapKeyOnly(false);
+        ar.setCheckMapNode(false);
+        ar.setEvaluateOnlyByGates(false);
+        ar.setGateAnyRelation(false);  
+        
+        accessruleRepo.persist(ar);
+
+        logger.debug("upsertTopmedAccessRule() finished");
+        return ar;
+    }
+    
+    
+    // Generates Main Rule only; gates & sub rules attached by calling method
+    private AccessRule upsertHarmonizedAccessRule(String project_name, String consent_group, String label ) {
+        logger.debug("upsertTopmedAccessRule() starting");
+        String ar_name = "AR_TOPMED_"+project_name+"_"+consent_group + "_" + label;
+        AccessRule ar = accessruleRepo.getUniqueResultByColumn("name", ar_name);
+        if (ar != null) {
+            logger.info("upsertTopmedAccessRule() AccessRule "+ar_name+" already exists.");
+            return ar;
+        }
+
+        logger.info("upsertTopmedAccessRule() Creating new access rule "+ar_name);
+        ar = new AccessRule();
+        ar.setName(ar_name);
+        ar.setDescription("FENCE AR for "+project_name+"."+consent_group + " Topmed data");
+        StringBuilder ruleText = new StringBuilder();
+        ruleText.append("$..categoryFilters.");
+        ruleText.append(fence_harmonized_consent_group_concept_path);
+        ruleText.append("[*]");
+        ar.setRule(ruleText.toString());
+        ar.setType(AccessRule.TypeNaming.ALL_CONTAINS);
+        ar.setValue(project_name+"."+consent_group);
+        ar.setCheckMapKeyOnly(false);
+        ar.setCheckMapNode(false);
+        ar.setEvaluateOnlyByGates(false);
+        ar.setGateAnyRelation(false);  
+        
+        accessruleRepo.persist(ar);
+
+        logger.debug("upsertTopmedAccessRule() finished");
+        return ar;
+    }
+
+    /**
+     * Insert a new gate (if it doesn't exist yet) to identify if consent values are present in the query.   
+     * return an existing gate named GATE_{gateName}_(PRESENT|MISSING) if it exists.
+     */
+	private AccessRule upsertConsentGate(String gateName, String rule, boolean is_present, String description) {
+		
+		gateName = "GATE_" + gateName + "_" + (is_present ? "PRESENT": "MISSING");
+		
+	    AccessRule gate = accessruleRepo.getUniqueResultByColumn("name", gateName);
+        if (gate != null) {
+            logger.info("upsertConsentGate() AccessRule "+gateName+" already exists.");
+            return gate;
+        }
+
+        logger.info("upsertClinicalGate() Creating new access rule "+gateName);
+        gate = new AccessRule();
+        gate.setName(gateName);
+        gate.setDescription("FENCE GATE for " + description + " consent " + (is_present ? "present" : "missing"));
+        gate.setRule(rule);
+        gate.setType(is_present ? AccessRule.TypeNaming.IS_NOT_EMPTY : AccessRule.TypeNaming.IS_EMPTY );
+        gate.setValue(null);  
+        gate.setCheckMapKeyOnly(false); 
+        gate.setCheckMapNode(false);
+        gate.setEvaluateOnlyByGates(false);
+        gate.setGateAnyRelation(false); 
+        
+        accessruleRepo.persist(gate);
+		return gate;
+	}
+	
+	private Map getFENCEMappingforProjectAndConsent(String projectId, String consent_group) {
+	
+		String consentVal = projectId + "." + consent_group;
+		logger.info("getFENCEMappingforProjectAndConsent() looking up "+consentVal);
+			 
+		Object projectMetadata = getFENCEMapping().get(consentVal);
+		if( projectMetadata instanceof Map) {
+			return (Map)projectMetadata;
+		} else if (projectMetadata != null) {
+			logger.info("getFENCEMappingforProjectAndConsent() Obj instance of " + projectMetadata.getClass().getCanonicalName());	
+		}
+		return null;
+	}
+	
+	private Map<String, Map> getFENCEMapping(){
+		if(_projectMap == null || _projectMap.isEmpty()) {
+			try {
+				Map fenceMapping = JAXRSConfiguration.objectMapper.readValue(
+						new File(String.join(File.separator,
+								new String[] {JAXRSConfiguration.templatePath ,"fence_mapping.json"}))
+						, Map.class);
+				List<Map> projects = (List<Map>) fenceMapping.get("bio_data_catalyst");
+				logger.debug("getFENCEMapping: found FENCE mapping with " + projects.size() + " entries");
+				_projectMap = new HashMap<String, Map>(projects.size());
+				for(Map project : projects) {
+					String consentVal = "" + project.get("study_identifier") + "." + project.get("consent_group_code");
+					logger.debug("adding study " + consentVal);
+					_projectMap.put(consentVal, project);
+				}
+				
+			} catch (Exception e) {
+				logger.error("getFENCEMapping: Non-fatal error parsing fence_mapping.json: "+JAXRSConfiguration.templatePath, e);
+				return new HashMap<String,Map>();
+			}
+		}
+		
+		return _projectMap;
+	}
 }
