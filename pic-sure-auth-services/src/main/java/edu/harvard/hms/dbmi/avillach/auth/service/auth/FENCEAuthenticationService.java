@@ -76,6 +76,7 @@ public class FENCEAuthenticationService {
     		fence_topmed_consent_group_concept_path,
     		"\\\\_VCF Sample Id\\\\",
     		"\\\\_studies\\\\",
+    		"\\\\_studies_consents\\\\",  //used to provide consent-level counts for open access
     		"\\\\_parent_consents\\\\",  //parent consents not used for auth (use combined _consents)
     		"\\\\_Consents\\\\"   ///old _Consents\Short Study... path no longer used, but still present in examples.
     };
