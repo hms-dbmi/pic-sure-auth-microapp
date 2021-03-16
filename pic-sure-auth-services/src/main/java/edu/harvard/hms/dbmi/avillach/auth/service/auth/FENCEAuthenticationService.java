@@ -239,18 +239,25 @@ public class FENCEAuthenticationService {
         
         if(current_user.getRoles() != null && current_user.getRoles().size() == 0) {
         	//User was authorized by fence, but has no study access.
-        	//add role to allow login, but deny all queries
+        	//add role to allow login, but deny all queries to authorized resource
         	
-        	
-        	// Create the Role in the repository, if it does not exist. Otherwise, add it.
             Role noAccessRole = roleRepo.getUniqueResultByColumn("name", fence_no_access_role_name);
             if (noAccessRole != null) {
-                // Role already exists
             	current_user.getRoles().add(noAccessRole);
             } else {
             	logger.warn("Unable to find fence NO ACCESS role");
             }
         }
+        
+        
+        Role openAccessRole = roleRepo.getUniqueResultByColumn("name", "FENCE_ROLE_OPEN_ACCESS");
+        if (openAccessRole != null) {
+        	current_user.getRoles().add(openAccessRole);
+        } else {
+        	logger.warn("Unable to find fence OPEN ACCESS role");
+        }
+        
+        
         
         try {
             userRepo.changeRole(current_user, current_user.getRoles());
@@ -521,7 +528,6 @@ public class FENCEAuthenticationService {
 	            //if this is a new rule, we need to populate it
 				 if(ar.getGates() == null) {
                 	ar.setGates(new HashSet<AccessRule>());
-//	            	ar.getGates().addAll(getGates(false, true, false));
                 	ar.getGates().add(upsertConsentGate("HARMONIZED_CONSENT", "$..categoryFilters." + fence_harmonized_consent_group_concept_path + "[*]", true, "harmonized data"));
              	
 	            	if(ar.getSubAccessRule() == null) {
@@ -529,9 +535,7 @@ public class FENCEAuthenticationService {
                   	}
 	            	ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
 	            	ar.getSubAccessRule().addAll(getHarmonizedSubRules());
-	            	
 	            	ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, conceptPath, projectAlias));
-//	            	ar.getSubAccessRule().addAll(getTopmedRestrictedSubRules());
 	            	accessruleRepo.merge(ar);
 	            }
 	            accessrules.add(ar);
