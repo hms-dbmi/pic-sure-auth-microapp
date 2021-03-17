@@ -16,10 +16,8 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader.InvalidCacheLoadException;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.PathNotFoundException;
-import edu.harvard.hms.dbmi.avillach.auth.data.entity.AccessRule;
-import edu.harvard.hms.dbmi.avillach.auth.data.entity.Application;
-import edu.harvard.hms.dbmi.avillach.auth.data.entity.Privilege;
-import edu.harvard.hms.dbmi.avillach.auth.data.entity.User;
+
+import edu.harvard.hms.dbmi.avillach.auth.data.entity.*;
 import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 
