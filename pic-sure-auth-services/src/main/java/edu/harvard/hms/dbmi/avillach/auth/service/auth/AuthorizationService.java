@@ -101,7 +101,7 @@ public class AuthorizationService {
 		if (requestBody == null) {
 			logger.info("ACCESS_LOG ___ " + user.getUuid().toString() + "," + user.getEmail() + "," + user.getName() + 
 					" ___ has been granted access to application ___ " + applicationName +
-                    " ___  resource ___ " + resourceId + " ___ targetService --- " + targetService +
+                    " ___  resource ___ " + resourceId + " ___ targetService ___ " + targetService +
                     " ___ NO REQUEST BODY FORWARDED BY APPLICATION");
 			return true;
 		}
@@ -129,7 +129,7 @@ public class AuthorizationService {
 			e1.printStackTrace();
 			logger.info("ACCESS_LOG ___ " + user.getUuid().toString() + "," + user.getEmail() + "," + user.getName() + 
 					" ___ has been denied access to execute query ___ " + requestBody + " ___ in application ___ " + applicationName +
-                    " ___  resource ___ " + resourceId + " ___ targetService --- " + targetService +
+                    " ___  resource ___ " + resourceId + " ___ targetService ___ " + targetService +
                     " ___ UNABLE TO PARSE REQUEST");
 			return false;
 		}
@@ -139,7 +139,7 @@ public class AuthorizationService {
 		if(accessRules == null || accessRules.isEmpty()) {
 			logger.info("ACCESS_LOG ___ " + user.getUuid().toString() + "," + user.getEmail() + "," + user.getName() + 
 					" ___ has been denied access to execute query ___ " + formattedQuery + " ___ in application ___ " + applicationName +
-                    " ___  resource ___ " + resourceId + " ___ targetService --- " + targetService +
+                    " ___  resource ___ " + resourceId + " ___ targetService ___ " + targetService +
                     " ___ NO ACCESS RULES EVALUATED");
 			return false;
 		}
@@ -176,7 +176,7 @@ public class AuthorizationService {
 		logger.info("ACCESS_LOG ___ " + user.getUuid().toString() + "," + user.getEmail() + "," + user.getName() + 
 				" ___ has been " + (result?"granted":"denied") + " access to execute query ___ " + formattedQuery + 
 				" ___ in application ___ " + applicationName +
-                " ___  resource ___ " + resourceId + " ___ targetService --- " + targetService +
+                " ___  resource ___ " + resourceId + " ___ targetService ___ " + targetService +
                 " ___ " + (result?"passed by " + passRuleName:"failed by rules: ["
                         + failedRules.stream()
                         .map(ar->(ar.getMergedName().isEmpty()?ar.getName():ar.getMergedName()))
