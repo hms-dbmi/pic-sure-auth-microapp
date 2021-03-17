@@ -6,6 +6,7 @@ import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_parent
 import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_standard_access_rules;
 import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_topmed_consent_group_concept_path;
 import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_no_access_role_name;
+import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_open_access_role_name;
 
 import java.io.File;
 import java.util.*;
@@ -247,16 +248,14 @@ public class FENCEAuthenticationService {
             } else {
             	logger.warn("Unable to find fence NO ACCESS role");
             }
-        }
-        
-        
-        Role openAccessRole = roleRepo.getUniqueResultByColumn("name", "FENCE_ROLE_OPEN_ACCESS");
-        if (openAccessRole != null) {
-        	current_user.getRoles().add(openAccessRole);
         } else {
-        	logger.warn("Unable to find fence OPEN ACCESS role");
+	        Role openAccessRole = roleRepo.getUniqueResultByColumn("name", fence_open_access_role_name);
+	        if (openAccessRole != null) {
+	        	current_user.getRoles().add(openAccessRole);
+	        } else {
+	        	logger.warn("Unable to find fence OPEN ACCESS role");
+	        }
         }
-        
         
         
         try {
