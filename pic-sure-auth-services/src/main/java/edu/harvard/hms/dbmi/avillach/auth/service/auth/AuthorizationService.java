@@ -16,8 +16,10 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader.InvalidCacheLoadException;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.PathNotFoundException;
-
-import edu.harvard.hms.dbmi.avillach.auth.data.entity.*;
+import edu.harvard.hms.dbmi.avillach.auth.data.entity.AccessRule;
+import edu.harvard.hms.dbmi.avillach.auth.data.entity.Application;
+import edu.harvard.hms.dbmi.avillach.auth.data.entity.Privilege;
+import edu.harvard.hms.dbmi.avillach.auth.data.entity.User;
 import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 
@@ -93,16 +95,30 @@ public class AuthorizationService {
 	private boolean _isAuthorized(Application application , Object requestBody, User user){
 
         String applicationName = application.getName();
+
+        String resourceId = "null";
+        String targetService = "null";
+
 		//in some cases, we don't go through the evaluation
 		if (requestBody == null) {
 			logger.info("ACCESS_LOG ___ " + user.getUuid().toString() + "," + user.getEmail() + "," + user.getName() + 
-					" ___ has been granted access to application ___ " + applicationName + " ___ NO REQUEST BODY FORWARDED BY APPLICATION");        
+					" ___ has been granted access to application ___ " + applicationName +
+                    " ___  resource ___ " + resourceId + " ___ targetService --- " + targetService +
+                    " ___ NO REQUEST BODY FORWARDED BY APPLICATION");
 			return true;
 		}
 
-		// start to process the jsonpath checking
+        try {
+            Map requestBodyMap = (Map) requestBody;
+            Map queryMap = (Map) requestBodyMap.get("query");
+            resourceId = (String) queryMap.get("resourceUUID");
+            targetService = (String) requestBodyMap.get("Target Service");
+        } catch (RuntimeException e) {
+            logger.info("Error parsing resource and target service from requestBody", e);
+        }
 
-		String formattedQuery = null;
+		// start to process the jsonpath checking
+        String formattedQuery = null;
 		try {
 			 // NC - this formatted query can sometimes mask data, but it's just used for logging
 			formattedQuery = (String) ((Map)requestBody).get("formattedQuery");
@@ -114,8 +130,9 @@ public class AuthorizationService {
 		} catch (ClassCastException | JsonProcessingException e1) {
 			e1.printStackTrace();
 			logger.info("ACCESS_LOG ___ " + user.getUuid().toString() + "," + user.getEmail() + "," + user.getName() + 
-					" ___ has been denied access to execute query ___ " + requestBody + " ___ in application ___ " + applicationName
-                    + " ___ UNABLE TO PARSE REQUEST");
+					" ___ has been denied access to execute query ___ " + requestBody + " ___ in application ___ " + applicationName +
+                    " ___  resource ___ " + resourceId + " ___ targetService --- " + targetService +
+                    " ___ UNABLE TO PARSE REQUEST");
 			return false;
 		}
 
@@ -123,8 +140,9 @@ public class AuthorizationService {
 		
 		if(accessRules == null || accessRules.isEmpty()) {
 			logger.info("ACCESS_LOG ___ " + user.getUuid().toString() + "," + user.getEmail() + "," + user.getName() + 
-					" ___ has been denied access to execute query ___ " + formattedQuery + " ___ in application ___ " + applicationName
-                    + " ___ NO ACCESS RULES EVALUATED");
+					" ___ has been denied access to execute query ___ " + formattedQuery + " ___ in application ___ " + applicationName +
+                    " ___  resource ___ " + resourceId + " ___ targetService --- " + targetService +
+                    " ___ NO ACCESS RULES EVALUATED");
 			return false;
 		}
 
@@ -159,8 +177,9 @@ public class AuthorizationService {
 
 		logger.info("ACCESS_LOG ___ " + user.getUuid().toString() + "," + user.getEmail() + "," + user.getName() + 
 				" ___ has been " + (result?"granted":"denied") + " access to execute query ___ " + formattedQuery + 
-				" ___ in application ___ " + applicationName + " ___ " +
-                (result?"passed by " + passRuleName:"failed by rules: ["
+				" ___ in application ___ " + applicationName +
+                " ___  resource ___ " + resourceId + " ___ targetService --- " + targetService +
+                " ___ " + (result?"passed by " + passRuleName:"failed by rules: ["
                         + failedRules.stream()
                         .map(ar->(ar.getMergedName().isEmpty()?ar.getName():ar.getMergedName()))
                         .collect(Collectors.joining(", ")) + "]"
