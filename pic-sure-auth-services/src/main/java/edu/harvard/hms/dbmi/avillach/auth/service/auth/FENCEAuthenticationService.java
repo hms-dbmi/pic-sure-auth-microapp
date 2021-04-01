@@ -256,7 +256,6 @@ public class FENCEAuthenticationService {
 	        	logger.warn("Unable to find fence OPEN ACCESS role");
 	        }
         }
-        current_user.getRoles().clear();
         
         
         try {
