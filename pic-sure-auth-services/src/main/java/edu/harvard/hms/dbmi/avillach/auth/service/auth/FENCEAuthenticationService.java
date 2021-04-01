@@ -250,7 +250,7 @@ public class FENCEAuthenticationService {
             }
         } else {
 	        Role openAccessRole = roleRepo.getUniqueResultByColumn("name", fence_open_access_role_name);
-	        if (openAccessRole != null) {
+	        if (openAccessRole != null && current_user.getRoles().size() > 0) {
 	        	current_user.getRoles().add(openAccessRole);
 	        } else {
 	        	logger.warn("Unable to find fence OPEN ACCESS role");
