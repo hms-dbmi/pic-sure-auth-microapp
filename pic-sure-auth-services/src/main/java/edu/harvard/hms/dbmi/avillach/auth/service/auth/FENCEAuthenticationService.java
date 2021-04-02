@@ -237,6 +237,9 @@ public class FENCEAuthenticationService {
                 //It is a an array of strings, like this: ["read-storage","read"]
                 //logger.debug("getFENCEProfile() object:"+role_object.toString());
         }
+
+        // Testing no access, since I don't have a user with no access
+        current_user.getRoles().clear();
         
         if(current_user.getRoles() != null && current_user.getRoles().size() == 0) {
         	//User was authorized by fence, but has no study access.
