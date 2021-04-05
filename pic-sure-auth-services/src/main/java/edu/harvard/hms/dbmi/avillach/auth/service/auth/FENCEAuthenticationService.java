@@ -16,6 +16,8 @@ import javax.inject.Inject;
 import javax.ws.rs.NotAuthorizedException;
 import javax.ws.rs.core.Response;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.http.Header;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicHeader;
@@ -237,7 +239,17 @@ public class FENCEAuthenticationService {
                 //It is a an array of strings, like this: ["read-storage","read"]
                 //logger.debug("getFENCEProfile() object:"+role_object.toString());
         }
-        
+
+        // todo: find idp value in here
+        logger.info("GENERAL METADATA = " + current_user.getGeneralMetadata());
+        final ObjectNode node;
+        try {
+            node = new ObjectMapper().readValue(current_user.getGeneralMetadata(), ObjectNode.class);
+            String idp = node.get("idp").asText();
+            logger.info("idp = " + idp);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
         if(current_user.getRoles() != null && current_user.getRoles().size() == 0) {
         	//User was authorized by fence, but has no study access.
         	//add role to allow login, but deny all queries to authorized resource
