@@ -242,6 +242,9 @@ public class FENCEAuthenticationService {
                 //logger.debug("getFENCEProfile() object:"+role_object.toString());
         }
 
+        // todo: REMOVE, this is for testing
+        current_user.getRoles().clear();
+
         final String idp = extractIdp(current_user);
 
         if (current_user.getRoles() != null && (current_user.getRoles().size() > 0 || openAccessIdpValues.contains(idp))) {
