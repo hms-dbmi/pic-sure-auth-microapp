@@ -70,6 +70,8 @@ public class FENCEAuthenticationService {
     
     private static final String parentAccessionField = "\\\\_Parent Study Accession with Subject ID\\\\";
     private static final String topmedAccessionField = "\\\\_Topmed Study Accession with Subject ID\\\\";
+
+    private final Set<String> openAccessIdpValues = Set.of("fence", "ras");
     
     private static final String[] underscoreFields = new String[] {
     		parentAccessionField,
@@ -240,29 +242,11 @@ public class FENCEAuthenticationService {
                 //logger.debug("getFENCEProfile() object:"+role_object.toString());
         }
 
-        // todo: find idp value in here
-        logger.info("GENERAL METADATA = " + current_user.getGeneralMetadata());
-        final ObjectNode node;
-        try {
-            node = new ObjectMapper().readValue(current_user.getGeneralMetadata(), ObjectNode.class);
-            String idp = node.get("idp").asText();
-            logger.info("idp = " + idp);
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-        }
-        if(current_user.getRoles() != null && current_user.getRoles().size() == 0) {
-        	//User was authorized by fence, but has no study access.
-        	//add role to allow login, but deny all queries to authorized resource
-        	
-            Role noAccessRole = roleRepo.getUniqueResultByColumn("name", fence_no_access_role_name);
-            if (noAccessRole != null) {
-            	current_user.getRoles().add(noAccessRole);
-            } else {
-            	logger.warn("Unable to find fence NO ACCESS role");
-            }
-        } else {
+        final String idp = extractIdp(current_user);
+
+        if (current_user.getRoles() != null && (current_user.getRoles().size() > 0 || openAccessIdpValues.contains(idp))) {
 	        Role openAccessRole = roleRepo.getUniqueResultByColumn("name", fence_open_access_role_name);
-	        if (openAccessRole != null && current_user.getRoles().size() > 0) {
+	        if (openAccessRole != null) {
 	        	current_user.getRoles().add(openAccessRole);
 	        } else {
 	        	logger.warn("Unable to find fence OPEN ACCESS role");
@@ -285,6 +269,17 @@ public class FENCEAuthenticationService {
         logger.debug("getFENCEProfile() UserProfile response object has been generated");
         logger.debug("getFENCEToken() finished");
         return PICSUREResponse.success(responseMap);
+    }
+
+    private String extractIdp(User current_user) {
+        try {
+            final ObjectNode node;
+            node = new ObjectMapper().readValue(current_user.getGeneralMetadata(), ObjectNode.class);
+            return node.get("idp").asText();
+        } catch (JsonProcessingException e) {
+            logger.warn("Error parsing idp value from medatada", e);
+            return "";
+        }
     }
 
 
