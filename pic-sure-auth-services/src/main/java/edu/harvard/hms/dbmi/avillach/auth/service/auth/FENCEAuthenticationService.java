@@ -5,7 +5,6 @@ import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_harmon
 import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_parent_consent_group_concept_path;
 import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_standard_access_rules;
 import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_topmed_consent_group_concept_path;
-import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_no_access_role_name;
 import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_open_access_role_name;
 
 import java.io.File;

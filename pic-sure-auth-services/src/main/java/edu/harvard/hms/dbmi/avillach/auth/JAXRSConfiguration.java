@@ -108,8 +108,7 @@ public class JAXRSConfiguration extends Application {
     public static String fence_harmonized_consent_group_concept_path;
     public static String fence_topmed_consent_group_concept_path;
     public static String fence_allowed_query_types;
-    public static String fence_no_access_role_name;
-    public static String fence_open_access_role_name;
+    public static final String fence_open_access_role_name = "FENCE_PRIV_OPEN_ACCESS";
     
     
     public static String defaultAdminRoleName = "PIC-SURE Top Admin";
@@ -227,19 +226,7 @@ public class JAXRSConfiguration extends Application {
                     logger.error("checkIDPProvider() Missing Standard Access Rules in standalone.xml. Using defaults.");
                     fence_standard_access_rules = "GATE_ONLY_INFO,GATE_ONLY_QUERY,GATE_ONLY_SEARCH,GATE_FENCE_CONSENT_REQUIRED";
                 }
-                
-                fence_no_access_role_name = (String) ctx.lookup("java:global/fence_no_access_role_name");
-                if (fence_no_access_role_name.isEmpty()) {
-                    logger.error("checkIDPProvider() Missing NO ACCESS role standalone.xml. Using defaults.");
-                    fence_no_access_role_name = "FENCE_NO_ACCESS_ROLE";
-                }
-                
-                fence_open_access_role_name = (String) ctx.lookup("java:global/fence_open_access_role_name");
-                if (fence_open_access_role_name.isEmpty()) {
-                    logger.error("checkIDPProvider() Empty fence_oepn_access_role_name from standalone.xml. Using defaults.");
-                    fence_open_access_role_name = "FENCE_NO_ACCESS_ROLE";
-                }
-                
+
                 fence_allowed_query_types = (String) ctx.lookup("java:global/fence_allowed_query_types");
                 if (fence_allowed_query_types.isEmpty()) {
                     logger.error("checkIDPProvider() Missing Allowed query types from standalone.xml. Using defaults.");
