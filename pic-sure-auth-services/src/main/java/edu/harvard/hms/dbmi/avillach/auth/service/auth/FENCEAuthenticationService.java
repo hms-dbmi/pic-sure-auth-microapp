@@ -68,8 +68,8 @@ public class FENCEAuthenticationService {
     
     private static final String parentAccessionField = "\\\\_Parent Study Accession with Subject ID\\\\";
     private static final String topmedAccessionField = "\\\\_Topmed Study Accession with Subject ID\\\\";
-    
-    public static final String fence_open_access_role_name = "FENCE_PRIV_OPEN_ACCESS";
+
+    public static final String fence_open_access_role_name = "FENCE_ROLE_OPEN_ACCESS";
 
     private final Set<String> openAccessIdpValues = Set.of("fence", "ras");
     
