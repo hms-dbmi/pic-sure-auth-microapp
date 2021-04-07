@@ -108,7 +108,6 @@ public class JAXRSConfiguration extends Application {
     public static String fence_harmonized_consent_group_concept_path;
     public static String fence_topmed_consent_group_concept_path;
     public static String fence_allowed_query_types;
-    public static final String fence_open_access_role_name = "FENCE_PRIV_OPEN_ACCESS";
     
     
     public static String defaultAdminRoleName = "PIC-SURE Top Admin";
