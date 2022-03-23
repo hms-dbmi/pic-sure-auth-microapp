@@ -373,7 +373,7 @@ public class FENCEAuthenticationService {
         //e.g. FENCE_phs0000xx_c2
         String[] parts = roleName.split("_");
         String project_name = parts[1];
-        String consent_group = parts[2];
+        String consent_group = parts.length > 2 ? parts[2] : "";
         
         
         // Look up the metadata by consent group.
