@@ -521,7 +521,7 @@ public class FENCEAuthenticationService {
             	ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
         		ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, conceptPath, projectAlias));
         		//this is added in the 'getPhenotypeRestrictedSubRules()' which is not called in this path
-        		ar.getSubAccessRule().add(createPhenotypeSubRule(fence_topmed_consent_group_concept_path, "ALLOW_TOPMED_CONSENT", "$.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
+        		ar.getSubAccessRule().add(createPhenotypeSubRule(fence_topmed_consent_group_concept_path, "ALLOW_TOPMED_CONSENT", "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
             	
         		accessruleRepo.merge(ar);
             }
@@ -534,7 +534,7 @@ public class FENCEAuthenticationService {
 	            //if this is a new rule, we need to populate it
 				 if(ar.getGates() == null) {
                 	ar.setGates(new HashSet<AccessRule>());
-                	ar.getGates().add(upsertConsentGate("HARMONIZED_CONSENT", "$.query.categoryFilters." + fence_harmonized_consent_group_concept_path + "[*]", true, "harmonized data"));
+                	ar.getGates().add(upsertConsentGate("HARMONIZED_CONSENT", "$.query.query.categoryFilters." + fence_harmonized_consent_group_concept_path + "[*]", true, "harmonized data"));
              	
 	            	if(ar.getSubAccessRule() == null) {
                   		ar.setSubAccessRule(new HashSet<AccessRule>());
@@ -590,7 +590,7 @@ public class FENCEAuthenticationService {
  	        ar = new AccessRule();
  	        ar.setName(ar_name);
  	        ar.setDescription("FENCE SUB AR to allow " + queryType + " Queries");
- 	        ar.setRule( "$.query.expectedResultType");
+ 	        ar.setRule( "$.query.query.expectedResultType");
  	        ar.setType(AccessRule.TypeNaming.ALL_EQUALS);
  	        ar.setValue(queryType);
  	        ar.setCheckMapKeyOnly(false);
@@ -607,8 +607,8 @@ public class FENCEAuthenticationService {
 
 	private Collection<? extends AccessRule> getTopmedRestrictedSubRules() {
     	Set<AccessRule> rules = new HashSet<AccessRule>();
-    	rules.add(upsertTopmedRestrictedSubRule("CATEGORICAL", "$.query.variantInfoFilters[*].categoryVariantInfoFilters.*"));
-    	rules.add(upsertTopmedRestrictedSubRule("NUMERIC", "$.query.variantInfoFilters[*].numericVariantInfoFilters.*"));
+    	rules.add(upsertTopmedRestrictedSubRule("CATEGORICAL", "$.query.query.variantInfoFilters[*].categoryVariantInfoFilters.*"));
+    	rules.add(upsertTopmedRestrictedSubRule("NUMERIC", "$.query.query.variantInfoFilters[*].numericVariantInfoFilters.*"));
     	
     	return rules;
 	}
@@ -644,18 +644,18 @@ public class FENCEAuthenticationService {
     	
     	Set<AccessRule> rules = new HashSet<AccessRule>();
     	//categorical filters will always contain at least one entry (for the consent groups); it will never be empty
-    	rules.add(createPhenotypeSubRule(fence_parent_consent_group_concept_path, "ALLOW_PARENT_CONSENT", "$.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
+    	rules.add(createPhenotypeSubRule(fence_parent_consent_group_concept_path, "ALLOW_PARENT_CONSENT", "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
     	
     	for(String underscorePath : underscoreFields ) {
-    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false));
-    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true));
-    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQ_FIELDS", false));
+    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false));
+    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true));
+    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQ_FIELDS", false));
     	}
     	
-    	rules.add(createPhenotypeSubRule(conceptPath, alias+ "_" + studyIdentifier, "$.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true));
-    	rules.add(createPhenotypeSubRule(conceptPath, alias+ "_" + studyIdentifier, "$.query.numericFilters", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "NUMERIC", true));
-    	rules.add(createPhenotypeSubRule(conceptPath, alias+ "_" + studyIdentifier, "$.query.fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false));
-    	rules.add(createPhenotypeSubRule(conceptPath, alias+ "_" + studyIdentifier, "$.query.requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQUIRED_FIELDS", false));
+    	rules.add(createPhenotypeSubRule(conceptPath, alias+ "_" + studyIdentifier, "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true));
+    	rules.add(createPhenotypeSubRule(conceptPath, alias+ "_" + studyIdentifier, "$.query.query.numericFilters", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "NUMERIC", true));
+    	rules.add(createPhenotypeSubRule(conceptPath, alias+ "_" + studyIdentifier, "$.query.query.fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false));
+    	rules.add(createPhenotypeSubRule(conceptPath, alias+ "_" + studyIdentifier, "$.query.query.requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQUIRED_FIELDS", false));
     	
     	return rules;
 	}
@@ -670,20 +670,20 @@ public class FENCEAuthenticationService {
     	
     	Set<AccessRule> rules = new HashSet<AccessRule>();
     	//categorical filters will always contain at least one entry (for the consent groups); it will never be empty
-    	rules.add(createPhenotypeSubRule(fence_parent_consent_group_concept_path, "ALLOW_PARENT_CONSENT", "$.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
-    	rules.add(createPhenotypeSubRule(fence_harmonized_consent_group_concept_path, "ALLOW_HARMONIZED_CONSENT", "$.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
-    	rules.add(createPhenotypeSubRule(fence_topmed_consent_group_concept_path, "ALLOW_TOPMED_CONSENT", "$.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
+    	rules.add(createPhenotypeSubRule(fence_parent_consent_group_concept_path, "ALLOW_PARENT_CONSENT", "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
+    	rules.add(createPhenotypeSubRule(fence_harmonized_consent_group_concept_path, "ALLOW_HARMONIZED_CONSENT", "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
+    	rules.add(createPhenotypeSubRule(fence_topmed_consent_group_concept_path, "ALLOW_TOPMED_CONSENT", "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
     	
     	for(String underscorePath : underscoreFields ) {
-    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false));
-    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true));
-    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQ_FIELDS", false));
+    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false));
+    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true));
+    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQ_FIELDS", false));
     	}
     	
-    	rules.add(createPhenotypeSubRule(fence_harmonized_concept_path, "HARMONIZED", "$.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true));
-    	rules.add(createPhenotypeSubRule(fence_harmonized_concept_path, "HARMONIZED", "$.query.numericFilters", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "NUMERIC", true));
-    	rules.add(createPhenotypeSubRule(fence_harmonized_concept_path, "HARMONIZED", "$.query.fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false));
-    	rules.add(createPhenotypeSubRule(fence_harmonized_concept_path, "HARMONIZED", "$.query.requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQUIRED_FIELDS", false));
+    	rules.add(createPhenotypeSubRule(fence_harmonized_concept_path, "HARMONIZED", "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true));
+    	rules.add(createPhenotypeSubRule(fence_harmonized_concept_path, "HARMONIZED", "$.query.query.numericFilters", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "NUMERIC", true));
+    	rules.add(createPhenotypeSubRule(fence_harmonized_concept_path, "HARMONIZED", "$.query.query.fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false));
+    	rules.add(createPhenotypeSubRule(fence_harmonized_concept_path, "HARMONIZED", "$.query.query.requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQUIRED_FIELDS", false));
     	
     	return rules;
 	}
@@ -697,17 +697,17 @@ public class FENCEAuthenticationService {
     	
     	Set<AccessRule> rules = new HashSet<AccessRule>();
     	//categorical filters will always contain at least one entry (for the consent groups); it will never be empty
-    	rules.add(createPhenotypeSubRule(fence_topmed_consent_group_concept_path, "ALLOW_TOPMED_CONSENT", "$.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
+    	rules.add(createPhenotypeSubRule(fence_topmed_consent_group_concept_path, "ALLOW_TOPMED_CONSENT", "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
     	
     	for(String underscorePath : underscoreFields ) {
-    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false));
-    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true));
-    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQ_FIELDS", false));
+    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false));
+    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true));
+    		rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQ_FIELDS", false));
     	}
     	
-    	rules.add(createPhenotypeSubRule(null, alias + "_" + studyIdentifier+ "_" + consentCode, "$.query.numericFilters.[*]", AccessRule.TypeNaming.IS_EMPTY, "DISALLOW_NUMERIC", false));
-//    	rules.add(createPhenotypeSubRule(null, alias + "_" + studyIdentifier+ "_" + consentCode, "$.query.fields.[*]", AccessRule.TypeNaming.IS_EMPTY, "DISALLOW FIELDS", false, parentRule));
-    	rules.add(createPhenotypeSubRule(null, alias + "_" + studyIdentifier+ "_" + consentCode, "$.query.requiredFields.[*]", AccessRule.TypeNaming.IS_EMPTY, "DISALLOW_REQUIRED_FIELDS", false));
+    	rules.add(createPhenotypeSubRule(null, alias + "_" + studyIdentifier+ "_" + consentCode, "$.query.query.numericFilters.[*]", AccessRule.TypeNaming.IS_EMPTY, "DISALLOW_NUMERIC", false));
+//    	rules.add(createPhenotypeSubRule(null, alias + "_" + studyIdentifier+ "_" + consentCode, "$.query.query.fields.[*]", AccessRule.TypeNaming.IS_EMPTY, "DISALLOW FIELDS", false, parentRule));
+    	rules.add(createPhenotypeSubRule(null, alias + "_" + studyIdentifier+ "_" + consentCode, "$.query.query.requiredFields.[*]", AccessRule.TypeNaming.IS_EMPTY, "DISALLOW_REQUIRED_FIELDS", false));
     	
     	return rules;
 	}
@@ -723,9 +723,9 @@ public class FENCEAuthenticationService {
 	private Collection<? extends AccessRule> getGates(boolean parent, boolean harmonized, boolean topmed) {
     	
     	Set<AccessRule> gates = new HashSet<AccessRule>();
-    	gates.add(upsertConsentGate("PARENT_CONSENT", "$.query.categoryFilters." + fence_parent_consent_group_concept_path + "[*]", parent, "parent study data"));
-    	gates.add(upsertConsentGate("HARMONIZED_CONSENT", "$.query.categoryFilters." + fence_harmonized_consent_group_concept_path + "[*]", harmonized, "harmonized data"));
-    	gates.add(upsertConsentGate("TOPMED_CONSENT", "$.query.categoryFilters." + fence_topmed_consent_group_concept_path + "[*]", topmed, "Topmed data"));
+    	gates.add(upsertConsentGate("PARENT_CONSENT", "$.query.query.categoryFilters." + fence_parent_consent_group_concept_path + "[*]", parent, "parent study data"));
+    	gates.add(upsertConsentGate("HARMONIZED_CONSENT", "$.query.query.categoryFilters." + fence_harmonized_consent_group_concept_path + "[*]", harmonized, "harmonized data"));
+    	gates.add(upsertConsentGate("TOPMED_CONSENT", "$.query.query.categoryFilters." + fence_topmed_consent_group_concept_path + "[*]", topmed, "Topmed data"));
    		
 		return gates;
 	}
@@ -868,7 +868,7 @@ public class FENCEAuthenticationService {
                 	ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
             		ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, parentConceptPath, projectAlias));
             		//this is added in the 'getPhenotypeRestrictedSubRules()' which is not called in this path
-            		ar.getSubAccessRule().add(createPhenotypeSubRule(fence_topmed_consent_group_concept_path, "ALLOW_TOPMED_CONSENT", "$.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
+            		ar.getSubAccessRule().add(createPhenotypeSubRule(fence_topmed_consent_group_concept_path, "ALLOW_TOPMED_CONSENT", "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
                 	
             		accessruleRepo.merge(ar);
                 }
@@ -882,7 +882,7 @@ public class FENCEAuthenticationService {
                 	 if(ar.getGates() == null) {
                       	ar.setGates(new HashSet<AccessRule>());
 //                      	ar.getGates().addAll(getGates(true, true, false));
-                      	ar.getGates().add(upsertConsentGate("HARMONIZED_CONSENT", "$.query.categoryFilters." + fence_harmonized_consent_group_concept_path + "[*]", true, "harmonized data"));
+                      	ar.getGates().add(upsertConsentGate("HARMONIZED_CONSENT", "$.query.query.categoryFilters." + fence_harmonized_consent_group_concept_path + "[*]", true, "harmonized data"));
                      	
                      	if(ar.getSubAccessRule() == null) {
                      		ar.setSubAccessRule(new HashSet<AccessRule>());
@@ -908,7 +908,7 @@ public class FENCEAuthenticationService {
 //                      	ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
 //                    	ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, parentConceptPath,  projectAlias));
 //                		ar.getSubAccessRule().addAll(getHarmonizedSubRules());
-//                		ar.getSubAccessRule().add(createPhenotypeSubRule(fence_topmed_consent_group_concept_path, "ALLOW_TOPMED_CONSENT", "$.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
+//                		ar.getSubAccessRule().add(createPhenotypeSubRule(fence_topmed_consent_group_concept_path, "ALLOW_TOPMED_CONSENT", "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
 //                    	
 //                		accessruleRepo.merge(ar);
 //                    }
@@ -961,7 +961,7 @@ public class FENCEAuthenticationService {
         ar.setName(ar_name);
         ar.setDescription("FENCE AR for "+studyIdentifier+"."+consent_group + " clinical concepts");
         StringBuilder ruleText = new StringBuilder();
-        ruleText.append("$.query.categoryFilters.");
+        ruleText.append("$.query.query.categoryFilters.");
         ruleText.append(consent_path);
         ruleText.append("[*]");
         ar.setRule(ruleText.toString());
@@ -993,7 +993,7 @@ public class FENCEAuthenticationService {
         ar.setName(ar_name);
         ar.setDescription("FENCE AR for "+project_name+"."+consent_group + " Topmed data");
         StringBuilder ruleText = new StringBuilder();
-        ruleText.append("$.query.categoryFilters.");
+        ruleText.append("$.query.query.categoryFilters.");
         ruleText.append(fence_topmed_consent_group_concept_path);
         ruleText.append("[*]");
         ar.setRule(ruleText.toString());
@@ -1026,7 +1026,7 @@ public class FENCEAuthenticationService {
         ar.setName(ar_name);
         ar.setDescription("FENCE AR for "+project_name+"."+consent_group + " Topmed data");
         StringBuilder ruleText = new StringBuilder();
-        ruleText.append("$.query.categoryFilters.");
+        ruleText.append("$.query.query.categoryFilters.");
         ruleText.append(fence_harmonized_consent_group_concept_path);
         ruleText.append("[*]");
         ar.setRule(ruleText.toString());
