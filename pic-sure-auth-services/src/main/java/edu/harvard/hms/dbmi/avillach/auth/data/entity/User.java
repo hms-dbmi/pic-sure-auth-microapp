@@ -284,6 +284,7 @@ public class User extends BaseEntity implements Serializable, Principal {
 		Set<String> privileges;
 		String token;
 		Set<String> queryScopes;
+		private boolean acceptedTOS;
 
 		public UserForDisplay() {
 		}
@@ -330,6 +331,15 @@ public class User extends BaseEntity implements Serializable, Principal {
 
 		public void setQueryScopes(Set<String> queryScopes) {
 			this.queryScopes = queryScopes;
+		}
+
+		public boolean isAcceptedTOS() {
+			return acceptedTOS;
+		}
+
+		public UserForDisplay setAcceptedTOS(boolean acceptedTOS) {
+			this.acceptedTOS = acceptedTOS;
+			return this;
 		}
 	}
 

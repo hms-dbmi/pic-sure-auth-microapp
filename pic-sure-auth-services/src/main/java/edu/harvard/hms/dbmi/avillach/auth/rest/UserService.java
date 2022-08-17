@@ -279,7 +279,9 @@ public class UserService extends BaseEntityService<User> {
         User.UserForDisplay userForDisplay = new User.UserForDisplay()
                 .setEmail(user.getEmail())
                 .setPrivileges(user.getPrivilegeNameSet())
-                .setUuid(user.getUuid().toString());
+                .setUuid(user.getUuid().toString())
+                .setAcceptedTOS(true);  //FENCE only returns valid users who have agreed to their terms
+        
 
         // currently, the queryScopes are simple combination of queryScope string together as a set.
         // We are expecting the queryScope string as plain string. If it is a JSON, we could change the
