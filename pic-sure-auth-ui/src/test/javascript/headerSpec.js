@@ -81,16 +81,7 @@ define(["header/header", "picSure/userFunctions", "picSure/applicationFunctions"
 						header.View.render();
 						expect($('a[href="/psamaui/userManagement"][style="visibility: hidden"]', header.View.$el).length).toEqual(1);
 					});
-					// Since it is possible that admin users would not have access to picsure, perhaps this is the wrong approach
-					// That is not an issue related to the current ticket and those discussions will not be happening now.
-					// it("shows the PIC-SURE UI button without needing any specific roles", function(){
-					// 	userFunctionsSpy = spyOn(userFunctions, "me").and
-					// 	.callFake(function(object, callback){
-					// 		callback({privileges: []});
-					// 	});
-					// 	header.View.render();
-					// 	expect($('a[href="/picsureui"]', header.View.$el).length).toEqual(1);
-					// });
+
 					it("shows application in Applications dropdown when at least one application has a link", function(){
 						userFunctionsSpy = spyOn(userFunctions, "me").and
 							.callFake(function(object, callback){
@@ -130,20 +121,6 @@ define(["header/header", "picSure/userFunctions", "picSure/applicationFunctions"
 							expect($('a#logout-btn', header.View.$el).length).toEqual(1);
 						});
 						var logoutSpy;
-						
-						// See comment above regarding the window.location issue in header.js
-						
-//						it("when clicked the Log Out button triggers the header.View.logout function", function(){
-//							logoutSpy = spyOn(header.View, "logout");
-//							userFunctionsSpy = spyOn(userFunctions, "me").and
-//							.callFake(function(object, callback){
-//								callback({privileges: []});
-//							});
-//							header.View.render();
-//							$('a#logout-btn', header.View.$el).click();
-//							expect(header.View.logout).toHaveBeenCalled();
-//							history.replaceState(undefined,"","/");
-//						});
 					});
 				});
 			});
