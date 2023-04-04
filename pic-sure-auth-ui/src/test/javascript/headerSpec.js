@@ -16,34 +16,6 @@ define(["header/header", "picSure/userFunctions", "picSure/applicationFunctions"
 					expect(_.keys(sessionStorage)).toEqual([]);
 				});
 			});
-
-			// The following tests require changes to header.js which is not 
-			// in scope for the current ticket. A new ticket has been generated 
-			// for this fix().
-			//
-			// Basically there is not a good way to spy on the change in state
-			// because the window.location = on line 21 refreshes the browser.
-			//
-			// Consider instead using a history.pushState call which can be spied on
-
-//			describe("has a gotoLogin function", function(){
-//				var logoutSpy;
-//				it("invokes the logout function when invoked", function(){
-//					logoutSpy = spyOn(header.View, "logout");
-//					header.View.gotoLogin();
-//					expect(header.View.logout).toHaveBeenCalled();
-//				});
-//
-//				it("sends the user to the login page", function(){
-//				logoutSpy = spyOn(history, "pushState");
-//				header.View.gotoLogin();
-//				expect(history.pushState).toHaveBeenCalled();
-//				/* reset the url in the browser for developer sanity
-//				* this way you can refresh the browser after one test run
-//				*/
-//				history.replaceState(undefined,"","/");
-//				});
-//			});
 		
 			describe("has a render function", function(){
 				var userFunctionsSpy;
