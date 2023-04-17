@@ -9,4 +9,21 @@
   <modules>
     <module>pic-sure-auth-services</module>
   </modules>
+  <repositories>
+    <repository>
+      <id>github</id>
+      <name>GitHub HMS-DBMI Apache Maven Packages</name>
+      <url>https://maven.pkg.github.com/hms-dbmi/pic-sure-auth-microapp</url>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </repository>
+  </repositories>
+  <distributionManagement>
+    <repository>
+      <id>github</id>
+      <name>GitHub HMS-DBMI Apache Maven Packages</name>
+      <url>https://maven.pkg.github.com/hms-dbmi/pic-sure-auth-microapp</url>
+    </repository>
+  </distributionManagement>
 </project>
