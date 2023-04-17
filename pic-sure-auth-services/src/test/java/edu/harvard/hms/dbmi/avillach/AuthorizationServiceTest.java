@@ -224,6 +224,7 @@ public class AuthorizationServiceTest extends AuthorizationService{
         GATE_resouceUUID.setName("Gate_resoruceUUID");
         GATE_resouceUUID.setRule("$.queries..resourceUUID");
         GATE_resouceUUID.setValue("8694e3d4-5cb4-410f-8431-993445e6d3f6");
+        GATE_resouceUUID.setCheckMapNode(true);
 
         GATE_has_expectedResultType = new AccessRule();
         GATE_has_expectedResultType.setUuid(UUID.randomUUID());
@@ -258,12 +259,14 @@ public class AuthorizationServiceTest extends AuthorizationService{
         AR_CategoryFilter_String_contains.setRule("$.queries..fields.*");
         AR_CategoryFilter_String_contains.setType(AccessRule.TypeNaming.ALL_CONTAINS);
         AR_CategoryFilter_String_contains.setValue("\\demographics\\SEX\\");
+        AR_CategoryFilter_String_contains.setCheckMapNode(true);
 
         AR_CategoryFilter_Any_Contains = new AccessRule();
         AR_CategoryFilter_Any_Contains.setName("AR_CategoryFilter");
         AR_CategoryFilter_Any_Contains.setRule("$.queries..fields.*");
         AR_CategoryFilter_Any_Contains.setType(AccessRule.TypeNaming.ANY_CONTAINS);
         AR_CategoryFilter_Any_Contains.setValue("\\demographics\\SEX\\");
+        AR_CategoryFilter_Any_Contains.setCheckMapNode(true);
 
         AR_Fields_ALL_SEX = new AccessRule();
         AR_Fields_ALL_SEX.setUuid(UUID.randomUUID());
@@ -271,6 +274,7 @@ public class AuthorizationServiceTest extends AuthorizationService{
         AR_Fields_ALL_SEX.setRule("$.queries..fields.*");
         AR_Fields_ALL_SEX.setType(AccessRule.TypeNaming.ALL_CONTAINS);
         AR_Fields_ALL_SEX.setValue("\\demographics\\SEX\\");
+        AR_Fields_ALL_SEX.setCheckMapNode(true);
         Set<AccessRule> gates = new HashSet<>();
         gates.add(GATE_resouceUUID);
         AR_Fields_ALL_SEX.setGates(gates);
@@ -282,6 +286,7 @@ public class AuthorizationServiceTest extends AuthorizationService{
         AR_Fields_ALL_AGE.setRule("$.queries..fields.*");
         AR_Fields_ALL_AGE.setType(AccessRule.TypeNaming.ALL_CONTAINS);
         AR_Fields_ALL_AGE.setValue("\\demographics\\AGE\\");
+        AR_Fields_ALL_AGE.setCheckMapNode(true);
         Set<AccessRule> gates_2 = new HashSet<>();
         gates_2.add(GATE_resouceUUID);
         AR_Fields_ALL_AGE.setGates(gates_2);
@@ -291,12 +296,14 @@ public class AuthorizationServiceTest extends AuthorizationService{
         AR_Fields_IS_EMPTY.setName("AR_Fields_IS_EMPTY");
         AR_Fields_IS_EMPTY.setRule("$.queries..fields.*");
         AR_Fields_IS_EMPTY.setType(AccessRule.TypeNaming.IS_EMPTY);
+        AR_Fields_IS_EMPTY.setCheckMapNode(true);
 
         AR_Fields_IS_NOT_EMPTY = new AccessRule();
         AR_Fields_IS_NOT_EMPTY.setUuid(UUID.randomUUID());
         AR_Fields_IS_NOT_EMPTY.setName("AR_Fields_IS_EMPTY");
         AR_Fields_IS_NOT_EMPTY.setRule("$.queries..fields.*");
         AR_Fields_IS_NOT_EMPTY.setType(AccessRule.TypeNaming.IS_NOT_EMPTY);
+        AR_Fields_IS_NOT_EMPTY.setCheckMapNode(true);
     }
 
     @Test
@@ -434,6 +441,7 @@ public class AuthorizationServiceTest extends AuthorizationService{
         accessRuleGatesAllandAny.setUuid(UUID.randomUUID());
         accessRuleGatesAllandAny.setRule("$.queries..query.numericFilters.*");
         accessRuleGatesAllandAny.setType(AccessRule.TypeNaming.IS_NOT_EMPTY);
+        accessRuleGatesAllandAny.setCheckMapNode(false);
 
         // the relationship of the nestedGate here is
         // GATE_resouceUUID && GATE_has_expectedResultType && (GATE_has_categoryFilters || GATE_has_requiredFields)
@@ -441,6 +449,7 @@ public class AuthorizationServiceTest extends AuthorizationService{
         orGate.setUuid(UUID.randomUUID());
         orGate.setGateAnyRelation(true);
         orGate.setName("Gate_OR_for_GATE_has_categoryFilters_GATE_has_requiredFields");
+        orGate.setCheckMapNode(false);
         Set<AccessRule> gates = new HashSet<>();
         gates.add(GATE_has_requiredFields);
         gates.add(GATE_has_categoryFilters);
