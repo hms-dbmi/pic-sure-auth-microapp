@@ -110,7 +110,7 @@ public class AccessRule extends BaseEntity {
      * The jsonpath rule to retrieve values, kind of the route to the data.
      * The possible value will be String, JSONObject, JSONArray, etc.
      *
-     * Our rule is mapped to the following json object as we
+     * Our rule is mapped to the following json object as we use jsonpath to retrieve the value from the resource:
      * <b> Auth Query Object Example</b>:
      * <pre>
      * {
