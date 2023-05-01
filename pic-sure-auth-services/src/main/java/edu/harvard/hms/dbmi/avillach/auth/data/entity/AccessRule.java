@@ -18,6 +18,7 @@ import edu.harvard.dbmi.avillach.data.entity.BaseEntity;
  * <br>
  * <br>
  * <b>Attribute Explanations</b>:
+ *
  *     <li><b>checkMapNode</b> - after retrieving the value by jsonPath rule, if the value is a map,
  *     this flag will let the evaluation go through all the map nodes and their children nodes</li>
  *     <li><b>checkMapKeyOnly</b> - only take effective when checkMapNode flag is turned on. This flag will
@@ -29,7 +30,6 @@ import edu.harvard.dbmi.avillach.data.entity.BaseEntity;
  *     then evaluation result is true, not passed, return false. The use case for this flag is sometimes, we
  *     need to meet the requirements of some nested AND/OR gates like gateA && gateB && (gateC || gateD),
  *     in this example, (gateC || gateD) has to be together in a gate and not evaluate by the values and rules</li>
- *
  */
 @Entity(name = "access_rule")
 public class AccessRule extends BaseEntity {
@@ -38,6 +38,23 @@ public class AccessRule extends BaseEntity {
      * please do not modify the existing values, in case the value has
      * already saved in the database. But you can add more constant values, or
      * update the keys.
+     *
+     * <ul>
+     *   <li><b>NOT_CONTAINS:</b> The string does not contain the specified substring.</li>
+     *   <li><b>NOT_CONTAINS_IGNORE_CASE:</b> The string does not contain the specified substring, ignoring case.</li>
+     *   <li><b>NOT_EQUALS:</b> The string is not equal to the specified value.</li>
+     *   <li><b>ALL_EQUALS:</b> The string is equal to all of the specified values.</li>
+     *   <li><b>ALL_CONTAINS:</b> The string contains all of the specified substrings.</li>
+     *   <li><b>ALL_CONTAINS_IGNORE_CASE:</b> The string contains all of the specified substrings, ignoring case.</li>
+     *   <li><b>ANY_CONTAINS:</b> The string contains any of the specified substrings.</li>
+     *   <li><b>NOT_EQUALS_IGNORE_CASE:</b> The string is not equal to the specified value, ignoring case.</li>
+     *   <li><b>ALL_EQUALS_IGNORE_CASE:</b> The string is equal to all of the specified values, ignoring case.</li>
+     *   <li><b>ANY_EQUALS:</b> The string is equal to any of the specified values.</li>
+     *   <li><b>ALL_REG_MATCH:</b> The string matches all of the specified regular expressions.</li>
+     *   <li><b>ANY_REG_MATCH:</b> The string matches any of the specified regular expressions.</li>
+     *   <li><b>IS_EMPTY:</b> The string is empty.</li>
+     *   <li><b>IS_NOT_EMPTY:</b> The string is not empty.</li>
+     * </ul>
      */
     public static class TypeNaming {
 //        public static final int CONTAINS = 0;
@@ -92,6 +109,41 @@ public class AccessRule extends BaseEntity {
     /**
      * The jsonpath rule to retrieve values, kind of the route to the data.
      * The possible value will be String, JSONObject, JSONArray, etc.
+     *
+     * Our rule is mapped to the following json object as we use jsonpath to retrieve the value from the resource:
+     * <b> Auth Query Object Example</b>:
+     * <pre>
+     * {
+     *   "resourceUUID": "",
+     *   "resourceCredentials": {
+     *     "type": "",
+     *     "access_token": "",
+     *     "refresh_token": "",
+     *     "expires_in": 0,
+     *     "scope": "",
+     *     "token_type": ""
+     *   },
+     *   "query": {
+     *     "queryTemplate": "",
+     *     "resourceCredentials": {
+     *       "type": "",
+     *       "access_token": "",
+     *       "refresh_token": "",
+     *       "expires_in": 0,
+     *       "scope": "",
+     *       "token_type": ""
+     *     },
+     *     "filter": {},
+     *     "sort": [],
+     *     "select": [],
+     *     "offset": 0,
+     *     "limit": 0,
+     *     "aggregation": []
+     *   },
+     *   "userSpecificMap": {},
+     *   "validateOnly": false
+     * }
+     * </pre>
      */
     private String rule;
 
@@ -155,7 +207,7 @@ public class AccessRule extends BaseEntity {
 
 
     /**
-     * introduce sub-accessRule to enable the ability of more complex problem
+     * introduce sub-accessRule to enable the ability of more complex problem, essentially it is an AND relationship.
      */
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "accessRule_subRule",
