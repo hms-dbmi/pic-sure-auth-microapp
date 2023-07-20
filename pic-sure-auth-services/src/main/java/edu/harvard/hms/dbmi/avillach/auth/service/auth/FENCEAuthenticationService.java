@@ -390,8 +390,6 @@ public class FENCEAuthenticationService {
         String project_name = parts[1];
         String consent_group = "";
         if (parts.length > 2 && parts[2].startsWith("c")) {
-            	project_name = project_name + "_" + parts[2];
-        } else if (parts.length > 2) {
             consent_group = parts[2];
         }
 
