@@ -461,7 +461,8 @@ public class FENCEAuthenticationService {
     private Privilege upsertClinicalPrivilege(String studyIdentifier, String projectAlias, String consent_group, String conceptPath, boolean isHarmonized) {
     	
     	String privilegeName = (consent_group != null && consent_group != "") ? "PRIV_FENCE_"+studyIdentifier+"_"+consent_group+(isHarmonized?"_HARMONIZED":"") : "PRIV_FENCE_"+studyIdentifier+(isHarmonized?"_HARMONIZED":"") ;
-    	Privilege priv = privilegeRepo.getUniqueResultByColumn("name", privilegeName);
+    	logger.info("========> upsertClinicalPrivilege() " + privilegeName + " <========");
+        Privilege priv = privilegeRepo.getUniqueResultByColumn("name", privilegeName);
     	if(priv !=  null) {
     		 logger.info("upsertClinicalPrivilege() " + privilegeName + " already exists");
     		return priv;
