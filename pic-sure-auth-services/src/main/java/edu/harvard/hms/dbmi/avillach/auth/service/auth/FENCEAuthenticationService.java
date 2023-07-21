@@ -8,6 +8,8 @@ import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_topmed
 
 import java.io.File;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
@@ -384,14 +386,16 @@ public class FENCEAuthenticationService {
         //Topmed has up to three ARs for topmed / topmed + parent / topmed + harmonized 
         Set<Privilege> privs = r.getPrivileges();
         if (privs == null) { privs = new HashSet<Privilege>();}
-        
-        //e.g. FENCE_phs0000xx_c2
-        String[] parts = roleName.split("_");
-        String project_name = parts[1];
-        String consent_group = "";
-        if (parts.length > 2 && parts[2].startsWith("c")) {
-            consent_group = parts[2];
+
+        //e.g. FENCE_phs0000xx_c2 or FENCE_tutorial-biolinc_camp
+        String project_name = extractProject(roleName);
+        if (project_name.length() <= 0) {
+            logger.warn("addFENCEPrivileges() role name: "+roleName+" returned an empty project name");
         }
+        String consent_group = extractConsentGroup(roleName);
+
+        //log project name and consent group
+        logger.info("addFENCEPrivileges() project name: "+project_name+" consent group: "+consent_group);
 
         // Look up the metadata by consent group.
        Map projectMetadata = getFENCEMappingforProjectAndConsent(project_name, consent_group);
@@ -418,7 +422,7 @@ public class FENCEAuthenticationService {
         if(concept_path != null) {
         	concept_path = concept_path.replaceAll("\\\\", "\\\\\\\\");
         }
-        
+
         if(dataType != null && dataType.contains("G")) {
         	//insert genomic/topmed privs - this will also add rules for including harmonized & parent data if applicable
         	privs.add(upsertTopmedPrivilege(project_name, projectAlias, consent_group, concept_path, isHarmonized));
@@ -442,6 +446,34 @@ public class FENCEAuthenticationService {
             
         logger.info("addPrivileges() Finished");
         return privs;
+    }
+
+    private static String extractProject(String roleName) {
+        String projectPattern = "FENCE_(.*?)(?:_c\\d+)?$";
+        Pattern projectRegex = Pattern.compile(projectPattern);
+        Matcher projectMatcher = projectRegex.matcher(roleName);
+        String project = "";
+        if (projectMatcher.find()) {
+            project = projectMatcher.group(1).trim();
+        } else {
+            String[] parts = roleName.split("_", 1);
+            if (parts.length > 0) {
+                project = parts[1];
+            }
+        }
+        return project;
+    }
+
+    private static String extractConsentGroup(String roleName) {
+        String consentPattern = "FENCE_.*?_c(\\d+)$";
+
+        Pattern consentRegex = Pattern.compile(consentPattern);
+        Matcher consentMatcher = consentRegex.matcher(roleName);
+        String consentGroup = "";
+        if (consentMatcher.find()) {
+            consentGroup = "c" + consentMatcher.group(1).trim();
+        }
+    	return consentGroup;
     }
 
     /**
