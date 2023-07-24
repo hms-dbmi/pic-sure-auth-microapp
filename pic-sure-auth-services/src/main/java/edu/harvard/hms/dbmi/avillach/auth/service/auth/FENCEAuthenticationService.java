@@ -997,7 +997,7 @@ public class FENCEAuthenticationService {
 	// prentRule should be null if this is the main rule, or the appropriate value if this is a sub rule
     private AccessRule createConsentAccessRule(String studyIdentifier, String consent_group, String label, String consent_path) {
         logger.debug("upsertConsentAccessRule() starting");
-        String ar_name = (consent_group != null && consent_group != "") ? "AR_CONSENT_" + studyIdentifier+"_"+consent_group+ "_" +label : "AR_CONSENT_" + studyIdentifier+"_"+label;
+        String ar_name = (consent_group != null && consent_group != "") ? "AR_CONSENT_" + studyIdentifier+"_"+consent_group+ "_" +label : "AR_CONSENT_" + studyIdentifier;
 
         AccessRule ar = accessruleRepo.getUniqueResultByColumn("name", ar_name);
         if(ar != null) {
