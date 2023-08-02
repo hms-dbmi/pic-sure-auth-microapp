@@ -90,10 +90,11 @@ public class FENCEAuthenticationService {
 
     //TODO: Remove when RAS is implemented
     private static final List<String> openDatasets = Collections.unmodifiableList(
-            new ArrayList<>() {{
-                add("tutorial-biolincc_camp");
- //               add("RECOVER_synthetic_data_set_1");
-            }});
+        new ArrayList<>() {{
+            add("tutorial-biolincc_camp");
+            add("tutorial-biolincc_digitalis");
+    }});
+
     @PostConstruct
 	public void initializeFenceService() {
 		 picSureApp = applicationRepo.getUniqueResultByColumn("name", "PICSURE");
@@ -241,8 +242,6 @@ public class FENCEAuthenticationService {
     }
 
     private void createAndUpsertRole(String access_role_name, User current_user) {
-        logger.info("---------------------->  getFENCEProfile() AccessRole:"+access_role_name);
-
         // These two special access does not matter. We are not using it.
         if (access_role_name.equals("admin") || access_role_name.equals("parent")) {
             logger.info("SKIPPING ACCESS ROLE: " + access_role_name);
@@ -393,6 +392,9 @@ public class FENCEAuthenticationService {
             logger.warn("addFENCEPrivileges() role name: "+roleName+" returned an empty project name");
         }
         String consent_group = extractConsentGroup(roleName);
+        if (consent_group.length() <= 0) {
+            logger.warn("addFENCEPrivileges() role name: "+roleName+" returned an empty consent group");
+        }
 
         //log project name and consent group
         logger.info("addFENCEPrivileges() project name: "+project_name+" consent group: "+consent_group);
@@ -441,7 +443,7 @@ public class FENCEAuthenticationService {
         
         //projects without G or P in data_type are skipped
         if(dataType == null || (!dataType.contains("P")  && !dataType.contains("G"))){
-        	logger.warn("Missing study type for " + project_name + " " + consent_group);
+        	logger.warn("Missing study type for " + project_name + " " + consent_group + ". Skipping.");
         }
             
         logger.info("addPrivileges() Finished");
@@ -491,7 +493,6 @@ public class FENCEAuthenticationService {
     private Privilege upsertClinicalPrivilege(String studyIdentifier, String projectAlias, String consent_group, String conceptPath, boolean isHarmonized) {
     	
     	String privilegeName = (consent_group != null && consent_group != "") ? "PRIV_FENCE_"+studyIdentifier+"_"+consent_group+(isHarmonized?"_HARMONIZED":"") : "PRIV_FENCE_"+studyIdentifier+(isHarmonized?"_HARMONIZED":"") ;
-    	logger.info("========> upsertClinicalPrivilege() " + privilegeName + " <========");
         Privilege priv = privilegeRepo.getUniqueResultByColumn("name", privilegeName);
     	if(priv !=  null) {
     		 logger.info("upsertClinicalPrivilege() " + privilegeName + " already exists");
