@@ -519,5 +519,4 @@ public class UserService extends BaseEntityService<User> {
         }
     }
 
-
 }

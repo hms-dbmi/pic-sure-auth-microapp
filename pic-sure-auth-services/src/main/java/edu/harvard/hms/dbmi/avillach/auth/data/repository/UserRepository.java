@@ -13,10 +13,7 @@ import javax.persistence.NoResultException;
 import javax.persistence.NonUniqueResultException;
 import javax.persistence.criteria.*;
 import javax.transaction.Transactional;
-import java.util.Date;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -34,14 +31,18 @@ public class UserRepository extends BaseRepository<User, UUID> {
 	}
 
 	public User findBySubject(String subject) {
-		CriteriaQuery<User> query = em.getCriteriaBuilder().createQuery(User.class);
-		Root<User> queryRoot = query.from(User.class);
-		query.select(queryRoot);
-		CriteriaBuilder cb = cb();
-		return em.createQuery(query
-				.where(
-						eq(cb, queryRoot, "subject", subject)))
-				.getSingleResult();
+		try {
+			CriteriaQuery<User> query = em.getCriteriaBuilder().createQuery(User.class);
+			Root<User> queryRoot = query.from(User.class);
+			query.select(queryRoot);
+			CriteriaBuilder cb = cb();
+			return em.createQuery(query
+							.where(
+									eq(cb, queryRoot, "subject", subject)))
+					.getSingleResult();
+		} catch (NoResultException e){
+			return null;
+		}
 	}
 
 	public User findBySubjectAndConnection(String subject, String connectionId){
@@ -99,10 +100,6 @@ public class UserRepository extends BaseRepository<User, UUID> {
 
 	private User createUser(User inputUser) {
 		String subject = inputUser.getSubject();
-//		if (subject == null && userId == null){
-//			logger.error("createUser() cannot create user when both subject and userId are null");
-//			return null;
-//		}
 		logger.debug("createUser() creating user, subject: " + subject + " ......");
 		em().persist(inputUser);
 
@@ -161,4 +158,50 @@ public class UserRepository extends BaseRepository<User, UUID> {
 				.getResultList().isEmpty();
 	}
 
+	/**
+	 *
+	 * @param uuid the uuid of the user to find
+	 * @return the user with the given uuid, or null if no user is found
+	 */
+	public User findByUUID(UUID uuid) {
+		CriteriaQuery<User> query = em.getCriteriaBuilder().createQuery(User.class);
+		Root<User> queryRoot = query.from(User.class);
+		query.select(queryRoot);
+		CriteriaBuilder cb = cb();
+		try {
+			return em.createQuery(query
+					.where(
+							eq(cb, queryRoot, "uuid", uuid)))
+					.getSingleResult();
+		} catch (NoResultException e){
+			logger.error("findByUUID() " + e.getClass().getSimpleName() + ": " + e.getMessage());
+		}
+
+		return null;
+	}
+
+	/**
+	 * Creates a user with a subject of "open_access|{uuid}"
+	 * and an email of "{uuid}@open_access.com"
+	 *
+	 * @return the created user
+	 */
+	public User createOpenAccessUser() {
+		User user = new User();
+		em().persist(user);
+
+		User result = getById(user.getUuid());
+		result.setSubject("open_access|" + result.getUuid().toString());
+		result.setRoles(new HashSet<>());
+		result.setEmail(user.getUuid() + "@open_access.com");
+		user.setRoles(new HashSet<>());
+		em().merge(result);
+
+		logger.info("createOpenAccessUser() created user, uuid: " + result.getUuid()
+				+ ", subject: " + result.getSubject()
+				+ ", role: " + result.getRoleString()
+				+ ", privilege: "+ result.getPrivilegeString()
+				+ ", email: " + result.getEmail());
+		return result;
+	}
 }
