@@ -280,11 +280,6 @@ public class FENCEAuthenticationService {
         } else {
             logger.error("getFENCEProfile() could not add roles to user's profile");
         }
-
-        // TODO: In case we need to do something with this part, we can uncomment it.
-        //JsonNode role_object = fence_user_profile.get("project_access").get(newRoleName);
-        //It is a an array of strings, like this: ["read-storage","read"]
-        //logger.debug("getFENCEProfile() object:"+role_object.toString());
     }
 
     private String extractIdp(User current_user) {
@@ -395,8 +390,6 @@ public class FENCEAuthenticationService {
         if (consent_group.length() <= 0) {
             logger.warn("addFENCEPrivileges() role name: "+roleName+" returned an empty consent group");
         }
-
-        //log project name and consent group
         logger.info("addFENCEPrivileges() project name: "+project_name+" consent group: "+consent_group);
 
         // Look up the metadata by consent group.
