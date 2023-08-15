@@ -8,6 +8,8 @@ import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_topmed
 
 import java.io.File;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
@@ -85,6 +87,13 @@ public class FENCEAuthenticationService {
     		"\\\\_parent_consents\\\\",  //parent consents not used for auth (use combined _consents)
     		"\\\\_Consents\\\\"   ///old _Consents\Short Study... path no longer used, but still present in examples.
     };
+
+    //TODO: Remove when RAS is implemented
+    private static final List<String> openDatasets = Collections.unmodifiableList(
+        new ArrayList<>() {{
+            add("tutorial-biolincc_camp");
+            add("tutorial-biolincc_digitalis");
+    }});
 
     @PostConstruct
 	public void initializeFenceService() {
@@ -192,54 +201,15 @@ public class FENCEAuthenticationService {
 
         // Update the user's roles (or create them if none exists)
         //Set<Role> actual_user_roles = u.getRoles();
-        Iterator<String> access_role_names = fence_user_profile.get("project_access").fieldNames();
-        while (access_role_names.hasNext()) {
-            String access_role_name = access_role_names.next();
-            logger.debug("getFENCEProfile() AccessRole:"+access_role_name);
-            
-            // These two special access does not matter. We are not using it.
-            if (access_role_name.equals("admin") || access_role_name.equals("parent")) {
-            	logger.info("SKIPPING ACCESS ROLE: " + access_role_name);
-                continue;
-            }
-            //topmed ==> access to all studies (not just topmed)
-            if (access_role_name.equals("topmed") ) {
-            	Map<String, Map> projects = getFENCEMapping();
-            	for(Map projectMetadata : projects.values()) {
-					String projectId = (String) projectMetadata.get("study_identifier");
-					String consentCode = (String) projectMetadata.get("consent_group_code");
-					String newRoleName =  "FENCE_"+projectId+"_"+consentCode;
-					
-					 if (upsertRole(current_user, newRoleName, "FENCE role "+newRoleName)) {
-	                    logger.info("getFENCEProfile() Updated TOPMED user role. Now it includes `"+newRoleName+"`");
-	                } else {
-	                    logger.error("getFENCEProfile() could not add roles to TOPMED user's profile");
-	                }
-            	}
-            	continue;
-            }
-            
-           
-            String[] parts = access_role_name.split("\\.");
+        Iterator<String> project_access_names = fence_user_profile.get("project_access").fieldNames();
+        while (project_access_names.hasNext()) {
+            String access_role_name = project_access_names.next();
+            createAndUpsertRole(access_role_name, current_user);
+        }
 
-            String newRoleName;
-            if (parts.length > 1) {
-               newRoleName = "FENCE_"+parts[0]+"_"+parts[parts.length-1];
-            } else {
-              newRoleName = "FENCE_"+access_role_name;
-            }
-            logger.info("getFENCEProfile() New PSAMA role name:"+newRoleName);
-
-                if (upsertRole(current_user, newRoleName, "FENCE role "+newRoleName)) {
-                    logger.info("getFENCEProfile() Updated user role. Now it includes `"+newRoleName+"`");
-                } else {
-                    logger.error("getFENCEProfile() could not add roles to user's profile");
-                }
-
-                // TODO: In case we need to do something with this part, we can uncomment it.
-                //JsonNode role_object = fence_user_profile.get("project_access").get(newRoleName);
-                //It is a an array of strings, like this: ["read-storage","read"]
-                //logger.debug("getFENCEProfile() object:"+role_object.toString());
+        //add open access roles
+        for (String access_role_name : openDatasets) {
+            createAndUpsertRole(access_role_name, current_user);
         }
 
         final String idp = extractIdp(current_user);
@@ -269,6 +239,47 @@ public class FENCEAuthenticationService {
         logger.debug("getFENCEProfile() UserProfile response object has been generated");
         logger.debug("getFENCEToken() finished");
         return PICSUREResponse.success(responseMap);
+    }
+
+    private void createAndUpsertRole(String access_role_name, User current_user) {
+        // These two special access does not matter. We are not using it.
+        if (access_role_name.equals("admin") || access_role_name.equals("parent")) {
+            logger.info("SKIPPING ACCESS ROLE: " + access_role_name);
+            return;
+        }
+        //topmed ==> access to all studies (not just topmed)
+        if (access_role_name.equals("topmed") ) {
+            Map<String, Map> projects = getFENCEMapping();
+            for(Map projectMetadata : projects.values()) {
+                String projectId = (String) projectMetadata.get("study_identifier");
+                String consentCode = (String) projectMetadata.get("consent_group_code");
+                String newRoleName =  (consentCode != null && consentCode != "") ? "FENCE_"+projectId+"_"+consentCode : "FENCE_"+projectId;
+
+                if (upsertRole(current_user, newRoleName, "FENCE role "+newRoleName)) {
+                    logger.info("getFENCEProfile() Updated TOPMED user role. Now it includes `"+newRoleName+"`");
+                } else {
+                    logger.error("getFENCEProfile() could not add roles to TOPMED user's profile");
+                }
+            }
+            return;
+        }
+
+
+        String[] parts = access_role_name.split("\\.");
+
+        String newRoleName;
+        if (parts.length > 1) {
+            newRoleName = "FENCE_"+parts[0]+"_"+parts[parts.length-1];
+        } else {
+            newRoleName = "FENCE_"+access_role_name;
+        }
+        logger.info("getFENCEProfile() New PSAMA role name:"+newRoleName);
+
+        if (upsertRole(current_user, newRoleName, "FENCE role "+newRoleName)) {
+            logger.info("getFENCEProfile() Updated user role. Now it includes `"+newRoleName+"`");
+        } else {
+            logger.error("getFENCEProfile() could not add roles to user's profile");
+        }
     }
 
     private String extractIdp(User current_user) {
@@ -369,13 +380,18 @@ public class FENCEAuthenticationService {
         //Topmed has up to three ARs for topmed / topmed + parent / topmed + harmonized 
         Set<Privilege> privs = r.getPrivileges();
         if (privs == null) { privs = new HashSet<Privilege>();}
-        
-        //e.g. FENCE_phs0000xx_c2
-        String[] parts = roleName.split("_");
-        String project_name = parts[1];
-        String consent_group = parts.length > 2 ? parts[2] : "";
-        
-        
+
+        //e.g. FENCE_phs0000xx_c2 or FENCE_tutorial-biolinc_camp
+        String project_name = extractProject(roleName);
+        if (project_name.length() <= 0) {
+            logger.warn("addFENCEPrivileges() role name: "+roleName+" returned an empty project name");
+        }
+        String consent_group = extractConsentGroup(roleName);
+        if (consent_group.length() <= 0) {
+            logger.warn("addFENCEPrivileges() role name: "+roleName+" returned an empty consent group");
+        }
+        logger.info("addFENCEPrivileges() project name: "+project_name+" consent group: "+consent_group);
+
         // Look up the metadata by consent group.
        Map projectMetadata = getFENCEMappingforProjectAndConsent(project_name, consent_group);
         
@@ -401,7 +417,7 @@ public class FENCEAuthenticationService {
         if(concept_path != null) {
         	concept_path = concept_path.replaceAll("\\\\", "\\\\\\\\");
         }
-        
+
         if(dataType != null && dataType.contains("G")) {
         	//insert genomic/topmed privs - this will also add rules for including harmonized & parent data if applicable
         	privs.add(upsertTopmedPrivilege(project_name, projectAlias, consent_group, concept_path, isHarmonized));
@@ -420,11 +436,39 @@ public class FENCEAuthenticationService {
         
         //projects without G or P in data_type are skipped
         if(dataType == null || (!dataType.contains("P")  && !dataType.contains("G"))){
-        	logger.warn("Missing study type for " + project_name + " " + consent_group);
+        	logger.warn("Missing study type for " + project_name + " " + consent_group + ". Skipping.");
         }
             
         logger.info("addPrivileges() Finished");
         return privs;
+    }
+
+    private static String extractProject(String roleName) {
+        String projectPattern = "FENCE_(.*?)(?:_c\\d+)?$";
+        Pattern projectRegex = Pattern.compile(projectPattern);
+        Matcher projectMatcher = projectRegex.matcher(roleName);
+        String project = "";
+        if (projectMatcher.find()) {
+            project = projectMatcher.group(1).trim();
+        } else {
+            String[] parts = roleName.split("_", 1);
+            if (parts.length > 0) {
+                project = parts[1];
+            }
+        }
+        return project;
+    }
+
+    private static String extractConsentGroup(String roleName) {
+        String consentPattern = "FENCE_.*?_c(\\d+)$";
+
+        Pattern consentRegex = Pattern.compile(consentPattern);
+        Matcher consentMatcher = consentRegex.matcher(roleName);
+        String consentGroup = "";
+        if (consentMatcher.find()) {
+            consentGroup = "c" + consentMatcher.group(1).trim();
+        }
+    	return consentGroup;
     }
 
     /**
@@ -441,8 +485,8 @@ public class FENCEAuthenticationService {
      */
     private Privilege upsertClinicalPrivilege(String studyIdentifier, String projectAlias, String consent_group, String conceptPath, boolean isHarmonized) {
     	
-    	String privilegeName = "PRIV_FENCE_"+studyIdentifier+"_"+consent_group+(isHarmonized?"_HARMONIZED":"");
-    	Privilege priv = privilegeRepo.getUniqueResultByColumn("name", privilegeName);
+    	String privilegeName = (consent_group != null && consent_group != "") ? "PRIV_FENCE_"+studyIdentifier+"_"+consent_group+(isHarmonized?"_HARMONIZED":"") : "PRIV_FENCE_"+studyIdentifier+(isHarmonized?"_HARMONIZED":"") ;
+        Privilege priv = privilegeRepo.getUniqueResultByColumn("name", privilegeName);
     	if(priv !=  null) {
     		 logger.info("upsertClinicalPrivilege() " + privilegeName + " already exists");
     		return priv;
@@ -469,10 +513,11 @@ public class FENCEAuthenticationService {
             
             
             // TOOD: Change this to a mustache template
+            String studyIdentifierField = (consent_group != null && consent_group != "") ? studyIdentifier+"."+consent_group: studyIdentifier;
             String queryTemplateText = "{\"categoryFilters\": {\""
                     +consent_concept_path
                     +"\":[\""
-                    +studyIdentifier+"."+consent_group
+                    +studyIdentifierField
                     +"\"]},"
                     +"\"numericFilters\":{},\"requiredFields\":[],"
                     +"\"fields\":[\"" + parentAccessionField + "\"],"
@@ -946,7 +991,7 @@ public class FENCEAuthenticationService {
 	// prentRule should be null if this is the main rule, or the appropriate value if this is a sub rule
     private AccessRule createConsentAccessRule(String studyIdentifier, String consent_group, String label, String consent_path) {
         logger.debug("upsertConsentAccessRule() starting");
-        String ar_name = "AR_CONSENT_" + studyIdentifier+"_"+consent_group+ "_" +label;
+        String ar_name = (consent_group != null && consent_group != "") ? "AR_CONSENT_" + studyIdentifier+"_"+consent_group+ "_" +label : "AR_CONSENT_" + studyIdentifier;
 
         AccessRule ar = accessruleRepo.getUniqueResultByColumn("name", ar_name);
         if(ar != null) {
@@ -959,14 +1004,16 @@ public class FENCEAuthenticationService {
         logger.info("upsertConsentAccessRule() Creating new access rule "+ar_name);
         ar = new AccessRule();
         ar.setName(ar_name);
-        ar.setDescription("FENCE AR for "+studyIdentifier+"."+consent_group + " clinical concepts");
+        String description = (consent_group != null && consent_group != "") ? "FENCE AR for "+studyIdentifier+"."+consent_group + " clinical concepts" : "FENCE AR for "+studyIdentifier+" clinical concepts";
+        ar.setDescription(description);
         StringBuilder ruleText = new StringBuilder();
         ruleText.append("$.query.query.categoryFilters.");
         ruleText.append(consent_path);
         ruleText.append("[*]");
         ar.setRule(ruleText.toString());
         ar.setType(AccessRule.TypeNaming.ALL_CONTAINS);
-        ar.setValue(studyIdentifier+"."+consent_group);
+        String arValue = (consent_group != null && consent_group != "") ? studyIdentifier+"."+consent_group : studyIdentifier;
+        ar.setValue(arValue);
         ar.setCheckMapKeyOnly(false);
         ar.setCheckMapNode(false);
         ar.setEvaluateOnlyByGates(false);
@@ -981,7 +1028,7 @@ public class FENCEAuthenticationService {
     // Generates Main Rule only; gates & sub rules attached by calling method
     private AccessRule upsertTopmedAccessRule(String project_name, String consent_group, String label ) {
         logger.debug("upsertTopmedAccessRule() starting");
-        String ar_name = "AR_TOPMED_"+project_name+"_"+consent_group + "_" + label;
+        String ar_name = (consent_group != null && consent_group != "") ? "AR_TOPMED_"+project_name+"_"+consent_group + "_" + label : "AR_TOPMED_"+project_name+"_"+label;
         AccessRule ar = accessruleRepo.getUniqueResultByColumn("name", ar_name);
         if (ar != null) {
             logger.info("upsertTopmedAccessRule() AccessRule "+ar_name+" already exists.");
@@ -998,7 +1045,8 @@ public class FENCEAuthenticationService {
         ruleText.append("[*]");
         ar.setRule(ruleText.toString());
         ar.setType(AccessRule.TypeNaming.ALL_CONTAINS);
-        ar.setValue(project_name+"."+consent_group);
+        String arValue = (consent_group != null && consent_group != "") ? project_name+"."+consent_group : project_name;
+        ar.setValue(arValue);
         ar.setCheckMapKeyOnly(false);
         ar.setCheckMapNode(false);
         ar.setEvaluateOnlyByGates(false);
@@ -1075,7 +1123,7 @@ public class FENCEAuthenticationService {
 	
 	private Map getFENCEMappingforProjectAndConsent(String projectId, String consent_group) {
 	
-		String consentVal = projectId + "." + consent_group;
+		String consentVal = (consent_group != null && consent_group != "") ? projectId + "." + consent_group : projectId;
 		logger.info("getFENCEMappingforProjectAndConsent() looking up "+consentVal);
 			 
 		Object projectMetadata = getFENCEMapping().get(consentVal);
@@ -1098,7 +1146,9 @@ public class FENCEAuthenticationService {
 				logger.debug("getFENCEMapping: found FENCE mapping with " + projects.size() + " entries");
 				_projectMap = new HashMap<String, Map>(projects.size());
 				for(Map project : projects) {
-					String consentVal = "" + project.get("study_identifier") + "." + project.get("consent_group_code");
+					String consentVal = (project.get("consent_group_code") != null && project.get("consent_group_code") != "") ?
+                                        "" + project.get("study_identifier") + "." + project.get("consent_group_code") :
+                                        "" + project.get("study_identifier");
 					logger.debug("adding study " + consentVal);
 					_projectMap.put(consentVal, project);
 				}
