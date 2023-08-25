@@ -61,8 +61,8 @@ public class OpenAuthenticationService {
     }
 
     private void setDefaultUserRoles(User current_user) {
-        fenceAuthenticationService.upsertRole(current_user, "FENCE_PRIV_OPEN_ACCESS", null);
-        fenceAuthenticationService.upsertRole(current_user, "FENCE_PRIV_DICTIONARY", null);
+        logger.info("Setting default roles for user " + current_user.getUuid());
+        fenceAuthenticationService.upsertRole(current_user, "FENCE_ROLE_OPEN_ACCESS", null);
         userRepository.persist(current_user);
     }
 }

@@ -190,18 +190,17 @@ public class UserRepository extends BaseRepository<User, UUID> {
 		User user = new User();
 		em().persist(user);
 
-		User result = getById(user.getUuid());
-		result.setSubject("open_access|" + result.getUuid().toString());
-		result.setRoles(new HashSet<>());
-		result.setEmail(user.getUuid() + "@open_access.com");
+		user = getById(user.getUuid());
+		user.setSubject("open_access|" + user.getUuid().toString());
 		user.setRoles(new HashSet<>());
-		em().merge(result);
+		user.setEmail(user.getUuid() + "@open_access.com");
+		em().merge(user);
 
-		logger.info("createOpenAccessUser() created user, uuid: " + result.getUuid()
-				+ ", subject: " + result.getSubject()
-				+ ", role: " + result.getRoleString()
-				+ ", privilege: "+ result.getPrivilegeString()
-				+ ", email: " + result.getEmail());
-		return result;
+		logger.info("createOpenAccessUser() created user, uuid: " + user.getUuid()
+				+ ", subject: " + user.getSubject()
+				+ ", role: " + user.getRoleString()
+				+ ", privilege: "+ user.getPrivilegeString()
+				+ ", email: " + user.getEmail());
+		return user;
 	}
 }
