@@ -42,11 +42,11 @@ public class OpenAuthenticationService {
         if (current_user == null) {
             current_user = userRepository.createOpenAccessUser();
 
+            setDefaultUserRoles(current_user);
+
             //clear some cache entries if we register a new login
             AuthorizationService.clearCache(current_user);
             UserService.clearCache(current_user);
-
-            setDefaultUserRoles(current_user);
         }
 
         HashMap<String, Object> claims = new HashMap<>();
@@ -63,6 +63,6 @@ public class OpenAuthenticationService {
     private void setDefaultUserRoles(User current_user) {
         fenceAuthenticationService.upsertRole(current_user, "FENCE_PRIV_OPEN_ACCESS", null);
         fenceAuthenticationService.upsertRole(current_user, "FENCE_PRIV_DICTIONARY", null);
-        userRepository.merge(current_user);
+        userRepository.persist(current_user);
     }
 }
