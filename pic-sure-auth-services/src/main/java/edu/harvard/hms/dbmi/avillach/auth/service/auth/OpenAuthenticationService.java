@@ -1,7 +1,9 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.auth;
 
 import edu.harvard.dbmi.avillach.util.response.PICSUREResponse;
+import edu.harvard.hms.dbmi.avillach.auth.data.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.data.entity.User;
+import edu.harvard.hms.dbmi.avillach.auth.data.repository.RoleRepository;
 import edu.harvard.hms.dbmi.avillach.auth.data.repository.UserRepository;
 import edu.harvard.hms.dbmi.avillach.auth.rest.UserService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.AuthUtils;
@@ -23,10 +25,10 @@ public class OpenAuthenticationService {
     private UserRepository userRepository;
 
     @Inject
-    AuthUtils authUtil;
+    private RoleRepository roleRepository;
 
     @Inject
-    private FENCEAuthenticationService fenceAuthenticationService;
+    AuthUtils authUtil;
 
     public Response authenticate(Map<String, String> authRequest) {
         String userUUID = authRequest.get("UUID");
@@ -40,9 +42,8 @@ public class OpenAuthenticationService {
 
         // If we can't find the user by UUID, create a new one
         if (current_user == null) {
-            current_user = userRepository.createOpenAccessUser();
-
-            setDefaultUserRoles(current_user);
+            Role openAccessRole = roleRepository.getUniqueResultByColumn("name", FENCEAuthenticationService.fence_open_access_role_name);
+            current_user = userRepository.createOpenAccessUser(openAccessRole);
 
             //clear some cache entries if we register a new login
             AuthorizationService.clearCache(current_user);
@@ -58,11 +59,5 @@ public class OpenAuthenticationService {
         logger.info("LOGIN SUCCESS ___ " + current_user.getEmail() + ":" + current_user.getUuid().toString() + " ___ Authorization will expire at  ___ " + responseMap.get("expirationDate") + "___");
 
         return PICSUREResponse.success(responseMap);
-    }
-
-    private void setDefaultUserRoles(User current_user) {
-        logger.info("Setting default roles for user " + current_user.getUuid());
-        fenceAuthenticationService.upsertRole(current_user, "FENCE_ROLE_OPEN_ACCESS", null);
-        userRepository.persist(current_user);
     }
 }
