@@ -192,9 +192,6 @@ public class UserRepository extends BaseRepository<User, UUID> {
         user = getById(user.getUuid());
         user.setSubject("open_access|" + user.getUuid().toString());
         if (openAccessRole != null) {
-            logger.info("createOpenAccessUser() openAccessRole is not null");
-            logger.info("Adding role: " + openAccessRole.getName() + " to user: " + user.getUuid() + " with subject: " + user.getSubject());
-
             user.setRoles(new HashSet<>(List.of(openAccessRole)));
         } else {
             logger.error("createOpenAccessUser() openAccessRole is null");
