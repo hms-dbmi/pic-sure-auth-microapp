@@ -1,5 +1,6 @@
 package edu.harvard.hms.dbmi.avillach.auth.rest;
 
+import edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration;
 import edu.harvard.hms.dbmi.avillach.auth.service.auth.OpenAuthenticationService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -35,7 +36,13 @@ public class OpenAuthService {
     public Response authentication(@ApiParam(required = true, value = "A json object that includes all Oauth authentication needs, for example, access_token and redirectURI") Map<String, String> authRequest) {
         logger.debug("authentication() starting...");
 
-        return openAuthenticationService.authenticate(authRequest);
+        // idp_provider also has default value of "default" if not set in the config file
+        // This is a temporary solution to ensure that a user cannot authenticate against fence using the open endpoint
+        if (!JAXRSConfiguration.idp_provider.equalsIgnoreCase("fence")) {
+            return openAuthenticationService.authenticate(authRequest);
+        }
+
+        return Response.status(Response.Status.BAD_REQUEST).entity("Fence authentication is not supported").build();
     }
 
 }
