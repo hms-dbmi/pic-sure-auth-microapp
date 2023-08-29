@@ -173,7 +173,6 @@ public class JWTFilter implements ContainerRequestFilter {
 		String userForLogging;
 
 		// Find the user when checking the claims
-		logger.info("Looking for user with subject: " + claimsSubject);
 		User authenticatedUser = userRepo.findBySubject(claimsSubject);
 
 		if (authenticatedUser == null) {
