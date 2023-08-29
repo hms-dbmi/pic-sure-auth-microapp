@@ -42,7 +42,8 @@ public class OpenAuthService {
             return openAuthenticationService.authenticate(authRequest);
         }
 
-        return Response.status(Response.Status.BAD_REQUEST).entity("Fence authentication is not supported").build();
+        // Fence authentication is not supported by the open endpoint
+        return Response.status(Response.Status.FORBIDDEN).build();
     }
 
 }
