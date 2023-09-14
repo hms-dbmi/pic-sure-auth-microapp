@@ -157,12 +157,6 @@ public class FENCEAuthenticationService {
         logger.debug("getFENCEProfile() starting...");
         String fence_code  = authRequest.get("code");
 
-        // Validate that the fence code is alphanumeric
-        if (!fence_code.matches("[a-zA-Z0-9]+")) {
-            logger.error("getFENCEProfile() fence code is not alphanumeric");
-            throw new NotAuthorizedException("The fence code is not alphanumeric");
-        }
-
         JsonNode fence_user_profile = null;
         // Get the Gen3/FENCE user profile. It is a JsonNode object
         try {
