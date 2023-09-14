@@ -41,8 +41,6 @@ public class OpenAuthenticationService {
                 current_user = userRepository.findByUUID(uuid);
             } catch (IllegalArgumentException e) {
                 logger.error("Invalid UUID: " + userUUID);
-                // If we reach this the database could have been restarted and the UUID is no longer valid
-                // We will create a new user
             }
         }
 
