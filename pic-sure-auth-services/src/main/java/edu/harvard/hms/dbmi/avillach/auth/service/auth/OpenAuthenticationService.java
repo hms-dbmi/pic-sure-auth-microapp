@@ -36,8 +36,14 @@ public class OpenAuthenticationService {
 
         // Try to get the user by UUID
         if (StringUtils.isNotBlank(userUUID)) {
-            UUID uuid = UUID.fromString(userUUID);
-            current_user = userRepository.findByUUID(uuid);
+            try {
+                UUID uuid = UUID.fromString(userUUID);
+                current_user = userRepository.findByUUID(uuid);
+            } catch (IllegalArgumentException e) {
+                logger.error("Invalid UUID: " + userUUID);
+                // If we reach this the database could have been restarted and the UUID is no longer valid
+                // We will create a new user
+            }
         }
 
         // If we can't find the user by UUID, create a new one
