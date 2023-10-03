@@ -106,14 +106,19 @@ public class AuthUtils {
 
 		logger.debug("getUserProfileResponse() acceptedTOS is set");
 
-		boolean acceptedTOS = JAXRSConfiguration.tosEnabled.startsWith("true") ?
-				tosService.getLatest() == null || tosService.hasUserAcceptedLatest(claims.get("subject").toString()) : true;
+		boolean acceptedTOS = !JAXRSConfiguration.tosEnabled.startsWith("true") || tosService.getLatest() == null || tosService.hasUserAcceptedLatest(claims.get("subject").toString());
 
-		responseMap.put("acceptedTOS", ""+acceptedTOS);
+		responseMap.put("acceptedTOS", String.valueOf(acceptedTOS));
 
 		logger.debug("getUserProfileResponse() expirationDate is set");
 		Date expirationDate = new Date(Calendar.getInstance().getTimeInMillis() + JAXRSConfiguration.tokenExpirationTime);
 		responseMap.put("expirationDate", ZonedDateTime.ofInstant(expirationDate.toInstant(), ZoneOffset.UTC).toString());
+
+		// This is required for open access, but optional otherwise
+		if (claims.get("uuid") != null) {
+			logger.debug("getUserProfileResponse() uuid field is set");
+			responseMap.put("uuid", claims.get("uuid").toString());
+		}
 
 		logger.debug("getUserProfileResponse() finished");
 		return responseMap;
