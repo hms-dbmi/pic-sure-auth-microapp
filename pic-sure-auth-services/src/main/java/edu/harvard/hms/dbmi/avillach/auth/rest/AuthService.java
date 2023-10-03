@@ -34,9 +34,6 @@ public class AuthService {
     private Logger logger = LoggerFactory.getLogger(this.getClass());
 
     @Inject
-    AuthorizationService authorizationService;
-
-    @Inject
     AuthenticationService authenticationService;
 
     @Inject
