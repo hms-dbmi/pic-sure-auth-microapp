@@ -86,7 +86,6 @@ public class AuthenticationService {
             throw new ApplicationException("cannot get sufficient user information. Please contact admin.");
         }
 
-        //Do we have this user already?
         User user = userRepository.findBySubjectAndConnection(userId, connectionId);
         if  (user == null){
             //Try to match

@@ -281,7 +281,8 @@ public class UserService extends BaseEntityService<User> {
                 .setPrivileges(user.getPrivilegeNameSet())
                 .setUuid(user.getUuid().toString())
                 .setAcceptedTOS(true);  //FENCE only returns valid users who have agreed to their terms
-        
+
+        logger.debug("getCurrentUser() userForDisplay: " + userForDisplay.toString());
 
         // currently, the queryScopes are simple combination of queryScope string together as a set.
         // We are expecting the queryScope string as plain string. If it is a JSON, we could change the
@@ -312,6 +313,8 @@ public class UserService extends BaseEntityService<User> {
                 userForDisplay.setToken(user.getToken());
             }
         }
+
+        logger.debug("getCurrentUser() returning userForDisplay: " + userForDisplay.toString());
 
         return PICSUREResponse.success(userForDisplay);
     }
@@ -518,6 +521,5 @@ public class UserService extends BaseEntityService<User> {
             }
         }
     }
-
 
 }
