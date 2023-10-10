@@ -32,18 +32,14 @@ public class UserRepository extends BaseRepository<User, UUID> {
     }
 
     public User findBySubject(String subject) {
-        try {
-            CriteriaQuery<User> query = em.getCriteriaBuilder().createQuery(User.class);
-            Root<User> queryRoot = query.from(User.class);
-            query.select(queryRoot);
-            CriteriaBuilder cb = cb();
-            return em.createQuery(query
-                            .where(
-                                    eq(cb, queryRoot, "subject", subject)))
-                    .getSingleResult();
-        } catch (NoResultException e) {
-            return null;
-        }
+        CriteriaQuery<User> query = em.getCriteriaBuilder().createQuery(User.class);
+        Root<User> queryRoot = query.from(User.class);
+        query.select(queryRoot);
+        CriteriaBuilder cb = cb();
+        return em.createQuery(query
+                        .where(
+                                eq(cb, queryRoot, "subject", subject)))
+                .getSingleResult();
     }
 
     public User findBySubjectAndConnection(String subject, String connectionId) {
@@ -81,7 +77,7 @@ public class UserRepository extends BaseRepository<User, UUID> {
      * @return
      */
     public User findOrCreate(User inputUser) {
-        User user = null;
+        User user;
         String subject = inputUser.getSubject();
         try {
             user = findBySubject(subject);
@@ -94,6 +90,7 @@ public class UserRepository extends BaseRepository<User, UUID> {
             user = createUser(inputUser);
         } catch (NonUniqueResultException e) {
             logger.error("findOrCreate() " + e.getClass().getSimpleName() + ": " + e.getMessage());
+            user = createUser(inputUser);
         }
         return user;
     }

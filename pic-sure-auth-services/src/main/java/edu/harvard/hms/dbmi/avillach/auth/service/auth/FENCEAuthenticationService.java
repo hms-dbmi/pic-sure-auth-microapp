@@ -340,7 +340,7 @@ public class FENCEAuthenticationService {
      * @param roleDescription Description of the Role
      * @return boolean Whether the Role was successfully added to the User or not
      */
-    public boolean upsertRole(User u,  String roleName, String roleDescription) {
+    private boolean upsertRole(User u,  String roleName, String roleDescription) {
         boolean status = false;
         logger.debug("upsertRole() starting for user subject:"+u.getSubject());
 
