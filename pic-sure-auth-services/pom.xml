@@ -11,8 +11,7 @@
 	<artifactId>pic-sure-auth-services</artifactId>
 	<packaging>war</packaging>
 	<properties>
-		<!--<jackson.version>1.8.6</jackson.version> -->
-		<jackson.version>2.10.0</jackson.version>
+		<jackson.version>2.15.2</jackson.version>
 		<xml.bind.version>2.3.0</xml.bind.version>
 	</properties>
 	<dependencies>
@@ -99,21 +98,6 @@
 			<artifactId>jackson-databind</artifactId>
 			<version>${jackson.version}</version>
 		</dependency>
-		<!--<dependency> -->
-		<!--<groupId>org.codehaus.jackson</groupId> -->
-		<!--<artifactId>jackson-core-asl</artifactId> -->
-		<!--<version>${jackson.version}</version> -->
-		<!--</dependency> -->
-		<!--<dependency> -->
-		<!--<groupId>org.codehaus.jackson</groupId> -->
-		<!--<artifactId>jackson-mapper-asl</artifactId> -->
-		<!--<version>${jackson.version}</version> -->
-		<!--</dependency> -->
-		<!--<dependency> -->
-		<!--<groupId>org.codehaus.jackson</groupId> -->
-		<!--<artifactId>jackson-jaxrs</artifactId> -->
-		<!--<version>${jackson.version}</version> -->
-		<!--</dependency> -->
 		<dependency>
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-web</artifactId>
