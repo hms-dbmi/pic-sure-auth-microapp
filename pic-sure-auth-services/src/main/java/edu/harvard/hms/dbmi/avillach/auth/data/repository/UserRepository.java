@@ -77,7 +77,7 @@ public class UserRepository extends BaseRepository<User, UUID> {
      * @return
      */
     public User findOrCreate(User inputUser) {
-        User user;
+        User user = null;
         String subject = inputUser.getSubject();
         try {
             user = findBySubject(subject);
