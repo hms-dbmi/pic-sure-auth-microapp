@@ -90,7 +90,6 @@ public class UserRepository extends BaseRepository<User, UUID> {
             user = createUser(inputUser);
         } catch (NonUniqueResultException e) {
             logger.error("findOrCreate() " + e.getClass().getSimpleName() + ": " + e.getMessage());
-            user = createUser(inputUser);
         }
         return user;
     }
