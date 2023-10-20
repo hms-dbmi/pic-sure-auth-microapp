@@ -250,8 +250,9 @@ public class FENCEAuthenticationService {
     private void createAndUpsertRole(String access_role_name, User current_user) {
         logger.debug("createAndUpsertRole() starting...");
         Map projectMetadata = getFENCEMapping().values().stream()
-                              .filter(map -> access_role_name.equals(map.get("authz")))
-                              .findFirst().orElse(null);
+                              .filter(map -> access_role_name.equals(
+                                      map.get("authZ").toString().replace("\\/", "/"))
+                              ).findFirst().orElse(null);
 
         if (projectMetadata == null) {
             logger.error("getFENCEProfile() -> createAndUpsertRole could not find study in FENCE mapping SKIPPING: " + access_role_name);
