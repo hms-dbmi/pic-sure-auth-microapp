@@ -207,7 +207,7 @@ public class FENCEAuthenticationService {
 
         // Update the user's roles (or create them if none exists)
         //Set<Role> actual_user_roles = u.getRoles();
-        Iterator<String> project_access_names = fence_user_profile.get("project_access").fieldNames();
+        Iterator<String> project_access_names = fence_user_profile.get("authz").fieldNames();
         while (project_access_names.hasNext()) {
             String access_role_name = project_access_names.next();
             createAndUpsertRole(access_role_name, current_user);
@@ -248,37 +248,20 @@ public class FENCEAuthenticationService {
     }
 
     private void createAndUpsertRole(String access_role_name, User current_user) {
-        // These two special access does not matter. We are not using it.
-        if (access_role_name.equals("admin") || access_role_name.equals("parent")) {
-            logger.info("SKIPPING ACCESS ROLE: " + access_role_name);
-            return;
-        }
-        //topmed ==> access to all studies (not just topmed)
-        if (access_role_name.equals("topmed") ) {
-            Map<String, Map> projects = getFENCEMapping();
-            for(Map projectMetadata : projects.values()) {
-                String projectId = (String) projectMetadata.get("study_identifier");
-                String consentCode = (String) projectMetadata.get("consent_group_code");
-                String newRoleName =  (consentCode != null && consentCode != "") ? "FENCE_"+projectId+"_"+consentCode : "FENCE_"+projectId;
+        logger.debug("createAndUpsertRole() starting...");
+        Map projectMetadata = getFENCEMapping().values().stream()
+                              .filter(map -> access_role_name.equals(map.get("authz")))
+                              .findFirst().orElse(null);
 
-                if (upsertRole(current_user, newRoleName, "FENCE role "+newRoleName)) {
-                    logger.info("getFENCEProfile() Updated TOPMED user role. Now it includes `"+newRoleName+"`");
-                } else {
-                    logger.error("getFENCEProfile() could not add roles to TOPMED user's profile");
-                }
-            }
+        if (projectMetadata == null) {
+            logger.error("getFENCEProfile() -> createAndUpsertRole could not find study in FENCE mapping SKIPPING: " + access_role_name);
             return;
         }
 
+        String projectId = (String) projectMetadata.get("study_identifier");
+        String consentCode = (String) projectMetadata.get("consent_group_code");
+        String newRoleName =  (consentCode != null && consentCode != "") ? "FENCE_"+projectId+"_"+consentCode : "FENCE_"+projectId;
 
-        String[] parts = access_role_name.split("\\.");
-
-        String newRoleName;
-        if (parts.length > 1) {
-            newRoleName = "FENCE_"+parts[0]+"_"+parts[parts.length-1];
-        } else {
-            newRoleName = "FENCE_"+access_role_name;
-        }
         logger.info("getFENCEProfile() New PSAMA role name:"+newRoleName);
 
         if (upsertRole(current_user, newRoleName, "FENCE role "+newRoleName)) {
