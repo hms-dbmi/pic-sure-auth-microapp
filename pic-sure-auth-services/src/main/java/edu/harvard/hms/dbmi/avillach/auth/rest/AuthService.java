@@ -31,7 +31,7 @@ import java.util.Map;
 @Produces("application/json")
 public class AuthService {
 
-    private Logger logger = LoggerFactory.getLogger(this.getClass());
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     @Inject
     AuthenticationService authenticationService;
