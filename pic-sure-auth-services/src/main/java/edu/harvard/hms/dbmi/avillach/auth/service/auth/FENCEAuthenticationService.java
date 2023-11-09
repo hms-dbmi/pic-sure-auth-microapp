@@ -88,13 +88,6 @@ public class FENCEAuthenticationService {
     		"\\\\_Consents\\\\"   ///old _Consents\Short Study... path no longer used, but still present in examples.
     };
 
-    //TODO: Remove when RAS is implemented
-    private static final List<String> openDatasets = Collections.unmodifiableList(
-        new ArrayList<>() {{
-            add("tutorial-biolincc_camp");
-            add("tutorial-biolincc_digitalis");
-    }});
-
     @PostConstruct
 	public void initializeFenceService() {
 		 picSureApp = applicationRepo.getUniqueResultByColumn("name", "PICSURE");
@@ -210,11 +203,6 @@ public class FENCEAuthenticationService {
         Iterator<String> project_access_names = fence_user_profile.get("authz").fieldNames();
         while (project_access_names.hasNext()) {
             String access_role_name = project_access_names.next();
-            createAndUpsertRole(access_role_name, current_user);
-        }
-
-        //add open access roles
-        for (String access_role_name : openDatasets) {
             createAndUpsertRole(access_role_name, current_user);
         }
 
