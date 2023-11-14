@@ -18,6 +18,7 @@ import javax.ws.rs.core.Response;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.Header;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicHeader;
@@ -249,7 +250,7 @@ public class FENCEAuthenticationService {
 
         String projectId = (String) projectMetadata.get("study_identifier");
         String consentCode = (String) projectMetadata.get("consent_group_code");
-        String newRoleName =  (consentCode != null && consentCode != "") ? "FENCE_"+projectId+"_"+consentCode : "FENCE_"+projectId;
+        String newRoleName = StringUtils.isNotBlank(consentCode) ? "FENCE_"+projectId+"_"+consentCode : "FENCE_"+projectId;
 
         logger.info("getFENCEProfile() New PSAMA role name:"+newRoleName);
 
