@@ -295,22 +295,21 @@ public class FENCEAuthenticationService {
         logger.debug("createUserFromFENCEProfile() finished setting fields");
 
         User actual_user = userRepo.findOrCreate(new_user);
-	
-	Role topAdmin = null;
-	Role admin = null;
-        if (actual_user.getRoles() != null && actual_user.getRoles().isEmpty()) {
-		actual_user.getRoles().stream()
-		    .filter(userRole -> "PIC-SURE Top Admin".equals(userRole.getName()) || "Admin".equals(userRole.getName()))
-		    .forEach(role -> {
-		        if ("PIC-SURE Top Admin".equals(role.getName())) {
-		            topAdmin = role;
-		        } else if ("Admin".equals(role.getName())) {
-		            admin = role;
-		        }
-		    });
-	}
-	// Clear current set of roles every time we create or retrieve a user but persist admin status
-        actual_user.setRoles(new HashSet<>(Set.of(topAdmin, admin)));
+
+        Role[] roles = new Role[2];
+
+        actual_user.getRoles().stream()
+                .filter(userRole -> "PIC-SURE Top Admin".equals(userRole.getName()) || "Admin".equals(userRole.getName()))
+                .forEach(role -> {
+                    if ("PIC-SURE Top Admin".equals(role.getName())) {
+                        roles[0] = role;
+                    } else if ("Admin".equals(role.getName())) {
+                        roles[1] = role;
+                    }
+                });
+
+        // Clear current set of roles every time we create or retrieve a user but persist admin status
+        actual_user.setRoles(new HashSet<>(Set.of(roles[0], roles[1])));
 	
         logger.debug("createUserFromFENCEProfile() cleared roles");
 
