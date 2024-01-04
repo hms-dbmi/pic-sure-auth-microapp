@@ -10,6 +10,7 @@ import java.io.File;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
@@ -196,6 +197,7 @@ public class FENCEAuthenticationService {
 
         } catch (Exception ex) {
             logger.error("getFENCEToken() Could not persist the user information, because "+ex.getMessage());
+            ex.printStackTrace();
             throw new NotAuthorizedException("The user details could not be persisted. Please contact the administrator.");
         }
 
@@ -296,21 +298,16 @@ public class FENCEAuthenticationService {
 
         User actual_user = userRepo.findOrCreate(new_user);
 
-        Role[] roles = new Role[2];
-
-        actual_user.getRoles().stream()
-                .filter(userRole -> "PIC-SURE Top Admin".equals(userRole.getName()) || "Admin".equals(userRole.getName()))
-                .forEach(role -> {
-                    if ("PIC-SURE Top Admin".equals(role.getName())) {
-                        roles[0] = role;
-                    } else if ("Admin".equals(role.getName())) {
-                        roles[1] = role;
-                    }
-                });
+        Set<Role> roles = new HashSet<>();
+        if (actual_user != null)  {
+            roles = actual_user.getRoles().stream()
+                .filter(userRole -> "PIC-SURE Top Admin".equals(userRole.getName()) || "Admin".equals(userRole.getName()) || userRole.getName().startsWith("MANUAL_"))
+                .collect(Collectors.toSet());
+        }
 
         // Clear current set of roles every time we create or retrieve a user but persist admin status
-        actual_user.setRoles(new HashSet<>(Set.of(roles[0], roles[1])));
-	
+        actual_user.setRoles(roles);
+
         logger.debug("createUserFromFENCEProfile() cleared roles");
 
         userRepo.persist(actual_user);
