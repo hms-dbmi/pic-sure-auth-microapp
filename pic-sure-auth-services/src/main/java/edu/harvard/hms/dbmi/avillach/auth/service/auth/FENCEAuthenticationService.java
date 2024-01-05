@@ -36,6 +36,7 @@ import edu.harvard.hms.dbmi.avillach.auth.data.entity.*;
 import edu.harvard.hms.dbmi.avillach.auth.data.repository.*;
 import edu.harvard.hms.dbmi.avillach.auth.rest.UserService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.AuthUtils;
+import org.springframework.util.CollectionUtils;
 
 public class FENCEAuthenticationService {
 	private Logger logger = LoggerFactory.getLogger(FENCEAuthenticationService.class);
@@ -299,7 +300,7 @@ public class FENCEAuthenticationService {
         User actual_user = userRepo.findOrCreate(new_user);
 
         Set<Role> roles = new HashSet<>();
-        if (actual_user != null)  {
+        if (actual_user != null && !CollectionUtils.isEmpty(actual_user.getRoles()))  {
             roles = actual_user.getRoles().stream()
                 .filter(userRole -> "PIC-SURE Top Admin".equals(userRole.getName()) || "Admin".equals(userRole.getName()) || userRole.getName().startsWith("MANUAL_"))
                 .collect(Collectors.toSet());
