@@ -10,10 +10,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.ws.rs.Consumes;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
+import javax.ws.rs.*;
 import javax.ws.rs.core.*;
 import java.util.Map;
 
@@ -27,9 +24,9 @@ public class OktaAuthenticationService {
     private final String oktaDomain = System.getenv("okta_client_origin");
     private final String apiToken = System.getenv("okta_client_api_token");
 
-    @POST
+    @GET
     @Path("/authentication")
-    public Response authenticate(@Context HttpHeaders httpHeaders, @Context UriInfo uriInfo, Map<String, String> authRequest) {
+    public Response authenticate(@Context HttpHeaders httpHeaders, @Context UriInfo uriInfo) {
         Client client = Clients.builder()
                 .setOrgUrl(oktaDomain)
                 .setClientCredentials(new TokenClientCredentials(apiToken))
