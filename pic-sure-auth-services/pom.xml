@@ -14,12 +14,18 @@
 		<!--<jackson.version>1.8.6</jackson.version> -->
 		<jackson.version>2.10.0</jackson.version>
 		<xml.bind.version>2.3.0</xml.bind.version>
+		<okta.sdk.version>1.4.0</okta.sdk.version>
 	</properties>
 	<dependencies>
 		<dependency>
 			<groupId>com.okta.sdk</groupId>
 			<artifactId>okta-sdk-api</artifactId>
-			<version>1.4.0</version>
+			<version>${okta.sdk.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.okta.sdk</groupId>
+			<artifactId>okta-sdk-impl</artifactId>
+			<version>${okta.sdk.version}</version>
 		</dependency>
 		<!-- https://mvnrepository.com/artifact/org.apache.httpcomponents/httpclient -->
 		<dependency>
