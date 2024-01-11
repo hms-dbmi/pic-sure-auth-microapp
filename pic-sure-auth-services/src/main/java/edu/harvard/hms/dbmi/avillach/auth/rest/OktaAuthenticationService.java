@@ -30,6 +30,7 @@ public class OktaAuthenticationService {
     @Path("/authentication")
     public Response authenticate(@Context HttpHeaders httpHeaders, @Context UriInfo uriInfo) {
         if (StringUtils.isBlank(JAXRSConfiguration.oktaDomain) || StringUtils.isBlank(JAXRSConfiguration.oktaSessionApiToken)) {
+            logger.info("Okta Domain: " + JAXRSConfiguration.oktaDomain + " Okta Session API Token: " + JAXRSConfiguration.oktaSessionApiToken);
             return PICSUREResponse.error("OKTA is not configured");
         }
 

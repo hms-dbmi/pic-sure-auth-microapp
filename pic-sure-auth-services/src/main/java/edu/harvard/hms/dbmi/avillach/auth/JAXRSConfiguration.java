@@ -102,6 +102,8 @@ public class JAXRSConfiguration extends Application {
     public static String fence_harmonized_consent_group_concept_path;
     public static String fence_topmed_consent_group_concept_path;
     public static String fence_allowed_query_types;
+
+    // See checkOKTAProvider method for setting these variables
     public static String oktaDomain;
     public static String oktaSessionApiToken;
 
@@ -155,10 +157,7 @@ public class JAXRSConfiguration extends Application {
         initializeLongTermTokenExpirationTime(ctx);
         logger.info("Finished initializing token expiration time.");
 
-        logger.info("Determine IDP provider");
         checkIDPProvider(ctx);
-
-        logger.info("Determine OKTA provider");
         checkOKTAProvider(ctx);
 
         mailSession.getProperties().put("mail.smtp.ssl.trust", "smtp.gmail.com");
@@ -177,11 +176,13 @@ public class JAXRSConfiguration extends Application {
     }
 
     private void checkOKTAProvider(Context ctx) {
+        logger.info("Determine OKTA provider");
         try {
             oktaSessionApiToken = (String) ctx.lookup("java:global/okta_client_api_token");
             oktaDomain = (String) ctx.lookup("java:global/okta_client_origin");
         } catch (NamingException | ClassCastException | NumberFormatException ex) {
-            logger.info("checkOKTAProvider() OKTA provider is not configured. Please check standalone.xml for missing configuration.\n" +
+            logger.info(ex.getMessage());
+            logger.info("checkOKTAProvider() OKTA provider is not configured. Please check standalone.xml for missing configuration. " +
                     "If you are not using OKTA, please set okta_client_api_token to disabled and okta_client_origin to disabled");
         }
     }
@@ -278,6 +279,8 @@ public class JAXRSConfiguration extends Application {
             }
         }
         logger.debug("checkIDPProvider() finished");
+
+
     }
 
     private void initializeTokenExpirationTime(Context ctx) {
