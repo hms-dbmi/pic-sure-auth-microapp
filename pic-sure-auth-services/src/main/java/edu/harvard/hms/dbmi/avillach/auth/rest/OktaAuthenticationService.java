@@ -5,10 +5,12 @@ import com.okta.sdk.client.Client;
 import com.okta.sdk.client.Clients;
 import com.okta.sdk.resource.session.Session;
 import edu.harvard.dbmi.avillach.util.response.PICSUREResponse;
+import edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration;
 import io.swagger.annotations.Api;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
@@ -21,20 +23,28 @@ import java.util.Map;
 public class OktaAuthenticationService {
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    private final String oktaDomain = System.getenv("okta_client_origin");
-    private final String apiToken = System.getenv("okta_client_api_token");
+    @Autowired
+    private JAXRSConfiguration config;
 
     @GET
     @Path("/authentication")
     public Response authenticate(@Context HttpHeaders httpHeaders, @Context UriInfo uriInfo) {
+        if (StringUtils.isBlank(JAXRSConfiguration.oktaDomain) || StringUtils.isBlank(JAXRSConfiguration.oktaSessionApiToken)) {
+            return PICSUREResponse.error("OKTA is not configured");
+        }
+
+        if (JAXRSConfiguration.oktaDomain.equalsIgnoreCase("disabled") || JAXRSConfiguration.oktaSessionApiToken.equalsIgnoreCase("disabled")) {
+            return PICSUREResponse.error("OKTA is disabled");
+        }
+
         Client client = Clients.builder()
-                .setOrgUrl(oktaDomain)
-                .setClientCredentials(new TokenClientCredentials(apiToken))
+                .setOrgUrl(JAXRSConfiguration.oktaDomain)
+                .setClientCredentials(new TokenClientCredentials(JAXRSConfiguration.oktaSessionApiToken))
                 .build();
 
         Map<String, Cookie> cookies = httpHeaders.getCookies();
 
-        // Print all of the cookies in the request
+        // Print all the cookies in the request, for debugging
         for (Cookie cookie : cookies.values()) {
             logger.info("Cookie: " + cookie.getName() + " = " + cookie.getValue());
         }
