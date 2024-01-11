@@ -23,9 +23,6 @@ import java.util.Map;
 public class OktaAuthenticationService {
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    @Autowired
-    private JAXRSConfiguration config;
-
     @GET
     @Path("/authentication")
     public Response authenticate(@Context HttpHeaders httpHeaders, @Context UriInfo uriInfo) {
