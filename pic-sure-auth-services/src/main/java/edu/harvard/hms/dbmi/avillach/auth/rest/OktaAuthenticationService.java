@@ -38,7 +38,7 @@ public class OktaAuthenticationService {
         }
 
         Client client = Clients.builder()
-                .setOrgUrl(JAXRSConfiguration.oktaDomain)
+                .setOrgUrl("https://" + JAXRSConfiguration.oktaDomain)
                 .setClientCredentials(new TokenClientCredentials(JAXRSConfiguration.oktaSessionApiToken))
                 .build();
 
