@@ -47,12 +47,13 @@ public class StudyAccessService {
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/")
     public Response addStudyAccess(@ApiParam(value="The Study Identifier of the new study from the metadata.json") String studyIdentifier) {
+
         if (StringUtils.isBlank(studyIdentifier)) {
-            return Response.status(Response.Status.BAD_REQUEST)
-                       .entity("Study identifier cannot be blank")
-                       .build();
+            return Response.status(Response.Status.BAD_REQUEST).entity("Study identifier cannot be blank").build();
         }
+
         Map fenceMappingForStudy = null;
+
         try {
             Map<String, Map> fenceMapping = fenceAuthenticationService.getFENCEMapping();
             if (fenceMapping == null) {
@@ -61,16 +62,14 @@ public class StudyAccessService {
             fenceMappingForStudy = fenceMapping.get(studyIdentifier);
         } catch(Exception ex) {
             logger.error(ex.toString());
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                       .entity("Error occurred while fetching FENCE mapping")
-                       .build();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Error occurred while fetching FENCE mapping").build();
         }
+
         if (fenceMappingForStudy == null || fenceMappingForStudy.isEmpty()) {
             logger.error("addStudyAccess - Could not find study: " + studyIdentifier + " in FENCE mapping");
-            return Response.status(Response.Status.BAD_REQUEST)
-                       .entity("Could not find study with the provided identifier")
-                       .build();
+            return Response.status(Response.Status.BAD_REQUEST).entity("Could not find study with the provided identifier").build();
         }
+
         String projectId = (String) fenceMappingForStudy.get(STUDY_IDENTIFIER);
         String consentCode = (String) fenceMappingForStudy.get(CONSENT_GROUP_CODE);
         String newRoleName = StringUtils.isNotBlank(consentCode) ? MANUAL+projectId+"_"+consentCode : MANUAL+projectId;
@@ -83,8 +82,7 @@ public class StudyAccessService {
         } else {
             logger.error("addStudyAccess - could not add " + newRoleName + " role to to database");
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                   .entity("Could not add role '" + newRoleName + "' to database")
-                   .build();
+                           .entity("Could not add role '" + newRoleName + "' to database").build();
         }
     }
 }

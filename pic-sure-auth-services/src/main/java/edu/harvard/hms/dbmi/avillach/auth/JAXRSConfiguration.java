@@ -152,7 +152,7 @@ public class JAXRSConfiguration extends Application {
 
         //Set info for the swagger.json
         BeanConfig beanConfig = new BeanConfig();
-        beanConfig.setVersion("1.0.0");
+        beanConfig.setVersion("1.0.1");
         beanConfig.setSchemes(new String[] { "https" });
         beanConfig.setDescription("APIs for accessing PIC-SURE-AUTH-MICROAPP - a centralized authentication/authorization micro services");
         beanConfig.setTitle("PIC-SURE-AUTH-MICROAPP");
