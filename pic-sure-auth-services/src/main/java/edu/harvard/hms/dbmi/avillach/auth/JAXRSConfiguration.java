@@ -102,11 +102,8 @@ public class JAXRSConfiguration extends Application {
     public static String fence_harmonized_consent_group_concept_path;
     public static String fence_topmed_consent_group_concept_path;
     public static String fence_allowed_query_types;
-
-    // See checkOKTAProvider method for setting these variables
-    public static String oktaDomain;
-    public static String oktaSessionApiToken;
-
+    public static String oktaClientSecret;
+    public static String oktaClientId;
 
     public static String defaultAdminRoleName = "PIC-SURE Top Admin";
 
@@ -158,7 +155,6 @@ public class JAXRSConfiguration extends Application {
         logger.info("Finished initializing token expiration time.");
 
         checkIDPProvider(ctx);
-        checkOKTAProvider(ctx);
 
         mailSession.getProperties().put("mail.smtp.ssl.trust", "smtp.gmail.com");
 
@@ -173,18 +169,6 @@ public class JAXRSConfiguration extends Application {
         beanConfig.setBasePath("/psama");
         beanConfig.setResourcePackage(TokenService.class.getPackage().getName());
         beanConfig.setScan(true);
-    }
-
-    private void checkOKTAProvider(Context ctx) {
-        logger.info("Determine OKTA provider");
-        try {
-            oktaSessionApiToken = (String) ctx.lookup("java:global/okta_client_api_token");
-            oktaDomain = (String) ctx.lookup("java:global/okta_client_origin");
-        } catch (NamingException | ClassCastException | NumberFormatException ex) {
-            logger.info(ex.getMessage());
-            logger.info("checkOKTAProvider() OKTA provider is not configured. Please check standalone.xml for missing configuration. " +
-                    "If you are not using OKTA, please set okta_client_api_token to disabled and okta_client_origin to disabled");
-        }
     }
 
     /*
@@ -209,7 +193,6 @@ public class JAXRSConfiguration extends Application {
         if (idp_provider.equalsIgnoreCase("fence")) {
             try {
                 idp_provider_uri = (String) ctx.lookup("java:global/idp_provider_uri");
-
                 fence_client_id = (String) ctx.lookup("java:global/fence_client_id");
                 fence_client_secret = (String) ctx.lookup("java:global/fence_client_secret");
                 fence_redirect_url = (String) ctx.lookup("java:global/fence_redirect_url");
