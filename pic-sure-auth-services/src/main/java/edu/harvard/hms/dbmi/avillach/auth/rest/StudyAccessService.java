@@ -5,6 +5,7 @@ import edu.harvard.hms.dbmi.avillach.auth.data.repository.RoleRepository;
 import edu.harvard.hms.dbmi.avillach.auth.service.auth.FENCEAuthenticationService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,7 +46,7 @@ public class StudyAccessService {
     @RolesAllowed(SUPER_ADMIN)
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/")
-    public Response addStudyAccess(String studyIdentifier) {
+    public Response addStudyAccess(@ApiParam(value="The Study Identifier of the new study from the metadata.json") String studyIdentifier) {
         if (StringUtils.isBlank(studyIdentifier)) {
             return Response.status(Response.Status.BAD_REQUEST)
                        .entity("Study identifier cannot be blank")
@@ -66,7 +67,7 @@ public class StudyAccessService {
         }
         if (fenceMappingForStudy == null || fenceMappingForStudy.isEmpty()) {
             logger.error("addStudyAccess - Could not find study: " + studyIdentifier + " in FENCE mapping");
-            return Response.status(Response.Status.NOT_FOUND)
+            return Response.status(Response.Status.BAD_REQUEST)
                        .entity("Could not find study with the provided identifier")
                        .build();
         }

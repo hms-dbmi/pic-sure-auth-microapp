@@ -198,7 +198,6 @@ public class FENCEAuthenticationService {
 
         } catch (Exception ex) {
             logger.error("getFENCEToken() Could not persist the user information, because "+ex.getMessage());
-            ex.printStackTrace();
             throw new NotAuthorizedException("The user details could not be persisted. Please contact the administrator.");
         }
 
