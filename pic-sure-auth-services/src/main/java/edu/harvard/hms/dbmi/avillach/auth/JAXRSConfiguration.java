@@ -45,8 +45,9 @@ public class JAXRSConfiguration extends Application {
 
     @Resource(mappedName = "java:global/client_id")
     public static String clientId;
+
     @Resource(mappedName = "java:global/client_secret")
-    public static String clientSecret;
+    public static String clientSecret; // actually picsure_client_secret in standalone.xml
     @Resource(mappedName = "java:global/clientSecretIsBase64")
     public static String clientSecretIsBase64;
 
@@ -102,8 +103,6 @@ public class JAXRSConfiguration extends Application {
     public static String fence_harmonized_consent_group_concept_path;
     public static String fence_topmed_consent_group_concept_path;
     public static String fence_allowed_query_types;
-    public static String oktaClientSecret;
-    public static String oktaClientId;
 
     public static String defaultAdminRoleName = "PIC-SURE Top Admin";
 
@@ -260,6 +259,19 @@ public class JAXRSConfiguration extends Application {
                 logger.error("checkIDPProvider() Invalid FENCE IDP Provider Setup. Mandatory fields are missing. " +
                         "Check configuration in standalone.xml");
             }
+        } else if (idp_provider.equalsIgnoreCase("okta")) {
+            try {
+                idp_provider_uri = (String) ctx.lookup("java:global/idp_provider_uri");
+                clientSecret = (String) ctx.lookup("java:global/sp_client_secret");
+                logger.debug("checkIDPProvider() idp provider OKTA is configured");
+            } catch (Exception ex) {
+                logger.error("checkIDPProvider() " + ex.getMessage());
+                logger.error("checkIDPProvider() Invalid OKTA IDP Provider Setup. Mandatory fields are missing. " +
+                        "Check configuration in standalone.xml");
+            }
+        } else {
+            logger.error("checkIDPProvider() Invalid IDP Provider Setup. Mandatory fields are missing. " +
+                    "Check configuration in standalone.xml");
         }
         logger.debug("checkIDPProvider() finished");
 
