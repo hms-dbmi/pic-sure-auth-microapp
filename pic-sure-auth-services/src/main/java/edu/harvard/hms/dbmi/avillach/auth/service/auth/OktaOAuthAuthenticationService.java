@@ -155,7 +155,7 @@ public class OktaOAuthAuthenticationService {
     private JsonNode doOktaRequest(String requestUrl, String requestParams) {
         List<Header> headers = new ArrayList<>();
         Base64.Encoder encoder = Base64.getEncoder();
-        String fence_auth_header = JAXRSConfiguration.clientId + ":" + JAXRSConfiguration.clientSecret;
+        String fence_auth_header = JAXRSConfiguration.clientId + ":" + JAXRSConfiguration.spClientSecret;
         headers.add(new BasicHeader("Authorization", "Basic " + encoder.encodeToString(fence_auth_header.getBytes())));
         headers.add(new BasicHeader("Content-type", "application/x-www-form-urlencoded; charset=UTF-8"));
 
