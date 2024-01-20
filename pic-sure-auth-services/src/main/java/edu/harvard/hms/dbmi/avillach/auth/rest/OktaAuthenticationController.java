@@ -30,7 +30,7 @@ public class OktaAuthenticationController {
 
     @POST
     @Path("/authentication")
-    public Response authenticate(@Context HttpHeaders httpHeaders, @Context UriInfo uriInfo, HashMap<String, String> authRequest) {
+    public Response authenticate(@Context HttpHeaders httpHeaders, @Context UriInfo uriInfo, Map<String, String> authRequest) {
         logger.info("OKTA LOGIN ATTEMPT ___ " + authRequest.get("code") + " ___");
 
         // loop over all the authrequest keys and values

@@ -44,7 +44,7 @@ public class OktaOAuthAuthenticationService {
      * @param authRequest The request body
      * @return The response from the authentication attempt
      */
-    public Response authenticate(UriInfo uriInfo, HashMap<String, String> authRequest) {
+    public Response authenticate(UriInfo uriInfo, Map<String, String> authRequest) {
         String code = authRequest.get("code");
         if (StringUtils.isNotBlank(code)) {
             JsonNode userToken = handleCodeTokenExchange(uriInfo, code);
