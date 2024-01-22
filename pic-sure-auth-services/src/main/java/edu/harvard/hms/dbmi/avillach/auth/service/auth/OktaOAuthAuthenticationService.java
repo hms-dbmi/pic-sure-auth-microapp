@@ -139,7 +139,7 @@ public class OktaOAuthAuthenticationService {
         }
         String accessToken = userToken.get("access_token").toString();
         logger.info("introspectToken - Access Token: " + accessToken);
-        String oktaIntrospectUrl = "https://" + JAXRSConfiguration.idp_provider_uri + "/oauth2/v1/introspect";
+        String oktaIntrospectUrl = "https://" + JAXRSConfiguration.idp_provider_uri + "/oauth2/default/v1/introspect";
         String queryString = "token=" + accessToken + "&token_type_hint=access_token";
 
         return doOktaRequest(oktaIntrospectUrl, queryString);
