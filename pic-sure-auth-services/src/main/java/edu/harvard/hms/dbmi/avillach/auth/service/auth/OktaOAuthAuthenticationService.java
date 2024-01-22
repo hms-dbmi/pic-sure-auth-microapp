@@ -122,7 +122,7 @@ public class OktaOAuthAuthenticationService {
      */
     private JsonNode introspectToken(JsonNode userToken) {
         String accessToken = userToken.get("access_token").asText();
-        String oktaIntrospectUrl = JAXRSConfiguration.idp_provider_uri + "/user/oauth2/v1/introspect";
+        String oktaIntrospectUrl = "https://" + JAXRSConfiguration.idp_provider_uri + "/oauth2/v1/introspect";
         String queryString = "token=" + accessToken + "&token_type_hint=access_token";
 
         return doOktaRequest(oktaIntrospectUrl, queryString);
@@ -139,7 +139,7 @@ public class OktaOAuthAuthenticationService {
     private JsonNode handleCodeTokenExchange(UriInfo uriInfo, String code) {
         String callbackUrl = "https://" + uriInfo.getBaseUri().getHost() + "/psamaui/login/";
         String queryString = "grant_type=authorization_code" + "&code=" + code + "&redirect_uri=" + callbackUrl;
-        String oktaTokenUrl = JAXRSConfiguration.idp_provider_uri + "/user/oauth2/token";
+        String oktaTokenUrl = "https://" + JAXRSConfiguration.idp_provider_uri + "/oauth2/v1/token";
         return doOktaRequest(oktaTokenUrl, queryString);
     }
 
