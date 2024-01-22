@@ -146,8 +146,9 @@ public class OktaOAuthAuthenticationService {
      * @return The response from the token endpoint as a JsonNode
      */
     private JsonNode handleCodeTokenExchange(UriInfo uriInfo, String code) {
-        String callbackUrl = "https://" + uriInfo.getBaseUri().getHost() + "/psamaui/login/";
-        String queryString = "grant_type=authorization_code" + "&code=" + code + "&redirect_uri=" + callbackUrl;
+        String redirectUri = "https://" + uriInfo.getBaseUri().getHost() + "/psamaui/login";
+        logger.info(redirectUri);
+        String queryString = "grant_type=authorization_code" + "&code=" + code + "&redirect_uri=" + redirectUri;
         String oktaTokenUrl = "https://" + JAXRSConfiguration.idp_provider_uri + "/oauth2/v1/token";
         return doOktaRequest(oktaTokenUrl, queryString);
     }
