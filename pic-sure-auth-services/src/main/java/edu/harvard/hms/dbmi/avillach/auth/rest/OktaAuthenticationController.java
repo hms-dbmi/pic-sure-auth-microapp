@@ -33,11 +33,6 @@ public class OktaAuthenticationController {
     public Response authenticate(@Context HttpHeaders httpHeaders, @Context UriInfo uriInfo, Map<String, String> authRequest) {
         logger.info("OKTA LOGIN ATTEMPT ___ " + authRequest.get("code") + " ___");
 
-        // loop over all the authrequest keys and values
-        for (Map.Entry<String, String> entry : authRequest.entrySet()) {
-            logger.info("OKTA LOGIN ATTEMPT ___ " + entry.getKey() + ":" + entry.getValue() + " ___");
-        }
-
         String idp_provider = JAXRSConfiguration.idp_provider;
         if (idp_provider.equalsIgnoreCase("okta")) {
             return oktaOAuthAuthenticationService.authenticate(uriInfo, authRequest);

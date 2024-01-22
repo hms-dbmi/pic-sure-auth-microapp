@@ -48,7 +48,12 @@ public class OktaOAuthAuthenticationService {
         String code = authRequest.get("code");
         if (StringUtils.isNotBlank(code)) {
             JsonNode userToken = handleCodeTokenExchange(uriInfo, code);
+            logger.info("UserToken: " + userToken);
             JsonNode introspectResponse = introspectToken(userToken);
+
+            if (introspectResponse == null) {
+                return PICSUREResponse.error("Failed to introspect access token.");
+            }
 
             User user = initializeUser(introspectResponse);
             if (user == null) {
@@ -121,7 +126,11 @@ public class OktaOAuthAuthenticationService {
      * @return The response from the introspect endpoint as a JsonNode
      */
     private JsonNode introspectToken(JsonNode userToken) {
-        String accessToken = userToken.get("access_token").asText();
+        if (!userToken.has("access_token")) {
+            return null;
+        }
+        String accessToken = userToken.get("access_token").toString();
+        logger.info("introspectToken - Access Token: " + accessToken);
         String oktaIntrospectUrl = "https://" + JAXRSConfiguration.idp_provider_uri + "/oauth2/v1/introspect";
         String queryString = "token=" + accessToken + "&token_type_hint=access_token";
 
