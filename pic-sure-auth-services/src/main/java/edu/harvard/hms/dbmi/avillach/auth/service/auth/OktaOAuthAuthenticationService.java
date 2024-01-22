@@ -55,6 +55,8 @@ public class OktaOAuthAuthenticationService {
                 return PICSUREResponse.error("Failed to introspect access token.");
             }
 
+            logger.info("Introspection Token: " + introspectResponse);
+
             User user = initializeUser(introspectResponse);
             if (user == null) {
                 logger.info("LOGIN FAILED ___ USER NOT FOUND ___ " + userToken.get("email").asText() + ":" + userToken.get("sub").asText() + " ___");
@@ -72,6 +74,12 @@ public class OktaOAuthAuthenticationService {
     }
 
     private User initializeUser(JsonNode introspectResponse) {
+        boolean isActive = introspectResponse.get("active").asBoolean();
+        if (!isActive) {
+            logger.info("LOGIN FAILED ___ USER IS NOT ACTIVE ___ ");
+            return null;
+        }
+
         User user = loadUser(introspectResponse);
         clearCache(user);
         user = addUserRoles(user);
