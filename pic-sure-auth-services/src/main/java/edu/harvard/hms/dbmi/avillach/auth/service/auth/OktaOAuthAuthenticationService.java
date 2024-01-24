@@ -54,15 +54,20 @@ public class OktaOAuthAuthenticationService {
         if (StringUtils.isNotBlank(code)) {
             JsonNode userToken = handleCodeTokenExchange(uriInfo, code);
             logger.info("UserToken: " + userToken);
-            JsonNode introspectResponse = introspectToken(userToken);
-
-            if (introspectResponse == null) {
+            JsonNode introspectResponse = null;
+            try {
+                introspectResponse = introspectToken(userToken);
+            } catch (IOException | InterruptedException e) {
+                logger.error("Failed to introspect access token.", e);
                 return PICSUREResponse.error("Failed to introspect access token.");
             }
 
             logger.info("Introspection Token: " + introspectResponse);
-
-            User user = initializeUser(introspectResponse);
+            User user = null;
+            if (introspectResponse != null) {
+                user = initializeUser(introspectResponse);
+            }
+            
             if (user == null) {
                 logger.info("LOGIN FAILED ___ USER NOT FOUND ___ " + userToken.get("email").asText() + ":" + userToken.get("sub").asText() + " ___");
                 return PICSUREResponse.error("User not found");
