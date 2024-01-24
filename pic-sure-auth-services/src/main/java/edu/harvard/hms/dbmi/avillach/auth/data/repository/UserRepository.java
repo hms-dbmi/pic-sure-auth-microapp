@@ -5,6 +5,7 @@ import edu.harvard.hms.dbmi.avillach.auth.data.entity.Connection;
 import edu.harvard.hms.dbmi.avillach.auth.data.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.data.entity.TermsOfService;
 import edu.harvard.hms.dbmi.avillach.auth.data.entity.User;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -104,6 +105,10 @@ public class UserRepository extends BaseRepository<User, UUID> {
                // If the user isn't found by subject then check by email and connection just
                // in case they were created by jenkins
                user = findByEmailAndConnection(inputUser.getEmail(), inputUser.getConnection().getId());
+               if (StringUtils.isEmpty(user.getSubject())) {
+                   user.setSubject(inputUser.getSubject());
+                   user.setGeneralMetadata(inputUser.getGeneralMetadata());
+               }
            } catch (NoResultException ex) {
                logger.debug("findOrCreate() email " + inputUser.getEmail() +
                        " could not be found by `entityManager`, creating a new user");
