@@ -54,14 +54,8 @@ public class OktaOAuthAuthenticationService {
         if (StringUtils.isNotBlank(code)) {
             JsonNode userToken = handleCodeTokenExchange(uriInfo, code);
             logger.info("UserToken: " + userToken);
-            JsonNode introspectResponse = null;
-            try {
-                introspectResponse = introspectToken(userToken);
-            } catch (IOException | InterruptedException e) {
-                logger.error("Failed to introspect access token.", e);
-                return PICSUREResponse.error("Failed to introspect access token.");
-            }
 
+            JsonNode introspectResponse = introspectToken(userToken);
             logger.info("Introspection Token: " + introspectResponse);
             User user = null;
             if (introspectResponse != null) {
@@ -144,7 +138,7 @@ public class OktaOAuthAuthenticationService {
      * @param userToken The token to introspect
      * @return The response from the introspect endpoint as a JsonNode
      */
-    private JsonNode introspectToken(JsonNode userToken) throws IOException, InterruptedException {
+    private JsonNode introspectToken(JsonNode userToken) {
         if (!userToken.has("access_token")) {
             return null;
         }
