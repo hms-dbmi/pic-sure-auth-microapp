@@ -141,8 +141,9 @@ public class OktaOAuthAuthenticationService {
         logger.info("introspectToken - Access Token: " + accessToken);
         String oktaIntrospectUrl = "https://" + JAXRSConfiguration.idp_provider_uri + "/oauth2/default/v1/introspect";
         String queryString = "token=" + accessToken + "&token_type_hint=access_token";
+        String contentType = "application/json";
 
-        return doOktaRequest(oktaIntrospectUrl, queryString);
+        return doOktaRequest(oktaIntrospectUrl, queryString, contentType);
     }
 
     /**
@@ -158,7 +159,9 @@ public class OktaOAuthAuthenticationService {
         logger.info(redirectUri);
         String queryString = "grant_type=authorization_code" + "&code=" + code + "&redirect_uri=" + redirectUri;
         String oktaTokenUrl = "https://" + JAXRSConfiguration.idp_provider_uri + "/oauth2/v1/token";
-        return doOktaRequest(oktaTokenUrl, queryString);
+        String contentType = "application/x-www-form-urlencoded; charset=UTF-8";
+
+        return doOktaRequest(oktaTokenUrl, queryString, contentType);
     }
 
     /**
@@ -168,14 +171,15 @@ public class OktaOAuthAuthenticationService {
      *
      * @param requestUrl    The URL to call
      * @param requestParams The parameters to send
+     * @param contentType
      * @return The response from the OKTA API as a JsonNode
      */
-    private JsonNode doOktaRequest(String requestUrl, String requestParams) {
+    private JsonNode doOktaRequest(String requestUrl, String requestParams, String contentType) {
         List<Header> headers = new ArrayList<>();
         Base64.Encoder encoder = Base64.getEncoder();
         String fence_auth_header = JAXRSConfiguration.clientId + ":" + JAXRSConfiguration.spClientSecret;
         headers.add(new BasicHeader("Authorization", "Basic " + encoder.encodeToString(fence_auth_header.getBytes())));
-        headers.add(new BasicHeader("Content-type", "application/x-www-form-urlencoded; charset=UTF-8"));
+        headers.add(new BasicHeader("Content-type", contentType));
 
         JsonNode resp = null;
         try {
