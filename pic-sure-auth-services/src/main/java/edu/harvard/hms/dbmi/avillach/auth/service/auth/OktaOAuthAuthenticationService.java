@@ -67,7 +67,7 @@ public class OktaOAuthAuthenticationService {
             if (introspectResponse != null) {
                 user = initializeUser(introspectResponse);
             }
-            
+
             if (user == null) {
                 logger.info("LOGIN FAILED ___ USER NOT FOUND ___ " + userToken.get("email").asText() + ":" + userToken.get("sub").asText() + " ___");
                 return PICSUREResponse.error("User not found");
@@ -149,25 +149,14 @@ public class OktaOAuthAuthenticationService {
             return null;
         }
 
-        HttpClient client = HttpClient.newHttpClient();
         String accessToken = userToken.get("access_token").asText();
         logger.info("introspectToken - Access Token: " + accessToken);
         String oktaIntrospectUrl = "https://" + JAXRSConfiguration.idp_provider_uri + "/oauth2/default/v1/introspect";
 
         String payload = "{\"token\":\"" + accessToken + "\",\"token_type_hint\":\"access_token\"}";
-        String auth_header = JAXRSConfiguration.clientId + ":" + JAXRSConfiguration.spClientSecret;
+        String contentType = "application/json";
 
-        var request = HttpRequest.newBuilder()
-                .POST(HttpRequest.BodyPublishers.ofString(payload))
-                .uri(URI.create(oktaIntrospectUrl))
-                .header("Content-Type", "application/json")
-                .header("Authorization", "Basic " + Base64.getEncoder().encodeToString((auth_header).getBytes()))
-                .build();
-
-
-        HttpResponse<String> send = client.send(request, HttpResponse.BodyHandlers.ofString());
-        logger.info("introspectToken - Response: " + send.body());
-        return JAXRSConfiguration.objectMapper.readTree(send.body());
+        return doOktaRequest(oktaIntrospectUrl, payload, contentType);
     }
 
     /**
