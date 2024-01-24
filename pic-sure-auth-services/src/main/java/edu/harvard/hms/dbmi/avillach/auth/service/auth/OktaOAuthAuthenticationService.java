@@ -86,7 +86,7 @@ public class OktaOAuthAuthenticationService {
 
         User user = loadUser(introspectResponse);
         clearCache(user);
-        user = addUserRoles(user);
+        addUserRoles(user);
         return user;
     }
 
@@ -99,9 +99,10 @@ public class OktaOAuthAuthenticationService {
     }
 
 
-    private User addUserRoles(User user) {
+    private void addUserRoles(User user) {
         Role openAccessRole = roleRepository.getUniqueResultByColumn("name", FENCEAuthenticationService.fence_open_access_role_name);
-        return userRepository.createOpenAccessUser(openAccessRole);
+        user.setRoles(new HashSet<>(List.of(openAccessRole)));
+        userRepository.merge(user);
     }
 
     private void clearCache(User user) {
@@ -133,7 +134,7 @@ public class OktaOAuthAuthenticationService {
 
     /**
      * Introspect the token to get the user's email address. This is a call to the OKTA introspect endpoint.
-     * Documentation: <a href="https://developer.okta.com/docs/api/openapi/okta-oauth/oauth/tag/OrgAS/#tag/OrgAS/operation/introspect">/introspect</a>
+     * Documentation: <a href="https://developer.okta.com/docs/reference/api/oidc/#introspect">/introspect</a>
      *
      * @param userToken The token to introspect
      * @return The response from the introspect endpoint as a JsonNode
@@ -143,14 +144,12 @@ public class OktaOAuthAuthenticationService {
             return null;
         }
 
+        // get the access token string from the response
         String accessToken = userToken.get("access_token").asText();
         logger.info("introspectToken - Access Token: " + accessToken);
         String oktaIntrospectUrl = "https://" + JAXRSConfiguration.idp_provider_uri + "/oauth2/default/v1/introspect";
-
-        String payload = "{\"token\":\"" + accessToken + "\",\"token_type_hint\":\"access_token\"}";
-        String contentType = "application/json";
-
-        return doOktaRequest(oktaIntrospectUrl, payload, contentType);
+        String payload = "token_type_hint=access_token&token=" + accessToken;
+        return doOktaRequest(oktaIntrospectUrl, payload);
     }
 
     /**
@@ -166,9 +165,8 @@ public class OktaOAuthAuthenticationService {
         logger.info(redirectUri);
         String queryString = "grant_type=authorization_code" + "&code=" + code + "&redirect_uri=" + redirectUri;
         String oktaTokenUrl = "https://" + JAXRSConfiguration.idp_provider_uri + "/oauth2/v1/token";
-        String contentType = "application/x-www-form-urlencoded; charset=UTF-8";
 
-        return doOktaRequest(oktaTokenUrl, queryString, contentType);
+        return doOktaRequest(oktaTokenUrl, queryString);
     }
 
     /**
@@ -178,15 +176,14 @@ public class OktaOAuthAuthenticationService {
      *
      * @param requestUrl    The URL to call
      * @param requestParams The parameters to send
-     * @param contentType   The content type of the request
      * @return The response from the OKTA API as a JsonNode
      */
-    private JsonNode doOktaRequest(String requestUrl, String requestParams, String contentType) {
+    private JsonNode doOktaRequest(String requestUrl, String requestParams) {
         List<Header> headers = new ArrayList<>();
         Base64.Encoder encoder = Base64.getEncoder();
         String auth_header = JAXRSConfiguration.clientId + ":" + JAXRSConfiguration.spClientSecret;
         headers.add(new BasicHeader("Authorization", "Basic " + encoder.encodeToString(auth_header.getBytes())));
-        headers.add(new BasicHeader("Content-type", contentType));
+        headers.add(new BasicHeader("Content-type", "application/x-www-form-urlencoded"));
 
         JsonNode resp = null;
         try {
