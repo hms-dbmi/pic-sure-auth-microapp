@@ -20,6 +20,11 @@ import org.slf4j.LoggerFactory;
 import javax.inject.Inject;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.*;
 
 public class OktaOAuthAuthenticationService {
@@ -129,24 +134,35 @@ public class OktaOAuthAuthenticationService {
 
     /**
      * Introspect the token to get the user's email address. This is a call to the OKTA introspect endpoint.
+     * Documentation: <a href="https://developer.okta.com/docs/api/openapi/okta-oauth/oauth/tag/OrgAS/#tag/OrgAS/operation/introspect">/introspect</a>
      *
      * @param userToken The token to introspect
      * @return The response from the introspect endpoint as a JsonNode
      */
-    private JsonNode introspectToken(JsonNode userToken) {
+    private JsonNode introspectToken(JsonNode userToken) throws IOException, InterruptedException {
         if (!userToken.has("access_token")) {
             return null;
         }
+
+        HttpClient client = HttpClient.newHttpClient();
         String accessToken = userToken.get("access_token").asText();
         logger.info("introspectToken - Access Token: " + accessToken);
         String oktaIntrospectUrl = "https://" + JAXRSConfiguration.idp_provider_uri + "/oauth2/default/v1/introspect";
-//        String queryString = "token=" + accessToken + "&token_type_hint=access_token";
 
         String payload = "{\"token\":\"" + accessToken + "\",\"token_type_hint\":\"access_token\"}";
+        String auth_header = JAXRSConfiguration.clientId + ":" + JAXRSConfiguration.spClientSecret;
 
-        String contentType = "application/x-www-form-urlencoded; charset=UTF-8";
+        var request = HttpRequest.newBuilder()
+                .POST(HttpRequest.BodyPublishers.ofString(payload))
+                .uri(URI.create(oktaIntrospectUrl))
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Basic " + Base64.getEncoder().encodeToString((auth_header).getBytes()))
+                .build();
 
-        return doOktaRequest(oktaIntrospectUrl, payload, contentType);
+
+        HttpResponse<String> send = client.send(request, HttpResponse.BodyHandlers.ofString());
+        logger.info("introspectToken - Response: " + send.body());
+        return JAXRSConfiguration.objectMapper.readTree(send.body());
     }
 
     /**
