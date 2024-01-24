@@ -137,13 +137,16 @@ public class OktaOAuthAuthenticationService {
         if (!userToken.has("access_token")) {
             return null;
         }
-        String accessToken = userToken.get("access_token").toString();
+        String accessToken = userToken.get("access_token").asText();
         logger.info("introspectToken - Access Token: " + accessToken);
         String oktaIntrospectUrl = "https://" + JAXRSConfiguration.idp_provider_uri + "/oauth2/default/v1/introspect";
-        String queryString = "token=" + accessToken + "&token_type_hint=access_token";
-        String contentType = "application/json";
+//        String queryString = "token=" + accessToken + "&token_type_hint=access_token";
 
-        return doOktaRequest(oktaIntrospectUrl, queryString, contentType);
+        String payload = "{\"token\":\"" + accessToken + "\",\"token_type_hint\":\"access_token\"}";
+
+        String contentType = "application/x-www-form-urlencoded; charset=UTF-8";
+
+        return doOktaRequest(oktaIntrospectUrl, payload, contentType);
     }
 
     /**
@@ -171,14 +174,14 @@ public class OktaOAuthAuthenticationService {
      *
      * @param requestUrl    The URL to call
      * @param requestParams The parameters to send
-     * @param contentType
+     * @param contentType   The content type of the request
      * @return The response from the OKTA API as a JsonNode
      */
     private JsonNode doOktaRequest(String requestUrl, String requestParams, String contentType) {
         List<Header> headers = new ArrayList<>();
         Base64.Encoder encoder = Base64.getEncoder();
-        String fence_auth_header = JAXRSConfiguration.clientId + ":" + JAXRSConfiguration.spClientSecret;
-        headers.add(new BasicHeader("Authorization", "Basic " + encoder.encodeToString(fence_auth_header.getBytes())));
+        String auth_header = JAXRSConfiguration.clientId + ":" + JAXRSConfiguration.spClientSecret;
+        headers.add(new BasicHeader("Authorization", "Basic " + encoder.encodeToString(auth_header.getBytes())));
         headers.add(new BasicHeader("Content-type", contentType));
 
         JsonNode resp = null;
