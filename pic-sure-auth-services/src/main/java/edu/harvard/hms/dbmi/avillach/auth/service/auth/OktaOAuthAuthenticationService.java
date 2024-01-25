@@ -54,7 +54,6 @@ public class OktaOAuthAuthenticationService {
             User user = initializeUser(introspectResponse);
 
             if (user == null) {
-                logger.info("LOGIN FAILED ___ USER NOT FOUND ___ " + userToken.get("uid").asText() + ":" + userToken.get("sub").asText() + " ___");
                 return PICSUREResponse.error(" LOGIN FAILED ___ USER NOT FOUND ___ ");
             }
 
