@@ -4,8 +4,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import edu.harvard.dbmi.avillach.util.HttpClientUtil;
 import edu.harvard.dbmi.avillach.util.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration;
-import edu.harvard.hms.dbmi.avillach.auth.data.entity.Role;
+import edu.harvard.hms.dbmi.avillach.auth.data.entity.Connection;
 import edu.harvard.hms.dbmi.avillach.auth.data.entity.User;
+import edu.harvard.hms.dbmi.avillach.auth.data.repository.ConnectionRepository;
 import edu.harvard.hms.dbmi.avillach.auth.data.repository.RoleRepository;
 import edu.harvard.hms.dbmi.avillach.auth.data.repository.UserRepository;
 import edu.harvard.hms.dbmi.avillach.auth.rest.UserService;
@@ -33,6 +34,9 @@ public class OktaOAuthAuthenticationService {
     private RoleRepository roleRepository;
 
     @Inject
+    private ConnectionRepository connectionRepository;
+
+    @Inject
     private AuthUtils authUtil;
 
     /**
@@ -48,18 +52,12 @@ public class OktaOAuthAuthenticationService {
         String code = authRequest.get("code");
         if (StringUtils.isNotBlank(code)) {
             JsonNode userToken = handleCodeTokenExchange(uriInfo, code);
-            logger.info("UserToken: " + userToken);
-
             JsonNode introspectResponse = introspectToken(userToken);
-            logger.info("Introspection Token: " + introspectResponse);
-            User user = null;
-            if (introspectResponse != null) {
-                user = initializeUser(introspectResponse);
-            }
+            User user = initializeUser(introspectResponse);
 
             if (user == null) {
                 logger.info("LOGIN FAILED ___ USER NOT FOUND ___ " + userToken.get("email").asText() + ":" + userToken.get("sub").asText() + " ___");
-                return PICSUREResponse.error("User not found");
+                return PICSUREResponse.error(" LOGIN FAILED ___ USER NOT FOUND ___ ");
             }
 
             HashMap<String, String> responseMap = createUserClaims(user);
@@ -68,11 +66,16 @@ public class OktaOAuthAuthenticationService {
             return PICSUREResponse.success(responseMap);
         }
 
-        logger.info("LOGIN FAILED ___ USER FAILED TO AUTHENTICATE ___");
+        logger.info("LOGIN FAILED ___ USER NOT AUTHENTICATED ___");
         return PICSUREResponse.error("User not authenticated");
     }
 
     private User initializeUser(JsonNode introspectResponse) {
+        if (introspectResponse == null) {
+            logger.info("FAILED TO INTROSPECT TOKEN ___ ");
+            return null;
+        }
+
         boolean isActive = introspectResponse.get("active").asBoolean();
         if (!isActive) {
             logger.info("LOGIN FAILED ___ USER IS NOT ACTIVE ___ ");
@@ -81,7 +84,6 @@ public class OktaOAuthAuthenticationService {
 
         User user = loadUser(introspectResponse);
         clearCache(user);
-        addUserRoles(user);
         return user;
     }
 
@@ -91,13 +93,6 @@ public class OktaOAuthAuthenticationService {
         claims.put("email", user.getEmail());
         claims.put("sub", user.getSubject());
         return authUtil.getUserProfileResponse(claims);
-    }
-
-
-    private void addUserRoles(User user) {
-        Role openAccessRole = roleRepository.getUniqueResultByColumn("name", FENCEAuthenticationService.fence_open_access_role_name);
-        user.setRoles(new HashSet<>(List.of(openAccessRole)));
-        userRepository.merge(user);
     }
 
     private void clearCache(User user) {
@@ -114,17 +109,8 @@ public class OktaOAuthAuthenticationService {
      * @return The user
      */
     private User loadUser(JsonNode introspectResponse) {
-        String email = introspectResponse.get("username").asText();
-        // TODO: Load the user from the database. For now, just return a new user so we can test.
-        User user = new User();
-        user.setSubject(introspectResponse.get("sub").asText());
-        user.setEmail(email);
-        user.setConnection(null); // TODO: We need to load the connection from the database.
-        user.setAcceptedTOS(new Date());
-        user.setGeneralMetadata(introspectResponse.toString());
-        user.setActive(introspectResponse.get("active").asBoolean());
-
-        return user;
+        String userEmail = introspectResponse.get("sub").asText();
+        return userRepository.findByEmailAndConnection(userEmail, "OKTA");
     }
 
     /**
