@@ -84,6 +84,10 @@ public class OktaOAuthAuthenticationService {
         }
 
         User user = loadUser(introspectResponse);
+        if (user == null) {
+            return null;
+        }
+
         clearCache(user);
         return user;
     }
