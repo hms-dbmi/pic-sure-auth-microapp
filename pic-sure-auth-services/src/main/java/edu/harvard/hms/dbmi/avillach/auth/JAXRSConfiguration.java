@@ -35,7 +35,7 @@ import static edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming.AuthRoleNaming
 import static edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming.AuthRoleNaming.SUPER_ADMIN;
 
 /**
- *<p>When you deploy the PSAMA application WAR file to a new server, this class is called to supply basic configuration information.</p>
+ * <p>When you deploy the PSAMA application WAR file to a new server, this class is called to supply basic configuration information.</p>
  */
 @Startup
 @ApplicationPath("auth")
@@ -45,8 +45,9 @@ public class JAXRSConfiguration extends Application {
 
     @Resource(mappedName = "java:global/client_id")
     public static String clientId;
+
     @Resource(mappedName = "java:global/client_secret")
-    public static String clientSecret;
+    public static String clientSecret; // actually picsure_client_secret in standalone.xml
     @Resource(mappedName = "java:global/clientSecretIsBase64")
     public static String clientSecretIsBase64;
 
@@ -61,7 +62,7 @@ public class JAXRSConfiguration extends Application {
 
     /**
      * The default application UUID assumed for all operational contexts where
-	 * one is not supplied.
+     * one is not supplied.
      */
     @Resource(mappedName = "java:global/defaultApplicationUUID")
     public static String defaultApplicationUUID;
@@ -76,7 +77,7 @@ public class JAXRSConfiguration extends Application {
     public static String accessGrantEmailSubject;
 
     @Resource(mappedName = "java:global/userActivationReplyTo")
-	public static String userActivationReplyTo;
+    public static String userActivationReplyTo;
 
     @Resource(lookup = "java:jboss/mail/gmail")
     public static Session mailSession;
@@ -86,11 +87,10 @@ public class JAXRSConfiguration extends Application {
 
     @Resource(lookup = "java:global/deniedEmailEnabled")
     public static String deniedEmailEnabled;
-    
+
     @Resource(lookup = "java:global/variantAnnotationColumns")
     public static String variantAnnotationColumns;
-    
-    
+
     // See checkIDPProvider method for setting these variables
     public static String idp_provider;
     public static String idp_provider_uri;
@@ -103,14 +103,12 @@ public class JAXRSConfiguration extends Application {
     public static String fence_harmonized_consent_group_concept_path;
     public static String fence_topmed_consent_group_concept_path;
     public static String fence_allowed_query_types;
-    
-    
     public static String defaultAdminRoleName = "PIC-SURE Top Admin";
-
+    public static String spClientSecret;
+    public static String connectionId;
     public static long tokenExpirationTime;
     // default expiration time is 1 hr
     private static long defaultTokenExpirationTime = 1000L * 60 * 60;
-
     public static long longTermTokenExpirationTime;
     // default long term token expiration time is 30 days
     private static long defaultLongTermTokenExpirationTime = 1000L * 60 * 60 * 24 * 30;
@@ -133,6 +131,15 @@ public class JAXRSConfiguration extends Application {
     public void init() {
         logger.info("Starting auth micro app");
 
+        logger.info("Start initializing JNDI context");
+        Context ctx;
+        try {
+            ctx = new InitialContext();
+        } catch (NamingException e) {
+            // If we can't get the context, we can't do anything
+            throw new RuntimeException("Failed to initialize JNDI context", e);
+        }
+
         /*
             create an admin role if there isn't one
          */
@@ -141,26 +148,24 @@ public class JAXRSConfiguration extends Application {
         logger.info("Finished initializing admin role.");
 
         logger.info("Start initializing tokens expiration time.");
-        initializeTokenExpirationTime();
-        initializeLongTermTokenExpirationTime();
+        initializeTokenExpirationTime(ctx);
+        initializeLongTermTokenExpirationTime(ctx);
         logger.info("Finished initializing token expiration time.");
 
-        logger.info("Determine IDP provider");
-        checkIDPProvider();
+        checkIDPProvider(ctx);
 
         mailSession.getProperties().put("mail.smtp.ssl.trust", "smtp.gmail.com");
 
-        logger.info("Auth micro app has been successfully started");
-
         //Set info for the swagger.json
         BeanConfig beanConfig = new BeanConfig();
-        beanConfig.setVersion("1.0.0");
+        beanConfig.setVersion("1.0.1");
         beanConfig.setSchemes(new String[] { "https" });
         beanConfig.setDescription("APIs for accessing PIC-SURE-AUTH-MICROAPP - a centralized authentication/authorization micro services");
         beanConfig.setTitle("PIC-SURE-AUTH-MICROAPP");
         beanConfig.setBasePath("/psama");
         beanConfig.setResourcePackage(TokenService.class.getPackage().getName());
         beanConfig.setScan(true);
+        logger.info("Auth micro app has been successfully started");
     }
 
     /*
@@ -172,27 +177,19 @@ public class JAXRSConfiguration extends Application {
      * This is currently only works for FENCE integration.
      *
      */
-    public void checkIDPProvider() {
+    public void checkIDPProvider(Context ctx) {
         logger.debug("checkIDPProvider() starting....");
 
-        Context ctx = null;
         try {
-            ctx = new InitialContext();
-        } catch (NamingException e) {
-            e.printStackTrace();
-        }
-
-        try {
-            idp_provider = (String)ctx.lookup("java:global/idp_provider");
-        } catch (NamingException | ClassCastException | NumberFormatException ex){
+            idp_provider = (String) ctx.lookup("java:global/idp_provider");
+        } catch (NamingException | ClassCastException | NumberFormatException ex) {
             idp_provider = "default";
         }
-        logger.info("checkIDPProvider() idp provider is now :"+idp_provider);
+        logger.info("checkIDPProvider() idp provider is now :" + idp_provider);
 
         if (idp_provider.equalsIgnoreCase("fence")) {
             try {
-                idp_provider_uri = (String)ctx.lookup("java:global/idp_provider_uri");
-
+                idp_provider_uri = (String) ctx.lookup("java:global/idp_provider_uri");
                 fence_client_id = (String) ctx.lookup("java:global/fence_client_id");
                 fence_client_secret = (String) ctx.lookup("java:global/fence_client_secret");
                 fence_redirect_url = (String) ctx.lookup("java:global/fence_redirect_url");
@@ -202,13 +199,13 @@ public class JAXRSConfiguration extends Application {
                     logger.error("checkIDPProvider() Empty parent consent group concept path from standalone.xml. Using default!");
                     fence_parent_consent_group_concept_path = "\\\\_Consents\\\\Short Study Accession with Consent code\\\\";
                 }
-                
+
                 fence_harmonized_consent_group_concept_path = (String) ctx.lookup("java:global/fence_harmonized_consent_group_concept_path");
                 if (fence_harmonized_consent_group_concept_path == null) {
                     logger.error("checkIDPProvider() Empty harmonized consent group concept path from standalone.xml. Using default!");
                     fence_harmonized_consent_group_concept_path = "\\\\_Consents\\\\Short Study Accession with Consent code\\\\";
                 }
-                
+
                 fence_topmed_consent_group_concept_path = (String) ctx.lookup("java:global/fence_topmed_consent_group_concept_path");
                 if (fence_topmed_consent_group_concept_path == null) {
                     logger.error("checkIDPProvider() Empty topmed consent group concept path from standalone.xml. Using default!");
@@ -226,8 +223,7 @@ public class JAXRSConfiguration extends Application {
                     logger.error("checkIDPProvider() Missing Allowed query types from standalone.xml. Using defaults.");
                     fence_allowed_query_types = "COUNT,CROSS_COUNT";
                 }
-                
-                
+
 
                 fence_harmonized_concept_path = (String) ctx.lookup("java:global/fence_harmonized_concept_path");
                 if (fence_harmonized_concept_path.isEmpty()) {
@@ -237,7 +233,7 @@ public class JAXRSConfiguration extends Application {
                 logger.debug("checkIDPProvider() idp provider FENCE is configured");
 
                 // Upsert FENCE connection
-                Connection c = connectionRepo.getUniqueResultByColumn("label","FENCE");
+                Connection c = connectionRepo.getUniqueResultByColumn("label", "FENCE");
                 if (c != null) {
                     logger.debug("checkIDPProvider() FENCE connection already exists.");
                 } else {
@@ -252,24 +248,38 @@ public class JAXRSConfiguration extends Application {
                 }
 
                 // For debugging purposes, here is a dump of most of the FENCE variables
-                logger.info("checkIDPProvider() fence_standard_access_rules        "+fence_standard_access_rules);
-                logger.info("checkIDPProvider() fence_consent_group_concept_path   "+fence_parent_consent_group_concept_path);
-                logger.info("checkIDPProvider() fence_harmonized_concept_path      "+fence_harmonized_concept_path);
+                logger.info("checkIDPProvider() fence_standard_access_rules        " + fence_standard_access_rules);
+                logger.info("checkIDPProvider() fence_consent_group_concept_path   " + fence_parent_consent_group_concept_path);
+                logger.info("checkIDPProvider() fence_harmonized_concept_path      " + fence_harmonized_concept_path);
 
             } catch (Exception ex) {
-                logger.error("checkIDPProvider() "+ex.getMessage());
-                logger.error("checkIDPProvider() Invalid FENCE IDP Provider Setup. Mandatory fields are missing. "+
+                logger.error("checkIDPProvider() " + ex.getMessage());
+                logger.error("checkIDPProvider() Invalid FENCE IDP Provider Setup. Mandatory fields are missing. " +
                         "Check configuration in standalone.xml");
             }
+        } else if (idp_provider.equalsIgnoreCase("okta")) {
+            try {
+                idp_provider_uri = (String) ctx.lookup("java:global/idp_provider_uri");
+                spClientSecret = (String) ctx.lookup("java:global/sp_client_secret");
+                connectionId = (String) ctx.lookup("java:global/connection_id");
+
+                logger.debug("checkIDPProvider() idp provider OKTA is configured");
+            } catch (Exception ex) {
+                logger.error("checkIDPProvider() " + ex.getMessage());
+                logger.error("checkIDPProvider() Invalid OKTA IDP Provider Setup. Mandatory fields are missing. " +
+                        "Check configuration in standalone.xml");
+            }
+        } else {
+            logger.error("checkIDPProvider() Invalid IDP Provider Setup. Mandatory fields are missing. " +
+                    "Check configuration in standalone.xml");
         }
         logger.debug("checkIDPProvider() finished");
     }
 
-    private void initializeTokenExpirationTime(){
+    private void initializeTokenExpirationTime(Context ctx) {
         try {
-            Context ctx = new InitialContext();
-            tokenExpirationTime = Long.parseLong((String)ctx.lookup("java:global/tokenExpirationTime"));
-        } catch (NamingException | ClassCastException | NumberFormatException ex){
+            tokenExpirationTime = Long.parseLong((String) ctx.lookup("java:global/tokenExpirationTime"));
+        } catch (NamingException | ClassCastException | NumberFormatException ex) {
             tokenExpirationTime = defaultTokenExpirationTime;
         }
 
@@ -277,11 +287,10 @@ public class JAXRSConfiguration extends Application {
 
     }
 
-    private void initializeLongTermTokenExpirationTime(){
+    private void initializeLongTermTokenExpirationTime(Context ctx) {
         try {
-            Context ctx = new InitialContext();
-            longTermTokenExpirationTime = Long.parseLong((String)ctx.lookup("java:global/longTermTokenExpirationTime"));
-        } catch (NamingException | ClassCastException | NumberFormatException ex){
+            longTermTokenExpirationTime = Long.parseLong((String) ctx.lookup("java:global/longTermTokenExpirationTime"));
+        } catch (NamingException | ClassCastException | NumberFormatException ex) {
             longTermTokenExpirationTime = defaultLongTermTokenExpirationTime;
         }
 
@@ -289,12 +298,12 @@ public class JAXRSConfiguration extends Application {
 
     }
 
-    private void initializeDefaultAdminRole(){
+    private void initializeDefaultAdminRole() {
 
         // make sure system admin and super admin privileges are added in the database
         checkAndAddAdminPrivileges();
 
-        if (checkIfAdminRoleExists()){
+        if (checkIfAdminRoleExists()) {
             logger.info("Admin role already exists in database, no need for the creation.");
             return;
         }
@@ -319,7 +328,7 @@ public class JAXRSConfiguration extends Application {
         privileges.add(superAdmin);
         role.setPrivileges(privileges);
 
-        if(isAdminRole){
+        if (isAdminRole) {
             roleRepo.merge(role);
             logger.info("Finished updating the admin role, roleId: " + role.getUuid());
         } else {
@@ -329,7 +338,7 @@ public class JAXRSConfiguration extends Application {
         }
     }
 
-    private void checkAndAddAdminPrivileges(){
+    private void checkAndAddAdminPrivileges() {
         logger.info("Checking if system admin and super admin privileges are added");
         List<Privilege> privileges = privilegeRepo.list();
         if (privileges == null)
@@ -341,18 +350,18 @@ public class JAXRSConfiguration extends Application {
             if (superAdmin != null && systemAdmin != null)
                 break;
 
-            if (SUPER_ADMIN.equals(p.getName())){
+            if (SUPER_ADMIN.equals(p.getName())) {
                 superAdmin = p;
                 continue;
             }
 
-            if (ADMIN.equals(p.getName())){
+            if (ADMIN.equals(p.getName())) {
                 systemAdmin = p;
                 continue;
             }
         }
 
-        if (superAdmin == null){
+        if (superAdmin == null) {
             logger.info("Adding super admin");
             superAdmin = new Privilege();
             superAdmin.setName(SUPER_ADMIN);
@@ -369,7 +378,7 @@ public class JAXRSConfiguration extends Application {
         }
     }
 
-    private boolean checkIfAdminRoleExists(){
+    private boolean checkIfAdminRoleExists() {
         logger.info("Checking if admin role already exists in database");
         List<Role> roles = roleRepo.list();
         if (roles == null || roles.isEmpty()) {
@@ -395,7 +404,7 @@ public class JAXRSConfiguration extends Application {
         return systemAdmin && superAdmin;
     }
 
-    public static String getPrincipalName(SecurityContext securityContext){
+    public static String getPrincipalName(SecurityContext securityContext) {
         if (securityContext.getUserPrincipal() == null)
             return "No security context set, ";
 
