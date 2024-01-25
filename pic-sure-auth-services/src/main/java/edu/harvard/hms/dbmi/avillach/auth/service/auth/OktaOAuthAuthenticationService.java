@@ -1,10 +1,12 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.auth;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import edu.harvard.dbmi.avillach.util.HttpClientUtil;
 import edu.harvard.dbmi.avillach.util.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration;
 import edu.harvard.hms.dbmi.avillach.auth.data.entity.User;
+import edu.harvard.hms.dbmi.avillach.auth.data.repository.RoleRepository;
 import edu.harvard.hms.dbmi.avillach.auth.data.repository.UserRepository;
 import edu.harvard.hms.dbmi.avillach.auth.rest.UserService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.AuthUtils;
@@ -30,6 +32,9 @@ public class OktaOAuthAuthenticationService {
 
     @Inject
     private AuthUtils authUtil;
+
+    @Inject
+    private RoleRepository roleRepository;
 
     /**
      * Authenticate the user using the code provided by the IDP. This code is exchanged for an access token.
@@ -113,6 +118,30 @@ public class OktaOAuthAuthenticationService {
             // If the user does not yet have a subject, set it to the subject from the introspect response
             if (user.getSubject() == null) {
                 user.setSubject("okta|" + introspectResponse.get("uid").asText());
+                userRepository.persist(user);
+            }
+
+            // All users that login through OKTA should have the fence_open_access role, or they will not be able to interact with the UI
+            String fenceOpenAccessRoleName = FENCEAuthenticationService.fence_open_access_role_name;
+            if (user.getRoles().stream().noneMatch(role -> role.getName().equals(fenceOpenAccessRoleName))) {
+                user.getRoles().add(roleRepository.getUniqueResultByColumn("name", fenceOpenAccessRoleName));
+                userRepository.persist(user);
+            }
+
+            // Add metadata to the user upon logging in if it doesn't exist
+            if (user.getGeneralMetadata().isEmpty()) {
+                // JsonNode is immutable, so we need to convert it to a ObjectNode
+                ObjectNode objectNode = JAXRSConfiguration.objectMapper.createObjectNode();
+                objectNode.set("email", introspectResponse.get("sub"));
+
+                // Set the remaining introspect fields to objectNode
+                introspectResponse.fields().forEachRemaining(field -> {
+                    objectNode.set(field.getKey(), field.getValue());
+                });
+
+                // Set the general metadata to the objectNode
+                user.setGeneralMetadata(objectNode.asText());
+
                 userRepository.persist(user);
             }
 
