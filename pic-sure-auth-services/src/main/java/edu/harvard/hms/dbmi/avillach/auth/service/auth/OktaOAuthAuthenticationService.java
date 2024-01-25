@@ -123,14 +123,10 @@ public class OktaOAuthAuthenticationService {
 
             // All users that login through OKTA should have the fence_open_access role, or they will not be able to interact with the UI
             Role fenceOpenAccessRole = roleRepository.getUniqueResultByColumn("name", FENCEAuthenticationService.fence_open_access_role_name);
-
-            // print user roles for debugging
-            logger.info("User roles: " + user.getRoles().toString());
-
             if (!user.getRoles().contains(fenceOpenAccessRole)) {
-                logger.info("Adding fence_open_access role to user: " + user.getUuid());
-                user.getRoles().add(fenceOpenAccessRole);
-                userRepository.persist(user);
+                Set<Role> roles = user.getRoles();
+                roles.add(fenceOpenAccessRole);
+                user.setRoles(roles);
             }
 
             // Add metadata to the user upon logging in if it doesn't exist
@@ -147,12 +143,11 @@ public class OktaOAuthAuthenticationService {
 
                 // Set the general metadata to the objectNode
                 user.setGeneralMetadata(objectNode.asText());
-
-                userRepository.persist(user);
             } else {
                 logger.info("User already has metadata: " + user.getUuid());
             }
 
+            userRepository.persist(user);
             return user;
         } catch (NoResultException ex) {
             logger.info("LOGIN FAILED ___ USER NOT FOUND ___ " + userEmail + " ___");
