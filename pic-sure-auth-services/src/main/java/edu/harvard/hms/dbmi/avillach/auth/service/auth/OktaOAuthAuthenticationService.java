@@ -4,10 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import edu.harvard.dbmi.avillach.util.HttpClientUtil;
 import edu.harvard.dbmi.avillach.util.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration;
-import edu.harvard.hms.dbmi.avillach.auth.data.entity.Connection;
 import edu.harvard.hms.dbmi.avillach.auth.data.entity.User;
-import edu.harvard.hms.dbmi.avillach.auth.data.repository.ConnectionRepository;
-import edu.harvard.hms.dbmi.avillach.auth.data.repository.RoleRepository;
 import edu.harvard.hms.dbmi.avillach.auth.data.repository.UserRepository;
 import edu.harvard.hms.dbmi.avillach.auth.rest.UserService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.AuthUtils;
@@ -32,12 +29,6 @@ public class OktaOAuthAuthenticationService {
     private UserRepository userRepository;
 
     @Inject
-    private RoleRepository roleRepository;
-
-    @Inject
-    private ConnectionRepository connectionRepository;
-
-    @Inject
     private AuthUtils authUtil;
 
     /**
@@ -57,7 +48,7 @@ public class OktaOAuthAuthenticationService {
             User user = initializeUser(introspectResponse);
 
             if (user == null) {
-                logger.info("LOGIN FAILED ___ USER NOT FOUND ___ " + userToken.get("email").asText() + ":" + userToken.get("sub").asText() + " ___");
+                logger.info("LOGIN FAILED ___ USER NOT FOUND ___ " + userToken.get("uid").asText() + ":" + userToken.get("sub").asText() + " ___");
                 return PICSUREResponse.error(" LOGIN FAILED ___ USER NOT FOUND ___ ");
             }
 
@@ -146,7 +137,6 @@ public class OktaOAuthAuthenticationService {
 
         // get the access token string from the response
         String accessToken = userToken.get("access_token").asText();
-        logger.info("introspectToken - Access Token: " + accessToken);
         String oktaIntrospectUrl = "https://" + JAXRSConfiguration.idp_provider_uri + "/oauth2/default/v1/introspect";
         String payload = "token_type_hint=access_token&token=" + accessToken;
         return doOktaRequest(oktaIntrospectUrl, payload);
@@ -162,7 +152,6 @@ public class OktaOAuthAuthenticationService {
      */
     private JsonNode handleCodeTokenExchange(UriInfo uriInfo, String code) {
         String redirectUri = "https://" + uriInfo.getBaseUri().getHost() + "/psamaui/login";
-        logger.info(redirectUri);
         String queryString = "grant_type=authorization_code" + "&code=" + code + "&redirect_uri=" + redirectUri;
         String oktaTokenUrl = "https://" + JAXRSConfiguration.idp_provider_uri + "/oauth2/default/v1/token";
 
