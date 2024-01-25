@@ -129,7 +129,7 @@ public class OktaOAuthAuthenticationService {
             }
 
             // Add metadata to the user upon logging in if it doesn't exist
-            if (user.getGeneralMetadata().isEmpty()) {
+            if (user.getGeneralMetadata() != null && user.getGeneralMetadata().isEmpty()) {
                 // JsonNode is immutable, so we need to convert it to a ObjectNode
                 ObjectNode objectNode = JAXRSConfiguration.objectMapper.createObjectNode();
                 objectNode.set("email", introspectResponse.get("sub"));
