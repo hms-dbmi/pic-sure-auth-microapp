@@ -5,6 +5,7 @@ import edu.harvard.hms.dbmi.avillach.auth.data.entity.Connection;
 import edu.harvard.hms.dbmi.avillach.auth.data.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.data.entity.TermsOfService;
 import edu.harvard.hms.dbmi.avillach.auth.data.entity.User;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,6 +41,19 @@ public class UserRepository extends BaseRepository<User, UUID> {
                         .where(
                                 eq(cb, queryRoot, "subject", subject)))
                 .getSingleResult();
+    }
+
+    public User findByEmailAndConnection(String email, String connectionId) {
+        CriteriaQuery<User> query = em.getCriteriaBuilder().createQuery(User.class);
+        Root<User> queryRoot = query.from(User.class);
+        query.select(queryRoot);
+        CriteriaBuilder cb = cb();
+        return em.createQuery(query
+            .where(
+                cb.equal(queryRoot.join("connection")
+                        .get("id"), connectionId),
+                eq(cb, queryRoot, "email", email)))
+            .getSingleResult();
     }
 
     public User findBySubjectAndConnection(String subject, String connectionId) {
@@ -86,8 +100,20 @@ public class UserRepository extends BaseRepository<User, UUID> {
                     + ", subject: " + user.getSubject());
         } catch (NoResultException e) {
             logger.debug("findOrCreate() subject " + subject +
-                    " could not be found by `entityManager`, going to create a new user.");
-            user = createUser(inputUser);
+                    " could not be found by `entityManager`, checking by email and connection");
+           try {
+               // If the user isn't found by subject then check by email and connection just
+               // in case they were created by jenkins
+               user = findByEmailAndConnection(inputUser.getEmail(), inputUser.getConnection().getId());
+               if (StringUtils.isEmpty(user.getSubject())) {
+                   user.setSubject(inputUser.getSubject());
+                   user.setGeneralMetadata(inputUser.getGeneralMetadata());
+               }
+           } catch (NoResultException ex) {
+               logger.debug("findOrCreate() email " + inputUser.getEmail() +
+                       " could not be found by `entityManager`, creating a new user");
+               user = createUser(inputUser);
+           }
         } catch (NonUniqueResultException e) {
             logger.error("findOrCreate() " + e.getClass().getSimpleName() + ": " + e.getMessage());
         }
