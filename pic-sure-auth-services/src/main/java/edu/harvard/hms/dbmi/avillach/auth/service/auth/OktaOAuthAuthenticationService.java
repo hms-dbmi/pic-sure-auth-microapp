@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import edu.harvard.dbmi.avillach.util.HttpClientUtil;
 import edu.harvard.dbmi.avillach.util.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration;
+import edu.harvard.hms.dbmi.avillach.auth.data.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.data.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.data.repository.RoleRepository;
 import edu.harvard.hms.dbmi.avillach.auth.data.repository.UserRepository;
@@ -122,9 +123,9 @@ public class OktaOAuthAuthenticationService {
             }
 
             // All users that login through OKTA should have the fence_open_access role, or they will not be able to interact with the UI
-            String fenceOpenAccessRoleName = FENCEAuthenticationService.fence_open_access_role_name;
-            if (user.getRoles().stream().noneMatch(role -> role.getName().equals(fenceOpenAccessRoleName))) {
-                user.getRoles().add(roleRepository.getUniqueResultByColumn("name", fenceOpenAccessRoleName));
+            Role fenceOpenAccessRole = roleRepository.getUniqueResultByColumn("name", FENCEAuthenticationService.fence_open_access_role_name);
+            if (!user.getRoles().contains(fenceOpenAccessRole)) {
+                user.getRoles().add(fenceOpenAccessRole);
                 userRepository.persist(user);
             }
 
