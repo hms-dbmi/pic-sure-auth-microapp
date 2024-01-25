@@ -19,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
+import javax.persistence.NoResultException;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import java.util.*;
@@ -110,7 +111,20 @@ public class OktaOAuthAuthenticationService {
      */
     private User loadUser(JsonNode introspectResponse) {
         String userEmail = introspectResponse.get("sub").asText();
-        return userRepository.findByEmailAndConnection(userEmail, "OKTA");
+        try {
+            User user = userRepository.findByEmailAndConnection(userEmail, "OKTA");
+
+            // If the user does not yet have a subject, set it to the subject from the introspect response
+            if (user.getSubject() == null) {
+                user.setSubject("okta|" + introspectResponse.get("uid").asText());
+                userRepository.persist(user);
+            }
+
+            return user;
+        } catch (NoResultException ex) {
+            logger.info("LOGIN FAILED ___ USER NOT FOUND ___ " + userEmail + " ___");
+            return null;
+        }
     }
 
     /**
