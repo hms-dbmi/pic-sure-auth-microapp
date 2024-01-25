@@ -105,6 +105,7 @@ public class JAXRSConfiguration extends Application {
     public static String fence_allowed_query_types;
     public static String defaultAdminRoleName = "PIC-SURE Top Admin";
     public static String spClientSecret;
+    public static String connectionId;
     public static long tokenExpirationTime;
     // default expiration time is 1 hr
     private static long defaultTokenExpirationTime = 1000L * 60 * 60;
@@ -262,6 +263,8 @@ public class JAXRSConfiguration extends Application {
             try {
                 idp_provider_uri = (String) ctx.lookup("java:global/idp_provider_uri");
                 spClientSecret = (String) ctx.lookup("java:global/sp_client_secret");
+                connectionId = (String) ctx.lookup("java:global/connection_id");
+
                 logger.debug("checkIDPProvider() idp provider OKTA is configured");
             } catch (Exception ex) {
                 logger.error("checkIDPProvider() " + ex.getMessage());

@@ -116,7 +116,8 @@ public class OktaOAuthAuthenticationService {
     private User loadUser(JsonNode introspectResponse) {
         String userEmail = introspectResponse.get("sub").asText();
         try {
-            User user = userRepository.findByEmailAndConnection(userEmail, "OKTA");
+            // connection id = okta-oauth2
+            User user = userRepository.findByEmailAndConnection(userEmail, JAXRSConfiguration.connectionId);
 
             // If the user does not yet have a subject, set it to the subject from the introspect response
             if (user.getSubject() == null) {
