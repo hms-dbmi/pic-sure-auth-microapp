@@ -123,13 +123,19 @@ public class OktaOAuthAuthenticationService {
 
             // All users that login through OKTA should have the fence_open_access role, or they will not be able to interact with the UI
             Role fenceOpenAccessRole = roleRepository.getUniqueResultByColumn("name", FENCEAuthenticationService.fence_open_access_role_name);
+
+            // print user roles for debugging
+            logger.info("User roles: " + user.getRoles().toString());
+
             if (!user.getRoles().contains(fenceOpenAccessRole)) {
+                logger.info("Adding fence_open_access role to user: " + user.getUuid());
                 user.getRoles().add(fenceOpenAccessRole);
                 userRepository.persist(user);
             }
 
             // Add metadata to the user upon logging in if it doesn't exist
-            if (user.getGeneralMetadata() != null && user.getGeneralMetadata().isEmpty()) {
+            if (user.getGeneralMetadata().isEmpty()) {
+                logger.info("Adding metadata to user: " + user.getUuid());
                 // JsonNode is immutable, so we need to convert it to a ObjectNode
                 ObjectNode objectNode = JAXRSConfiguration.objectMapper.createObjectNode();
                 objectNode.set("email", introspectResponse.get("sub"));
@@ -143,6 +149,8 @@ public class OktaOAuthAuthenticationService {
                 user.setGeneralMetadata(objectNode.asText());
 
                 userRepository.persist(user);
+            } else {
+                logger.info("User already has metadata: " + user.getUuid());
             }
 
             return user;
