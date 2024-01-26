@@ -54,7 +54,7 @@ public class OktaOAuthAuthenticationService {
             User user = initializeUser(introspectResponse);
 
             if (user == null) {
-                return PICSUREResponse.error(" LOGIN FAILED ___ USER NOT FOUND ___ ");
+                return PICSUREResponse.error("User not authenticated.");
             }
 
             HashMap<String, String> responseMap = createUserClaims(user);
@@ -124,9 +124,10 @@ public class OktaOAuthAuthenticationService {
             // All users that login through OKTA should have the fence_open_access role, or they will not be able to interact with the UI
             Role fenceOpenAccessRole = roleRepository.getUniqueResultByColumn("name", FENCEAuthenticationService.fence_open_access_role_name);
             if (!user.getRoles().contains(fenceOpenAccessRole)) {
+                logger.info("Adding fence_open_access role to user: " + user.getUuid());
                 Set<Role> roles = user.getRoles();
                 roles.add(fenceOpenAccessRole);
-                user.setRoles(roles);
+                userRepository.changeRole(user, roles);
             }
 
             // Add metadata to the user upon logging in if it doesn't exist
@@ -143,11 +144,12 @@ public class OktaOAuthAuthenticationService {
 
                 // Set the general metadata to the objectNode
                 user.setGeneralMetadata(objectNode.asText());
+                userRepository.persist(user);
             } else {
                 logger.info("User already has metadata: " + user.getUuid());
             }
 
-            userRepository.persist(user);
+            logger.info("LOGIN SUCCESS ___ USER DATA: " + user.toString());
             return user;
         } catch (NoResultException ex) {
             logger.info("LOGIN FAILED ___ USER NOT FOUND ___ " + userEmail + " ___");
