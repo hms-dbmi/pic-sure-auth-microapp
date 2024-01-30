@@ -54,7 +54,7 @@ public class OktaOAuthAuthenticationService {
             User user = initializeUser(introspectResponse);
 
             if (user == null) {
-                return PICSUREResponse.error("User not authenticated.");
+                return PICSUREResponse.unauthorizedError("User not authenticated.");
             }
 
             HashMap<String, String> responseMap = createUserClaims(user);
@@ -64,7 +64,7 @@ public class OktaOAuthAuthenticationService {
         }
 
         logger.info("LOGIN FAILED ___ USER NOT AUTHENTICATED ___");
-        return PICSUREResponse.error("User not authenticated");
+        return PICSUREResponse.unauthorizedError("User not authenticated");
     }
 
     private User initializeUser(JsonNode introspectResponse) {
