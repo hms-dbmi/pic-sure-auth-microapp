@@ -119,7 +119,6 @@ public class OktaOAuthAuthenticationService {
             // If the user does not yet have a subject, set it to the subject from the introspect response
             if (user.getSubject() == null) {
                 user.setSubject("okta|" + introspectResponse.get("uid").asText());
-                userRepository.persist(user);
             }
 
             // All users that login through OKTA should have the fence_open_access role, or they will not be able to interact with the UI
@@ -133,29 +132,42 @@ public class OktaOAuthAuthenticationService {
 
             // Add metadata to the user upon logging in if it doesn't exist
             if (StringUtils.isBlank(user.getGeneralMetadata())) {
+                ObjectNode objectNode = generateUserMetadata(introspectResponse, user);
+
                 logger.info("Adding metadata to user: " + user.getUuid());
-                // JsonNode is immutable, so we need to convert it to a ObjectNode
-                ObjectNode objectNode = JAXRSConfiguration.objectMapper.createObjectNode();
-                objectNode.set("email", introspectResponse.get("sub"));
-
-                // Set the remaining introspect fields to objectNode
-                introspectResponse.fields().forEachRemaining(field -> {
-                    objectNode.set(field.getKey(), field.getValue());
-                });
-
                 // Set the general metadata to the objectNode
                 user.setGeneralMetadata(objectNode.asText());
-                userRepository.persist(user);
-            } else {
-                logger.info("User already has metadata: " + user.getUuid());
             }
 
-            logger.info("LOGIN SUCCESS ___ USER DATA: " + user.toString());
+            userRepository.persist(user);
+            logger.info("LOGIN SUCCESS ___ USER DATA: " + user);
             return user;
         } catch (NoResultException ex) {
             logger.info("LOGIN FAILED ___ USER NOT FOUND ___ " + userEmail + " ___");
             return null;
         }
+    }
+
+    /**
+     * Generate the user metadata that will be stored in the database. This metadata is used to determine the user's
+     * role and other information.
+     *
+     * @param introspectResponse The response from the introspect endpoint
+     * @param user               The user
+     * @return The user metadata as an ObjectNode
+     */
+    private ObjectNode generateUserMetadata(JsonNode introspectResponse, User user) {
+        // JsonNode is immutable, so we need to convert it to an ObjectNode
+        ObjectNode objectNode = JAXRSConfiguration.objectMapper.createObjectNode();
+        ObjectNode authzNode = objectNode.putObject("authz");
+        ObjectNode tagsNode = authzNode.putObject("tags");
+
+        authzNode.put("role", "user");
+        authzNode.put("sub", introspectResponse.get("sub").asText());
+        authzNode.put("user_id", user.getUuid().toString());
+        authzNode.put("username", user.getEmail());
+        tagsNode.put("email", user.getEmail());
+        return objectNode;
     }
 
     /**
