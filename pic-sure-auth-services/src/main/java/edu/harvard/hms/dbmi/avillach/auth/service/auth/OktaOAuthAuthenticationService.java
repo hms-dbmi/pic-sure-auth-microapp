@@ -133,8 +133,7 @@ public class OktaOAuthAuthenticationService {
             // Add metadata to the user upon logging in if it doesn't exist
             if (StringUtils.isBlank(user.getGeneralMetadata())) {
                 ObjectNode objectNode = generateUserMetadata(introspectResponse, user);
-
-                logger.info("Adding metadata to user: " + user.getUuid());
+                logger.info("Adding metadata to user: " + user.getUuid() + " ___ " + objectNode.asText());
                 // Set the general metadata to the objectNode
                 user.setGeneralMetadata(objectNode.asText());
             }
