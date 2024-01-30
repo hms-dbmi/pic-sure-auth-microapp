@@ -165,12 +165,13 @@ public class OktaOAuthAuthenticationService {
      * @return The response from the introspect endpoint as a JsonNode
      */
     private JsonNode introspectToken(JsonNode userToken) {
-        if (!userToken.has("access_token")) {
+        String accessToken = userToken.get("access_token").asText();
+        if (accessToken == null) {
+            logger.info("USER TOKEN DOES NOT HAVE ACCESS TOKEN ___ " + userToken);
             return null;
         }
 
         // get the access token string from the response
-        String accessToken = userToken.get("access_token").asText();
         String oktaIntrospectUrl = "https://" + JAXRSConfiguration.idp_provider_uri + "/oauth2/default/v1/introspect";
         String payload = "token_type_hint=access_token&token=" + accessToken;
         return doOktaRequest(oktaIntrospectUrl, payload);
