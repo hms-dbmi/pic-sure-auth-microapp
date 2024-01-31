@@ -49,11 +49,11 @@ public class UserRepository extends BaseRepository<User, UUID> {
         query.select(queryRoot);
         CriteriaBuilder cb = cb();
         return em.createQuery(query
-            .where(
-                cb.equal(queryRoot.join("connection")
-                        .get("id"), connectionId),
-                eq(cb, queryRoot, "email", email)))
-            .getSingleResult();
+                        .where(
+                                cb.equal(queryRoot.join("connection")
+                                        .get("id"), connectionId),
+                                eq(cb, queryRoot, "email", email)))
+                .getSingleResult();
     }
 
     public User findBySubjectAndConnection(String subject, String connectionId) {
@@ -101,19 +101,19 @@ public class UserRepository extends BaseRepository<User, UUID> {
         } catch (NoResultException e) {
             logger.debug("findOrCreate() subject " + subject +
                     " could not be found by `entityManager`, checking by email and connection");
-           try {
-               // If the user isn't found by subject then check by email and connection just
-               // in case they were created by jenkins
-               user = findByEmailAndConnection(inputUser.getEmail(), inputUser.getConnection().getId());
-               if (StringUtils.isEmpty(user.getSubject())) {
-                   user.setSubject(inputUser.getSubject());
-                   user.setGeneralMetadata(inputUser.getGeneralMetadata());
-               }
-           } catch (NoResultException ex) {
-               logger.debug("findOrCreate() email " + inputUser.getEmail() +
-                       " could not be found by `entityManager`, creating a new user");
-               user = createUser(inputUser);
-           }
+            try {
+                // If the user isn't found by subject then check by email and connection just
+                // in case they were created by jenkins
+                user = findByEmailAndConnection(inputUser.getEmail(), inputUser.getConnection().getId());
+                if (StringUtils.isEmpty(user.getSubject())) {
+                    user.setSubject(inputUser.getSubject());
+                    user.setGeneralMetadata(inputUser.getGeneralMetadata());
+                }
+            } catch (NoResultException ex) {
+                logger.debug("findOrCreate() email " + inputUser.getEmail() +
+                        " could not be found by `entityManager`, creating a new user");
+                user = createUser(inputUser);
+            }
         } catch (NonUniqueResultException e) {
             logger.error("findOrCreate() " + e.getClass().getSimpleName() + ": " + e.getMessage());
         }
@@ -228,5 +228,14 @@ public class UserRepository extends BaseRepository<User, UUID> {
                 + ", privilege: " + user.getPrivilegeString()
                 + ", email: " + user.getEmail());
         return user;
+    }
+
+    /**
+     * Saves the given user to the database
+     *
+     * @param user the user to save
+     */
+    public void save(User user) {
+        em().merge(user);
     }
 }

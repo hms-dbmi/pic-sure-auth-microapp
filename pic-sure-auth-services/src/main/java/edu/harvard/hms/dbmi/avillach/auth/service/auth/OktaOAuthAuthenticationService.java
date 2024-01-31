@@ -131,22 +131,14 @@ public class OktaOAuthAuthenticationService {
                 userRepository.changeRole(user, roles);
             }
 
-            // Update the user's metadata with the information from the introspect response
-            // We do this every time the user logs in, because the user's information may have changed
-            ObjectNode objectNode = generateUserMetadata(introspectResponse, user);
-            String userMetadata = JAXRSConfiguration.objectMapper.writeValueAsString(objectNode);
-            logger.info("Adding metadata to user: " + user.getUuid() + " ___ " + userMetadata);
-            // Set the general metadata to the objectNode
-            user.setGeneralMetadata(userMetadata);
+            user.setGeneralMetadata(generateUserMetadata(introspectResponse, user).toString());
 
-            userRepository.persist(user);
+            userRepository.save(user);
             logger.info("LOGIN SUCCESS ___ USER DATA: " + user);
             return user;
         } catch (NoResultException ex) {
             logger.info("LOGIN FAILED ___ USER NOT FOUND ___ " + userEmail + " ___");
             return null;
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
         }
     }
 
@@ -158,7 +150,7 @@ public class OktaOAuthAuthenticationService {
      * @param user               The user
      * @return The user metadata as an ObjectNode
      */
-    private ObjectNode generateUserMetadata(JsonNode introspectResponse, User user) {
+    protected ObjectNode generateUserMetadata(JsonNode introspectResponse, User user) {
         // JsonNode is immutable, so we need to convert it to an ObjectNode
         ObjectNode objectNode = JAXRSConfiguration.objectMapper.createObjectNode();
         ObjectNode authzNode = objectNode.putObject("authz");
