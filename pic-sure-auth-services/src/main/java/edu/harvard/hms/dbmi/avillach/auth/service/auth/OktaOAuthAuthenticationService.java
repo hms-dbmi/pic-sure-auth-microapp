@@ -131,14 +131,13 @@ public class OktaOAuthAuthenticationService {
                 userRepository.changeRole(user, roles);
             }
 
-            // Add metadata to the user upon logging in if it doesn't exist
-            if (StringUtils.isBlank(user.getGeneralMetadata())) {
-                ObjectNode objectNode = generateUserMetadata(introspectResponse, user);
-                String userMetadata = JAXRSConfiguration.objectMapper.writeValueAsString(objectNode);
-                logger.info("Adding metadata to user: " + user.getUuid() + " ___ " + userMetadata);
-                // Set the general metadata to the objectNode
-                user.setGeneralMetadata(userMetadata);
-            }
+            // Update the user's metadata with the information from the introspect response
+            // We do this every time the user logs in, because the user's information may have changed
+            ObjectNode objectNode = generateUserMetadata(introspectResponse, user);
+            String userMetadata = JAXRSConfiguration.objectMapper.writeValueAsString(objectNode);
+            logger.info("Adding metadata to user: " + user.getUuid() + " ___ " + userMetadata);
+            // Set the general metadata to the objectNode
+            user.setGeneralMetadata(userMetadata);
 
             userRepository.persist(user);
             logger.info("LOGIN SUCCESS ___ USER DATA: " + user);
