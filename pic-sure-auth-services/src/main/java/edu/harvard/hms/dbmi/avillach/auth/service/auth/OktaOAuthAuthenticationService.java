@@ -1,5 +1,6 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.auth;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import edu.harvard.dbmi.avillach.util.HttpClientUtil;
@@ -133,9 +134,10 @@ public class OktaOAuthAuthenticationService {
             // Add metadata to the user upon logging in if it doesn't exist
             if (StringUtils.isBlank(user.getGeneralMetadata())) {
                 ObjectNode objectNode = generateUserMetadata(introspectResponse, user);
-                logger.info("Adding metadata to user: " + user.getUuid() + " ___ " + objectNode.asText());
+                String userMetadata = JAXRSConfiguration.objectMapper.writeValueAsString(objectNode);
+                logger.info("Adding metadata to user: " + user.getUuid() + " ___ " + userMetadata);
                 // Set the general metadata to the objectNode
-                user.setGeneralMetadata(objectNode.asText());
+                user.setGeneralMetadata(userMetadata);
             }
 
             userRepository.persist(user);
@@ -144,6 +146,8 @@ public class OktaOAuthAuthenticationService {
         } catch (NoResultException ex) {
             logger.info("LOGIN FAILED ___ USER NOT FOUND ___ " + userEmail + " ___");
             return null;
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -166,6 +170,7 @@ public class OktaOAuthAuthenticationService {
         authzNode.put("user_id", user.getUuid().toString());
         authzNode.put("username", user.getEmail());
         tagsNode.put("email", user.getEmail());
+
         return objectNode;
     }
 
