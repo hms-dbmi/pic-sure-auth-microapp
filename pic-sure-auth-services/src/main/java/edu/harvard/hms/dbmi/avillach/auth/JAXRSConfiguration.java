@@ -43,9 +43,6 @@ public class JAXRSConfiguration extends Application {
 
     private Logger logger = LoggerFactory.getLogger(JAXRSConfiguration.class);
 
-    @Resource(mappedName = "java:global/client_id")
-    public static String clientId;
-
     @Resource(mappedName = "java:global/client_secret")
     public static String clientSecret; // actually picsure_client_secret in standalone.xml
     @Resource(mappedName = "java:global/clientSecretIsBase64")
@@ -105,7 +102,9 @@ public class JAXRSConfiguration extends Application {
     public static String fence_allowed_query_types;
     public static String defaultAdminRoleName = "PIC-SURE Top Admin";
     public static String spClientSecret;
+    
     public static String connectionId;
+    public static String clientId;
     public static long tokenExpirationTime;
     // default expiration time is 1 hr
     private static long defaultTokenExpirationTime = 1000L * 60 * 60;
@@ -159,7 +158,7 @@ public class JAXRSConfiguration extends Application {
         //Set info for the swagger.json
         BeanConfig beanConfig = new BeanConfig();
         beanConfig.setVersion("1.0.1");
-        beanConfig.setSchemes(new String[] { "https" });
+        beanConfig.setSchemes(new String[]{"https"});
         beanConfig.setDescription("APIs for accessing PIC-SURE-AUTH-MICROAPP - a centralized authentication/authorization micro services");
         beanConfig.setTitle("PIC-SURE-AUTH-MICROAPP");
         beanConfig.setBasePath("/psama");
@@ -262,6 +261,7 @@ public class JAXRSConfiguration extends Application {
                 idp_provider_uri = (String) ctx.lookup("java:global/idp_provider_uri");
                 spClientSecret = (String) ctx.lookup("java:global/sp_client_secret");
                 connectionId = (String) ctx.lookup("java:global/connection_id");
+                clientId = (String) ctx.lookup("java:global/client_id");
 
                 logger.debug("checkIDPProvider() idp provider OKTA is configured");
             } catch (Exception ex) {
