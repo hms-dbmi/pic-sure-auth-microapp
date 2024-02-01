@@ -154,13 +154,12 @@ public class OktaOAuthAuthenticationService {
         // JsonNode is immutable, so we need to convert it to an ObjectNode
         ObjectNode objectNode = JAXRSConfiguration.objectMapper.createObjectNode();
         ObjectNode authzNode = objectNode.putObject("authz");
-        ObjectNode tagsNode = authzNode.putObject("tags");
 
         authzNode.put("role", "user");
         authzNode.put("sub", introspectResponse.get("sub").asText());
         authzNode.put("user_id", user.getUuid().toString());
         authzNode.put("username", user.getEmail());
-        tagsNode.put("email", user.getEmail());
+        authzNode.put("email", user.getEmail());
 
         return objectNode;
     }
