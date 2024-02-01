@@ -236,6 +236,12 @@ public class UserRepository extends BaseRepository<User, UUID> {
      * @param user the user to save
      */
     public void save(User user) {
-        em().merge(user);
+        // if user exists update, else create
+        if (user.getUuid() != null) {
+            em().merge(user);
+        } else {
+            em().persist(user);
+        }
     }
+
 }
