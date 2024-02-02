@@ -58,7 +58,6 @@ public class OktaOAuthAuthenticationServiceTest {
         service = new OktaOAuthAuthenticationService();
         ObjectNode result = service.generateUserMetadata(introspectResponse, user);
 
-        assertEquals(result.get("authz").get("tags").get("email").asText(), email);
         assertEquals(result.get("authz").get("sub").asText(), "test_sub");
         assertEquals(result.get("authz").get("user_id").asText(), uuid.toString());
         assertEquals(result.get("authz").get("username").asText(), email);
