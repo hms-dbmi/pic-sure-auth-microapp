@@ -10,6 +10,7 @@ import java.io.File;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
@@ -35,6 +36,7 @@ import edu.harvard.hms.dbmi.avillach.auth.data.entity.*;
 import edu.harvard.hms.dbmi.avillach.auth.data.repository.*;
 import edu.harvard.hms.dbmi.avillach.auth.rest.UserService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.AuthUtils;
+import org.springframework.util.CollectionUtils;
 
 public class FENCEAuthenticationService {
 	private Logger logger = LoggerFactory.getLogger(FENCEAuthenticationService.class);
@@ -296,8 +298,16 @@ public class FENCEAuthenticationService {
 
         User actual_user = userRepo.findOrCreate(new_user);
 
-        // Clear current set of roles every time we create or retrieve a user
-        actual_user.setRoles(new HashSet<>());
+        Set<Role> roles = new HashSet<>();
+        if (actual_user != null && !CollectionUtils.isEmpty(actual_user.getRoles()))  {
+            roles = actual_user.getRoles().stream()
+                .filter(userRole -> "PIC-SURE Top Admin".equals(userRole.getName()) || "Admin".equals(userRole.getName()) || userRole.getName().startsWith("MANUAL_"))
+                .collect(Collectors.toSet());
+        }
+
+        // Clear current set of roles every time we create or retrieve a user but persist admin status
+        actual_user.setRoles(roles);
+
         logger.debug("createUserFromFENCEProfile() cleared roles");
 
         userRepo.persist(actual_user);
@@ -315,7 +325,6 @@ public class FENCEAuthenticationService {
      */
     public boolean upsertRole(User u,  String roleName, String roleDescription) {
         boolean status = false;
-        logger.debug("upsertRole() starting for user subject:"+u.getSubject());
 
         // Get the User's list of Roles. The first time, this will be an empty Set.
         // This method is called for every Role, and the User's list of Roles will
@@ -339,7 +348,9 @@ public class FENCEAuthenticationService {
                 roleRepo.persist(r);
                 logger.info("upsertRole() created new role");
             }
-            u.getRoles().add(r);
+            if (u != null) {
+                u.getRoles().add(r);
+            }
             status = true;
         } catch (Exception ex) {
             logger.error("upsertRole() Could not inser/update role "+roleName+" to repo", ex);
@@ -424,6 +435,9 @@ public class FENCEAuthenticationService {
 
     private static String extractProject(String roleName) {
         String projectPattern = "FENCE_(.*?)(?:_c\\d+)?$";
+        if (roleName.startsWith("MANUAL_")) {
+            projectPattern = "MANUAL_(.*?)(?:_c\\d+)?$";
+        }
         Pattern projectRegex = Pattern.compile(projectPattern);
         Matcher projectMatcher = projectRegex.matcher(roleName);
         String project = "";
@@ -440,7 +454,9 @@ public class FENCEAuthenticationService {
 
     private static String extractConsentGroup(String roleName) {
         String consentPattern = "FENCE_.*?_c(\\d+)$";
-
+        if (roleName.startsWith("MANUAL_")) {
+            consentPattern = "MANUAL_.*?_c(\\d+)$";
+        }
         Pattern consentRegex = Pattern.compile(consentPattern);
         Matcher consentMatcher = consentRegex.matcher(roleName);
         String consentGroup = "";
@@ -1114,7 +1130,7 @@ public class FENCEAuthenticationService {
 		return null;
 	}
 	
-	private Map<String, Map> getFENCEMapping(){
+	public Map<String, Map> getFENCEMapping(){
 		if(_projectMap == null || _projectMap.isEmpty()) {
 			try {
 				Map fenceMapping = JAXRSConfiguration.objectMapper.readValue(
