@@ -161,7 +161,6 @@
             <artifactId>guava</artifactId>
             <version>33.0.0-jre</version>
         </dependency>
-
         <!-- swagger -->
         <dependency>
             <groupId>io.swagger</groupId>
