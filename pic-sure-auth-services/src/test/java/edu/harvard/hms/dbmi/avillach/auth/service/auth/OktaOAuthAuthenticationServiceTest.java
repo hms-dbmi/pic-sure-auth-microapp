@@ -21,25 +21,6 @@ public class OktaOAuthAuthenticationServiceTest {
 
     @Test
     public void testGenerateUserMetadata() {
-        /**
-         * unit test for generateUserMetadata
-         *protected ObjectNode generateUserMetadata (JsonNode introspectResponse, User user){
-         *         // JsonNode is immutable, so we need to convert it to an ObjectNode
-         *ObjectNode objectNode = JAXRSConfiguration.objectMapper.createObjectNode();
-         *ObjectNode authzNode = objectNode.putObject("authz");
-         *ObjectNode tagsNode = authzNode.putObject("tags");
-         *
-         *authzNode.put("role", "user");
-         *authzNode.put("sub", introspectResponse.get("sub").asText());
-         *authzNode.put("user_id", user.getUuid().toString());
-         *authzNode.put("username", user.getEmail());
-         *tagsNode.put("email", user.getEmail());
-         *
-         *return objectNode;
-         *}
-         *
-         */
-
         //mock user
         UUID uuid = UUID.randomUUID();
         String email = "test_email@hms.harvard.edu";
@@ -58,10 +39,10 @@ public class OktaOAuthAuthenticationServiceTest {
         service = new OktaOAuthAuthenticationService();
         ObjectNode result = service.generateUserMetadata(introspectResponse, user);
 
-        assertEquals(result.get("authz").get("sub").asText(), "test_sub");
-        assertEquals(result.get("authz").get("user_id").asText(), uuid.toString());
-        assertEquals(result.get("authz").get("username").asText(), email);
-        assertEquals(result.get("authz").get("role").asText(), "user");
+        assertEquals(result.get("sub").asText(), "test_sub");
+        assertEquals(result.get("user_id").asText(), uuid.toString());
+        assertEquals(result.get("username").asText(), email);
+        assertEquals(result.get("role").asText(), "user");
 
         // print result
         System.out.println(result);

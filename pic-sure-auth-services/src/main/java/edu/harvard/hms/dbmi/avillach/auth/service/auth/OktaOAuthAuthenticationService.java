@@ -90,6 +90,12 @@ public class OktaOAuthAuthenticationService {
         return user;
     }
 
+    /**
+     * Create user claims to return to the client
+     *
+     * @param user The user
+     * @return The user claims as a HashMap
+     */
     private HashMap<String, String> createUserClaims(User user) {
         HashMap<String, Object> claims = new HashMap<>();
         claims.put("name", user.getName());
@@ -153,13 +159,12 @@ public class OktaOAuthAuthenticationService {
     protected ObjectNode generateUserMetadata(JsonNode introspectResponse, User user) {
         // JsonNode is immutable, so we need to convert it to an ObjectNode
         ObjectNode objectNode = JAXRSConfiguration.objectMapper.createObjectNode();
-        ObjectNode authzNode = objectNode.putObject("authz");
 
-        authzNode.put("role", "user");
-        authzNode.put("sub", introspectResponse.get("sub").asText());
-        authzNode.put("user_id", user.getUuid().toString());
-        authzNode.put("username", user.getEmail());
-        authzNode.put("email", user.getEmail());
+        objectNode.put("role", "user");
+        objectNode.put("sub", introspectResponse.get("sub").asText());
+        objectNode.put("user_id", user.getUuid().toString());
+        objectNode.put("username", user.getEmail());
+        objectNode.put("email", user.getEmail());
 
         return objectNode;
     }
