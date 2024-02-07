@@ -1,4 +1,5 @@
-DROP PROCEDURE IF EXISTS CreateUserWithRole;
+USE `auth`;
+
 delimiter //
 CREATE PROCEDURE CreateUserWithRole (
     IN user_email VARCHAR(255),
