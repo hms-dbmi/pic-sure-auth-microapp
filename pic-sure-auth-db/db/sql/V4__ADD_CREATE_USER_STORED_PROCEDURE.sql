@@ -5,7 +5,8 @@ DELIMITER //
 CREATE PROCEDURE CreateUserWithRole (
     IN user_email VARCHAR(255),
     IN connection_id VARCHAR(255),
-    IN role_name VARCHAR(255)
+    IN role_name VARCHAR(255),
+    IN user_general_metadata varchar(255)
 )
 BEGIN
     -- Attempt to retrieve the UUIDs for the user and role based on the provided information
@@ -20,7 +21,7 @@ IF @userUUID IS NULL THEN
 SELECT @connectionUUID := uuid FROM auth.connection WHERE id = connection_id;
 -- Insert the new user record into the user table
 INSERT INTO auth.user (uuid, general_metadata, acceptedTOS, connectionId, email, matched, subject, is_active, long_term_token)
-VALUES (@userUUID, NULL, CURRENT_TIMESTAMP, @connectionUUID, user_email, 0, NULL, 1, NULL);
+VALUES (@userUUID, user_general_metadata, CURRENT_TIMESTAMP, @connectionUUID, user_email, 0, NULL, 1, NULL);
 END IF;
 
     -- If the role exists, associate the user with the role
