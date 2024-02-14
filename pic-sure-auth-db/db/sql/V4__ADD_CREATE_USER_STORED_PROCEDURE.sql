@@ -20,11 +20,11 @@ IF @userUUID IS NULL THEN
         -- Retrieve the UUID for the connection
 SELECT @connectionUUID := uuid FROM auth.connection WHERE id = connection_id;
 SELECT @connectionSubPrefix := subPrefix FROM auth.connection WHERE id = connection_id;
-@connectionSubPrefix := concat(@connectionSubPrefix, '|');
-@connectionSubPrefix := concat('LONG_TERM_TOKEN|', connection_id);
+SET @connectionSubPrefix := concat(@connectionSubPrefix, '|');
+SET @connectionSubPrefix := concat('LONG_TERM_TOKEN|', connection_id);
 -- Insert the new user record into the user table
 INSERT INTO auth.user (uuid, general_metadata, acceptedTOS, connectionId, email, matched, subject, is_active, long_term_token)
-VALUES (@userUUID, user_general_metadata, CURRENT_TIMESTAMP, @connectionUUID, user_email, 0, concat(@connectionSubPrefix, REPLACE(UUID(),'-','')), 1, NULL);
+VALUES (@userUUID, user_general_metadata, CURRENT_TIMESTAMP, @connectionUUID, user_email, 0,  concat(@connectionSubPrefix, REPLACE(UUID(),'-','')), 1, NULL);
 END IF;
 
     -- If the role exists, associate the user with the role
