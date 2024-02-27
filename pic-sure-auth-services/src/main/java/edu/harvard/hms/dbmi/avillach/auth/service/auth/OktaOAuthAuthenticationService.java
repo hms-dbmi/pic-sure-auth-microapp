@@ -1,6 +1,5 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.auth;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import edu.harvard.dbmi.avillach.util.HttpClientUtil;
