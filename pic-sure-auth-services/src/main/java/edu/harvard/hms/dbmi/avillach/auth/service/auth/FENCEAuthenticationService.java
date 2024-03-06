@@ -142,7 +142,7 @@ public class FENCEAuthenticationService {
                     headers.toArray(new Header[headers.size()])
             );
         } catch (Exception ex) {
-            logger.error("getFENCEAccessToken() failed to call FENCE token service, "+ex.getMessage());
+            logger.error("getFENCEAccessToken() failed to call FENCE token service, " + ex);
         }
         logger.debug("getFENCEAccessToken() finished: "+resp.asText());
         return resp;
