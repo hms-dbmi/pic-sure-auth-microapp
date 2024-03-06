@@ -142,7 +142,7 @@ public class FENCEAuthenticationService {
                     headers.toArray(new Header[headers.size()])
             );
         } catch (Exception ex) {
-            logger.error("getFENCEAccessToken() failed to call FENCE token service, "+ex.getMessage());
+            logger.error("getFENCEAccessToken() failed to call FENCE token service, " + ex);
         }
         logger.debug("getFENCEAccessToken() finished: "+resp.asText());
         return resp;
@@ -179,7 +179,7 @@ public class FENCEAuthenticationService {
         } catch (Exception ex) {
             logger.error("getFENCEProfile() could not retrieve the user profile from the auth provider, because "+ex.getMessage(), ex);
             throw new NotAuthorizedException("Could not get the user profile "+
-                    "from the Gen3 authentication provider."+ex.getMessage());
+                    "from the Gen3 authentication provider." + ex);
         }
 
         User current_user = null;
@@ -197,7 +197,7 @@ public class FENCEAuthenticationService {
             UserService.clearCache(current_user);
 
         } catch (Exception ex) {
-            logger.error("getFENCEToken() Could not persist the user information, because "+ex.getMessage());
+            logger.error("getFENCEToken() Could not persist the user information, because " + ex);
             throw new NotAuthorizedException("The user details could not be persisted. Please contact the administrator.");
         }
 
