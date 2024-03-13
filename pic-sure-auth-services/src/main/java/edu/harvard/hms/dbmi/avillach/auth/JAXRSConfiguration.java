@@ -103,7 +103,6 @@ public class JAXRSConfiguration extends Application {
     public static String fence_allowed_query_types;
     public static String defaultAdminRoleName = "PIC-SURE Top Admin";
     public static String spClientSecret;
-
     public static String connectionId;
     public static String clientId;
     public static long tokenExpirationTime;
@@ -223,6 +222,7 @@ public class JAXRSConfiguration extends Application {
                 logger.info("checkIDPProvider() fence_consent_group_concept_path   " + fence_parent_consent_group_concept_path);
                 logger.info("checkIDPProvider() fence_harmonized_concept_path      " + fence_harmonized_concept_path);
 
+                logger.debug("checkIDPProvider() idp provider OKTA is configured");
             } catch (Exception ex) {
                 logger.error("checkIDPProvider() " + ex.getMessage());
                 logger.error("checkIDPProvider() Invalid FENCE IDP Provider Setup. Mandatory fields are missing. " +
@@ -248,6 +248,7 @@ public class JAXRSConfiguration extends Application {
                 logger.error("checkIDPProvider() Invalid OKTA IDP Provider Setup. Mandatory fields are missing. " +
                         "Check configuration in standalone.xml");
             }
+          
         } else {
             logger.error("checkIDPProvider() Invalid IDP Provider Setup. Mandatory fields are missing. " +
                     "Check configuration in standalone.xml");
