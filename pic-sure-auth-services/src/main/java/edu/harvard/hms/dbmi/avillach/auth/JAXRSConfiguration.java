@@ -10,6 +10,7 @@ import edu.harvard.hms.dbmi.avillach.auth.data.repository.PrivilegeRepository;
 import edu.harvard.hms.dbmi.avillach.auth.data.repository.RoleRepository;
 import edu.harvard.hms.dbmi.avillach.auth.rest.TokenService;
 import io.swagger.jaxrs.config.BeanConfig;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.HttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.slf4j.Logger;
@@ -102,7 +103,6 @@ public class JAXRSConfiguration extends Application {
     public static String fence_allowed_query_types;
     public static String defaultAdminRoleName = "PIC-SURE Top Admin";
     public static String spClientSecret;
-    
     public static String connectionId;
     public static String clientId;
     public static long tokenExpirationTime;
@@ -193,42 +193,13 @@ public class JAXRSConfiguration extends Application {
                 fence_client_secret = (String) ctx.lookup("java:global/fence_client_secret");
                 fence_redirect_url = (String) ctx.lookup("java:global/fence_redirect_url");
 
-                fence_parent_consent_group_concept_path = (String) ctx.lookup("java:global/fence_parent_consent_group_concept_path");
-                if (fence_parent_consent_group_concept_path == null) {
-                    logger.error("checkIDPProvider() Empty parent consent group concept path from standalone.xml. Using default!");
-                    fence_parent_consent_group_concept_path = "\\\\_Consents\\\\Short Study Accession with Consent code\\\\";
-                }
+                getFenceParentConsentGroupConceptPath(ctx);
+                getFenceHarmonizaedGroupConsentPath(ctx);
+                getFenceTopmedConsentGroupPath(ctx);
+                getFenceStandardAccessRules(ctx);
+                getFenceAllowedQueryTypes(ctx);
+                getFenceHarmonizedConceptPath(ctx);
 
-                fence_harmonized_consent_group_concept_path = (String) ctx.lookup("java:global/fence_harmonized_consent_group_concept_path");
-                if (fence_harmonized_consent_group_concept_path == null) {
-                    logger.error("checkIDPProvider() Empty harmonized consent group concept path from standalone.xml. Using default!");
-                    fence_harmonized_consent_group_concept_path = "\\\\_Consents\\\\Short Study Accession with Consent code\\\\";
-                }
-
-                fence_topmed_consent_group_concept_path = (String) ctx.lookup("java:global/fence_topmed_consent_group_concept_path");
-                if (fence_topmed_consent_group_concept_path == null) {
-                    logger.error("checkIDPProvider() Empty topmed consent group concept path from standalone.xml. Using default!");
-                    fence_topmed_consent_group_concept_path = "\\\\_Consents\\\\Short Study Accession with Consent code\\\\";
-                }
-
-                fence_standard_access_rules = (String) ctx.lookup("java:global/fence_standard_access_rules");
-                if (fence_standard_access_rules.isEmpty()) {
-                    logger.error("checkIDPProvider() Missing Standard Access Rules in standalone.xml. Using defaults.");
-                    fence_standard_access_rules = "GATE_ONLY_INFO,GATE_ONLY_QUERY,GATE_ONLY_SEARCH,GATE_FENCE_CONSENT_REQUIRED";
-                }
-
-                fence_allowed_query_types = (String) ctx.lookup("java:global/fence_allowed_query_types");
-                if (fence_allowed_query_types.isEmpty()) {
-                    logger.error("checkIDPProvider() Missing Allowed query types from standalone.xml. Using defaults.");
-                    fence_allowed_query_types = "COUNT,CROSS_COUNT";
-                }
-
-
-                fence_harmonized_concept_path = (String) ctx.lookup("java:global/fence_harmonized_concept_path");
-                if (fence_harmonized_concept_path.isEmpty()) {
-                    logger.error("checkIDPProvider() Empty harmonized concept path. Not in use.");
-                    fence_harmonized_concept_path = "";
-                }
                 logger.debug("checkIDPProvider() idp provider FENCE is configured");
 
                 // Upsert FENCE connection
@@ -251,6 +222,7 @@ public class JAXRSConfiguration extends Application {
                 logger.info("checkIDPProvider() fence_consent_group_concept_path   " + fence_parent_consent_group_concept_path);
                 logger.info("checkIDPProvider() fence_harmonized_concept_path      " + fence_harmonized_concept_path);
 
+                logger.debug("checkIDPProvider() idp provider OKTA is configured");
             } catch (Exception ex) {
                 logger.error("checkIDPProvider() " + ex.getMessage());
                 logger.error("checkIDPProvider() Invalid FENCE IDP Provider Setup. Mandatory fields are missing. " +
@@ -263,17 +235,73 @@ public class JAXRSConfiguration extends Application {
                 connectionId = (String) ctx.lookup("java:global/connection_id");
                 clientId = (String) ctx.lookup("java:global/client_id");
 
+                getFenceParentConsentGroupConceptPath(ctx);
+                getFenceHarmonizaedGroupConsentPath(ctx);
+                getFenceTopmedConsentGroupPath(ctx);
+                getFenceStandardAccessRules(ctx);
+                getFenceAllowedQueryTypes(ctx);
+                getFenceHarmonizedConceptPath(ctx);
+
                 logger.debug("checkIDPProvider() idp provider OKTA is configured");
             } catch (Exception ex) {
                 logger.error("checkIDPProvider() " + ex.getMessage());
                 logger.error("checkIDPProvider() Invalid OKTA IDP Provider Setup. Mandatory fields are missing. " +
                         "Check configuration in standalone.xml");
             }
+          
         } else {
             logger.error("checkIDPProvider() Invalid IDP Provider Setup. Mandatory fields are missing. " +
                     "Check configuration in standalone.xml");
         }
         logger.debug("checkIDPProvider() finished");
+    }
+
+    private void getFenceTopmedConsentGroupPath(Context ctx) throws NamingException {
+        fence_topmed_consent_group_concept_path = (String) ctx.lookup("java:global/fence_topmed_consent_group_concept_path");
+        if (StringUtils.isBlank(fence_topmed_consent_group_concept_path)) {
+            logger.error("checkIDPProvider() Empty topmed consent group concept path from standalone.xml. Using default!");
+            fence_topmed_consent_group_concept_path = "\\\\_Consents\\\\Short Study Accession with Consent code\\\\";
+        }
+    }
+
+    private void getFenceHarmonizaedGroupConsentPath(Context ctx) throws NamingException {
+        fence_harmonized_consent_group_concept_path = (String) ctx.lookup("java:global/fence_harmonized_consent_group_concept_path");
+        if (StringUtils.isBlank(fence_harmonized_consent_group_concept_path)) {
+            logger.error("checkIDPProvider() Empty harmonized consent group concept path from standalone.xml. Using default!");
+            fence_harmonized_consent_group_concept_path = "\\\\_Consents\\\\Short Study Accession with Consent code\\\\";
+        }
+    }
+
+    private void getFenceStandardAccessRules(Context ctx) throws NamingException {
+        fence_standard_access_rules = (String) ctx.lookup("java:global/fence_standard_access_rules");
+        if (StringUtils.isBlank(fence_standard_access_rules)) {
+            logger.error("checkIDPProvider() Missing Standard Access Rules in standalone.xml. Using defaults.");
+            fence_standard_access_rules = "GATE_ONLY_INFO,GATE_ONLY_QUERY,GATE_ONLY_SEARCH,GATE_FENCE_CONSENT_REQUIRED";
+        }
+    }
+
+    private void getFenceHarmonizedConceptPath(Context ctx) throws NamingException {
+        fence_harmonized_concept_path = (String) ctx.lookup("java:global/fence_harmonized_concept_path");
+        if (StringUtils.isBlank(fence_harmonized_concept_path)) {
+            logger.error("checkIDPProvider() Empty harmonized concept path. Not in use.");
+            fence_harmonized_concept_path = "";
+        }
+    }
+
+    private void getFenceParentConsentGroupConceptPath(Context ctx) throws NamingException {
+        fence_parent_consent_group_concept_path = (String) ctx.lookup("java:global/fence_parent_consent_group_concept_path");
+        if (StringUtils.isBlank(fence_parent_consent_group_concept_path)) {
+            logger.error("checkIDPProvider() Empty parent consent group concept path from standalone.xml. Using default!");
+            fence_parent_consent_group_concept_path = "\\\\_Consents\\\\Short Study Accession with Consent code\\\\";
+        }
+    }
+
+    private void getFenceAllowedQueryTypes(Context ctx) throws NamingException {
+        fence_allowed_query_types = (String) ctx.lookup("java:global/fence_allowed_query_types");
+        if (StringUtils.isBlank(fence_allowed_query_types)) {
+            logger.error("checkIDPProvider() Missing Allowed query types from standalone.xml. Using defaults.");
+            fence_allowed_query_types = "COUNT,CROSS_COUNT";
+        }
     }
 
     private void initializeTokenExpirationTime(Context ctx) {
