@@ -30,7 +30,7 @@ RUN wildfly/bin/jboss-cli.sh --command="module add --name=com.sql.mysql \
     --resources=/modules/mysql-connector-java-5.1.38.jar --dependencies=javax.api"
 
 # Copy standalone.xml
-COPY src/main/resources/wildfly-configuration/standalone.xml wildfly/standalone/configuration/
+COPY bak/standalone.xml wildfly/standalone/configuration/
 
 # Copy war file
 COPY target/pic-sure-auth-services.war wildfly/standalone/deployments/pic-sure-auth-services.war
