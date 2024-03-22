@@ -519,7 +519,7 @@ public class FENCEAuthenticationService {
                     if(JAXRSConfiguration.idp_provider.equalsIgnoreCase("fence")) {
                     	queryTemplateText += "\"fields\":[\"" + parentAccessionField + "\"],";
                     } else {
-                        queryTemplateText += "\"fields\":[\"\"],";
+                        queryTemplateText += "\"fields\":[],";
                     }
 
                     queryTemplateText+="\"variantInfoFilters\":[{\"categoryVariantInfoFilters\":{},\"numericVariantInfoFilters\":{}}],"
