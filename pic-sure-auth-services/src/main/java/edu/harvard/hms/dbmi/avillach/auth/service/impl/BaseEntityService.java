@@ -28,8 +28,6 @@ public abstract class BaseEntityService<T extends BaseEntity> {
 
     private final String auditLogName;
     
-//    @Context
-//    SecurityContext securityContext;
 
     protected BaseEntityService(Class<T> type){
         this.type = type;

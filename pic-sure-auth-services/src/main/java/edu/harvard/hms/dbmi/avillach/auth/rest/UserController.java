@@ -1,18 +1,12 @@
 package edu.harvard.hms.dbmi.avillach.auth.rest;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.harvard.dbmi.avillach.util.exception.ApplicationException;
 import edu.harvard.dbmi.avillach.util.exception.ProtocolException;
 import edu.harvard.dbmi.avillach.util.response.PICSUREResponse;
-import edu.harvard.dbmi.avillach.util.response.PICSUREResponseOKwithMsgAndContent;
-import edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration;
 import edu.harvard.hms.dbmi.avillach.auth.entity.*;
-import edu.harvard.hms.dbmi.avillach.auth.repository.ApplicationRepository;
-import edu.harvard.hms.dbmi.avillach.auth.repository.ConnectionRepository;
-import edu.harvard.hms.dbmi.avillach.auth.repository.RoleRepository;
-import edu.harvard.hms.dbmi.avillach.auth.service.impl.BaseEntityService;
-import edu.harvard.hms.dbmi.avillach.auth.service.impl.MailService;
+import edu.harvard.hms.dbmi.avillach.auth.service.impl.TOSService;
+import edu.harvard.hms.dbmi.avillach.auth.service.impl.UserService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming;
 import edu.harvard.hms.dbmi.avillach.auth.utils.JWTUtil;
 import edu.harvard.hms.dbmi.avillach.auth.utils.JsonUtils;
@@ -21,22 +15,22 @@ import io.jsonwebtoken.Jws;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
+import jakarta.annotation.security.RolesAllowed;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.*;
 
-import javax.mail.MessagingException;
 import javax.transaction.Transactional;
-import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.util.*;
-import java.util.stream.Collectors;
 
-import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.*;
 import static edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming.AuthRoleNaming.ADMIN;
 import static edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming.AuthRoleNaming.SUPER_ADMIN;
 
@@ -45,222 +39,52 @@ import static edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming.AuthRoleNaming
  */
 @Api
 @Controller("/user")
-public class UserController extends BaseEntityService<User> {
+public class UserController {
 
-    Logger logger = LoggerFactory.getLogger(UserController.class);
+    private final static Logger logger = LoggerFactory.getLogger(UserController.class);
 
-//    @Context
-//    SecurityContext securityContext;
+    private final UserService userService;
 
-    private final RoleRepository roleRepo;
-
-    private final ConnectionRepository connectionRepo;
-
-    private final ApplicationRepository applicationRepo;
-
-    private final AuthUtils authUtil;
-
-    private MailService mailService;
+    private final TOSService tosService;
 
     @Autowired
-    public UserController(RoleRepository roleRepo, ConnectionRepository connectionRepo, ApplicationRepository applicationRepo, AuthUtils authUtil) {
-        super(User.class);
-        this.roleRepo = roleRepo;
-        this.connectionRepo = connectionRepo;
-        this.applicationRepo = applicationRepo;
-        this.authUtil = authUtil;
+    public UserController(UserService userService, TOSService tosService) {
+        this.userService = userService;
+        this.tosService = tosService;
     }
 
     @ApiOperation(value = "GET information of one user with the UUID, requires ADMIN or SUPER_ADMIN roles")
-    @GET
     @RolesAllowed({ADMIN, SUPER_ADMIN})
-    @Path("/{userId}")
+    @GetMapping(path = "/{userId}", produces = "application/json")
     public ResponseEntity<?> getUserById(
             @ApiParam(required = true, value = "The UUID of the user to fetch information about")
-            @PathParam("userId") String userId) {
-        return getEntityById(userId, userRepo);
+            @PathVariable("userId") String userId) {
+        return this.userService.getEntityById(userId);
     }
 
     @ApiOperation(value = "GET a list of existing users, requires ADMIN or SUPER_ADMIN roles")
-    @GET
     @RolesAllowed({ADMIN, SUPER_ADMIN})
-    @Path("")
+    @GetMapping(produces = "application/json")
     public ResponseEntity<?> getUserAll() {
-        return getEntityAll(userRepo);
+        return this.userService.getEntityAll();
     }
 
     @ApiOperation(value = "POST a list of users, requires ADMIN role")
-    @Transactional
-    @POST
+    @Transactional // TODO: Move this to the service layer
     @RolesAllowed({ADMIN})
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Path("/")
+    @PostMapping(produces = "application/json")
     public ResponseEntity<?> addUser(
             @ApiParam(required = true, value = "A list of user in JSON format")
             List<User> users) {
-        User currentUser = (User) securityContext.getUserPrincipal();
-        if (currentUser == null || currentUser.getUuid() == null) {
-            logger.error("Security context didn't have a user stored.");
-            return PICSUREResponse.applicationError("Inner application error, please contact admin.");
-        }
+        return this.userService.addUsers(users);
 
-        checkAssociation(users);
-
-        boolean allowAdd = true;
-        for (User user : users) {
-            logger.debug("Adding User " + user);
-            if (!allowUpdateSuperAdminRole(currentUser, user, null)) {
-                allowAdd = false;
-                break;
-            }
-
-            if (user.getEmail() == null) {
-                try {
-                    HashMap<String, String> metadata = new HashMap<String, String>(new ObjectMapper().readValue(user.getGeneralMetadata(), Map.class));
-                    List<String> emailKeys = metadata.keySet().stream().filter((key) -> {
-                        return key.toLowerCase().contains("email");
-                    }).collect(Collectors.toList());
-                    if (emailKeys.size() > 0) {
-                        user.setEmail(metadata.get(emailKeys.get(0)));
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-
-        if (allowAdd) {
-            Response updateResponse = addEntity(users, userRepo);
-            sendUserUpdateEmailsFromResponse(updateResponse);
-            return updateResponse;
-        } else {
-            logger.error("updateUser() user - " + currentUser.getUuid() + " - with roles [" + currentUser.getRoleString() + "] - is not allowed to grant "
-                    + AuthNaming.AuthRoleNaming.SUPER_ADMIN + " role when adding a user.");
-            throw new ProtocolException(Response.Status.BAD_REQUEST, "Not allowed to add a user with a " + AuthNaming.AuthRoleNaming.SUPER_ADMIN + " privilege associated.");
-        }
     }
 
     @ApiOperation(value = "Update a list of users, will only update the fields listed, requires ADMIN role")
-    @Transactional
-    @PUT
     @RolesAllowed({ADMIN})
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Path("/")
+    @PutMapping(produces = "application/json")
     public ResponseEntity<?> updateUser(List<User> users) {
-        User currentUser = (User) securityContext.getUserPrincipal();
-        if (currentUser == null || currentUser.getUuid() == null) {
-            logger.error("Security context didn't have a user stored.");
-            return PICSUREResponse.applicationError("Inner application error, please contact admin.");
-        }
-
-        checkAssociation(users);
-
-        boolean allowUpdate = true;
-        for (User user : users) {
-
-            User originalUser = userRepo.getById(user.getUuid());
-            if (allowUpdateSuperAdminRole(currentUser, user, originalUser)) {
-                continue;
-            } else {
-                allowUpdate = false;
-                break;
-            }
-        }
-
-        if (allowUpdate) {
-            Response updateResponse = updateEntity(users, userRepo);
-            sendUserUpdateEmailsFromResponse(updateResponse);
-            return updateResponse;
-        } else {
-            logger.error("updateUser() user - " + currentUser.getUuid() + " - with roles [" + currentUser.getRoleString() + "] - is not allowed to grant or remove "
-                    + AuthNaming.AuthRoleNaming.SUPER_ADMIN + " privilege.");
-            throw new ProtocolException(Response.Status.BAD_REQUEST, "Not allowed to update a user with changes associated to " + AuthNaming.AuthRoleNaming.SUPER_ADMIN + " privilege.");
-        }
-    }
-
-    private void sendUserUpdateEmailsFromResponse(Response updateResponse) {
-        logger.debug("Sending email");
-        try {
-            Object entity = updateResponse.getEntity();
-            if (entity != null && entity instanceof PICSUREResponseOKwithMsgAndContent) {
-                PICSUREResponseOKwithMsgAndContent okResponse = (PICSUREResponseOKwithMsgAndContent) entity;
-                List<User> addedUsers = (List<User>) okResponse.getContent();
-                String message = okResponse.getMessage();
-                for (User user : addedUsers) {
-                    try {
-                        mailService.sendUsersAccessEmail(user);
-                    } catch (MessagingException e) {
-                        logger.error("Failed to send email! " + e.getLocalizedMessage());
-                        logger.debug("Exception Trace: ", e);
-                        okResponse.setMessage(message + "  WARN - could not send email to user " + user.getEmail() + " see logs for more info");
-                    }
-                }
-            }
-        } catch (Exception e) {
-            logger.error("Failed to send email - unhandled exception: ", e);
-        }
-        logger.debug("finished email sending method");
-    }
-
-    /**
-     * This check is to prevent non-super-admin user to create/remove a super admin role
-     * against a user(include themselves). Only super admin user could perform such actions.
-     *
-     * <p>
-     * if operations not related to super admin role updates, this will return true.
-     * </p>
-     * <p>
-     * The logic here is checking the state of the super admin role in the input and output users,
-     * if the state is changed, check if the user is a super admin to determine if the user could perform the action.
-     *
-     * @param currentUser  the user trying to perform the action
-     * @param inputUser
-     * @param originalUser there could be no original user when adding a new user
-     * @return
-     */
-    private boolean allowUpdateSuperAdminRole(
-            @NotNull User currentUser,
-            @NotNull User inputUser,
-            User originalUser) {
-
-        // if current user is a super admin, this check will return true
-        for (Role role : currentUser.getRoles()) {
-            for (Privilege privilege : role.getPrivileges()) {
-                if (privilege.getName().equals(AuthNaming.AuthRoleNaming.SUPER_ADMIN)) {
-                    return true;
-                }
-            }
-        }
-
-        boolean inputUserHasSuperAdmin = false;
-        boolean originalUserHasSuperAdmin = false;
-
-        for (Role role : inputUser.getRoles()) {
-            for (Privilege privilege : role.getPrivileges()) {
-                if (privilege.getName().equals(AuthNaming.AuthRoleNaming.SUPER_ADMIN)) {
-                    inputUserHasSuperAdmin = true;
-                    break;
-                }
-            }
-        }
-
-        if (originalUser != null) {
-            for (Role role : originalUser.getRoles()) {
-                for (Privilege privilege : role.getPrivileges()) {
-                    if (privilege.getName().equals(AuthNaming.AuthRoleNaming.SUPER_ADMIN)) {
-                        originalUserHasSuperAdmin = true;
-                        break;
-                    }
-                }
-            }
-
-            // when they equals, nothing has changed, a non super admin user could perform the action
-            return inputUserHasSuperAdmin == originalUserHasSuperAdmin;
-        } else {
-            // if inputUser has super admin, it should return false
-            return !inputUserHasSuperAdmin;
-        }
-
+        return this.userService.updateUser(users);
     }
 
     /**
@@ -268,19 +92,18 @@ public class UserController extends BaseEntityService<User> {
      * every time a user hit this endpoint <code>/me</code> with the query parameter ?hasToken presented,
      * it will refresh the long term token.
      *
-     * @param httpHeaders
      * @param hasToken
      * @return
      */
     @ApiOperation(value = "Retrieve information of current user")
-    @Transactional
-    @GET
-    @Path("/me")
+    @Transactional // TODO: Move this to the service layer
+    @GetMapping(produces = "application/json", path = "/me")
     public ResponseEntity<?> getCurrentUser(
             @RequestHeader("Authorization") String authorizationHeader,
             @ApiParam(required = false, value = "Attribute that represents if a long term token will attach to the response")
-            @QueryParam("hasToken") Boolean hasToken) {
-        User user = (User) securityContext.getUserPrincipal();
+            @RequestParam("hasToken") Boolean hasToken) {
+        SecurityContext securityContext = SecurityContextHolder.getContext();
+        User user = (User) securityContext.getAuthentication().getPrincipal();
         if (user == null || user.getUuid() == null) {
             logger.error("Security context didn't have a user stored.");
             return PICSUREResponse.applicationError("Inner application error, please contact admin.");
@@ -296,7 +119,7 @@ public class UserController extends BaseEntityService<User> {
                 .setEmail(user.getEmail())
                 .setPrivileges(user.getPrivilegeNameSet())
                 .setUuid(user.getUuid().toString())
-                .setAcceptedTOS(authUtil.acceptedTOSBySub(user.getSubject()));
+                .setAcceptedTOS(this.tosService.hasUserAcceptedLatest(user.getSubject()));
 
         // currently, the queryScopes are simple combination of queryScope string together as a set.
         // We are expecting the queryScope string as plain string. If it is a JSON, we could change the
@@ -494,28 +317,7 @@ public class UserController extends BaseEntityService<User> {
     }
 
 
-    /**
-     * check all referenced field if they are already in database. If
-     * they are in database, then retrieve it by id, and attach it to
-     * user object.
-     *
-     * @param users
-     * @return
-     */
-    private void checkAssociation(List<User> users) {
-        for (User user : users) {
-            if (user.getRoles() != null) {
-                Set<Role> roles = new HashSet<>();
-                user.getRoles().stream().forEach(t -> roleRepo.addObjectToSet(roles, roleRepo, t));
-                user.setRoles(roles);
-            }
 
-            if (user.getConnection() != null) {
-                Connection connection = connectionRepo.getUniqueResultByColumn("id", user.getConnection().getId());
-                user.setConnection(connection);
-            }
-        }
-    }
 
 
 }
