@@ -31,11 +31,6 @@
       "description": "Description for application.tos.enabled."
     },
     {
-      "name": "application.default.application.uuid",
-      "type": "java.lang.String",
-      "description": "Description for application.default.application.uuid."
-    },
-    {
       "name": "application.system.name",
       "type": "java.lang.String",
       "description": "Description for application.system.name."
@@ -114,5 +109,10 @@
       "name": "application.long.term.token.expiration.time",
       "type": "java.lang.String",
       "description": "Description for application.long.term.token.expiration.time."
+    },
+    {
+      "name": "application.default.uuid",
+      "type": "java.lang.String",
+      "description": "Description for application.default.uuid."
     }
   ] }
