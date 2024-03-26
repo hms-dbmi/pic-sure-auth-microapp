@@ -516,7 +516,7 @@ public class FENCEAuthenticationService {
                     +"\"]},"
                     +"\"numericFilters\":{},\"requiredFields\":[],";
 
-                    if(JAXRSConfiguration.idp_provider.equalsIgnoreCase("fence")) {
+                    if("fence".equalsIgnoreCase(JAXRSConfiguration.idp_provider)) {
                     	queryTemplateText += "\"fields\":[\"" + parentAccessionField + "\"],";
                     } else {
                         queryTemplateText += "\"fields\":[],";
