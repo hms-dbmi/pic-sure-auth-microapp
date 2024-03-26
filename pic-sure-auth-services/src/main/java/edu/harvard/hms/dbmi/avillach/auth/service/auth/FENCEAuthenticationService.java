@@ -514,11 +514,18 @@ public class FENCEAuthenticationService {
                     +"\":[\""
                     +studyIdentifierField
                     +"\"]},"
-                    +"\"numericFilters\":{},\"requiredFields\":[],"
-                    +"\"fields\":[\"" + parentAccessionField + "\"],"
-                    +"\"variantInfoFilters\":[{\"categoryVariantInfoFilters\":{},\"numericVariantInfoFilters\":{}}],"
+                    +"\"numericFilters\":{},\"requiredFields\":[],";
+
+                    if("fence".equalsIgnoreCase(JAXRSConfiguration.idp_provider)) {
+                    	queryTemplateText += "\"fields\":[\"" + parentAccessionField + "\"],";
+                    } else {
+                        queryTemplateText += "\"fields\":[],";
+                    }
+
+                    queryTemplateText+="\"variantInfoFilters\":[{\"categoryVariantInfoFilters\":{},\"numericVariantInfoFilters\":{}}],"
                     +"\"expectedResultType\": \"COUNT\""
                     +"}";
+
             priv.setQueryTemplate(queryTemplateText);
             if(isHarmonized) {
             	priv.setQueryScope("[\"" + conceptPath + "\",\"_\",\"" + fence_harmonized_concept_path + "\"]");
