@@ -1,6 +1,5 @@
 package edu.harvard.hms.dbmi.avillach.auth.filter;
 
-import edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Application;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
@@ -52,14 +51,18 @@ public class JWTFilter extends OncePerRequestFilter {
 
     private final TOSService tosService;
 
-    @Value("${application.user.id.claim}")
-    private String USER_CLAIM_ID;
+    private final String userClaimId;
+
+    private final boolean tosEnabled;
 
     @Autowired
-    public JWTFilter(UserRepository userRepo, ApplicationRepository applicationRepo, TOSService tosService) {
+    public JWTFilter(UserRepository userRepo, ApplicationRepository applicationRepo, TOSService tosService,
+                     @Value("${application.user.id.claim}") String userClaimId, @Value("${application.tos.enabled}") boolean tosEnabled) {
         this.userRepo = userRepo;
         this.applicationRepo = applicationRepo;
         this.tosService = tosService;
+        this.userClaimId = userClaimId;
+        this.tosEnabled = tosEnabled;
     }
 
     /**
@@ -90,7 +93,7 @@ public class JWTFilter extends OncePerRequestFilter {
 
             // Parse the token
             Jws<Claims> jws = parseToken(token); // TODO: We shouldn't be implementing a method that should be in the JWTUtils class
-            String userId = jws.getBody().get(this.USER_CLAIM_ID, String.class); // TODO: Update when we remove the JAXRSConfiguration class
+            String userId = jws.getBody().get(this.userClaimId, String.class); // TODO: Update when we remove the JAXRSConfiguration class
 
             if (userId.startsWith(AuthNaming.LONG_TERM_TOKEN_PREFIX)) {
                 // For profile information, we do indeed allow long term token
@@ -176,7 +179,7 @@ public class JWTFilter extends OncePerRequestFilter {
             throw new NotAuthorizedException("User is deactivated");
         }
 
-        if (JAXRSConfiguration.tosEnabled.startsWith("true") && tosService.getLatest() != null && !tosService.hasUserAcceptedLatest(authenticatedUser.getSubject())) {
+        if (this.tosEnabled && tosService.getLatest() != null && !tosService.hasUserAcceptedLatest(authenticatedUser.getSubject())) {
             //If user has not accepted terms of service and is attempted to get information other than the terms of service, don't authenticate
             try {
                 response.sendError(HttpServletResponse.SC_FORBIDDEN, "User must accept terms of service");

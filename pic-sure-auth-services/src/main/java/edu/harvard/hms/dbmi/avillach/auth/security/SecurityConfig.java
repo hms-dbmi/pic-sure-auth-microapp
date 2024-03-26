@@ -25,7 +25,7 @@ public class SecurityConfig {
         http.authorizeHttpRequests((authz) ->
                         authz.anyRequest().authenticated()
                 )
-                .addFilter()
+                .addFilter(this.jwtFilter)
                 .httpBasic(withDefaults());
 
         return http.build();

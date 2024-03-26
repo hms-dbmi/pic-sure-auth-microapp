@@ -1,9 +1,5 @@
 //package edu.harvard.hms.dbmi.avillach.auth.security;
 //
-//import edu.harvard.hms.dbmi.avillach.auth.data.entity.Application;
-//import edu.harvard.hms.dbmi.avillach.auth.data.entity.User;
-//
-//import javax.ws.rs.core.SecurityContext;
 //import java.security.Principal;
 //
 ///**
