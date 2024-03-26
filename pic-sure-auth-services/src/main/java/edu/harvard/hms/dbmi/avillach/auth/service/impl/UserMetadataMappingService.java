@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import javax.transaction.Transactional;
 import java.util.List;
 
 /**
@@ -32,6 +33,7 @@ public class UserMetadataMappingService extends BaseEntityService<UserMetadataMa
         return userMetadataMappingRepo.findByConnection(connection);
     }
 
+    @Transactional
     public ResponseEntity<?> addMappings(List<UserMetadataMapping> mappings) {
         String errorMessage = "The following connectionIds do not exist:\n";
         boolean error = false;
@@ -54,4 +56,16 @@ public class UserMetadataMappingService extends BaseEntityService<UserMetadataMa
         return userMetadataMappingRepo.list();
     }
 
+    public ResponseEntity<?> getAllMappingsForConnection(String connection) {
+        return PICSUREResponse.success(getAllMappingsForConnection(connectionRepo.getUniqueResultByColumn("id", connection)));
+    }
+
+    public ResponseEntity<?> updateEntity(List<UserMetadataMapping> mappings) {
+        return this.updateEntity(mappings, userMetadataMappingRepo);
+    }
+
+    @Transactional
+    public ResponseEntity<?> removeEntityById(String mappingId) {
+        return this.removeEntityById(mappingId, userMetadataMappingRepo);
+    }
 }

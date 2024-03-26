@@ -57,7 +57,7 @@ public class Auth0MatchingServiceTest {
         doAnswer(invocation -> (listUnmatchedByConnectionIdMock(invocation.getArgument(0)))).
                 when(userRepo).listUnmatchedByConnectionId(any());
         doAnswer(invocation -> (getAllMappingsForConnectionMock(invocation.getArgument(0)))).
-                when(mappingService).getAllMappingsForConnection(any());
+                when(mappingService).getAllMappingsForConnection((Connection) any());
         //So we can check that the user is persisted
         doAnswer(new Answer<Void>() {
             public Void answer(InvocationOnMock invocation) {
