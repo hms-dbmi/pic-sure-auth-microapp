@@ -2,7 +2,6 @@ package edu.harvard.hms.dbmi.avillach.auth.service.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import edu.harvard.dbmi.avillach.util.exception.ProtocolException;
 import edu.harvard.dbmi.avillach.util.response.PICSUREResponseOKwithMsgAndContent;
 import edu.harvard.hms.dbmi.avillach.auth.entity.*;
 import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
@@ -39,7 +38,7 @@ public class UserService extends BaseEntityService<User> {
 
     private final Logger logger = LoggerFactory.getLogger(UserService.class.getName());
 
-    private final MailService mailService;
+    private final BasicMailService basicMailService;
     private final TOSService tosService;
     private final UserRepository userRepository;
     private final ConnectionRepository connectionRepository;
@@ -55,11 +54,11 @@ public class UserService extends BaseEntityService<User> {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Autowired
-    public UserService(MailService mailService, TOSService tosService, UserRepository userRepository, ConnectionRepository connectionRepository, RoleRepository roleRepository, ApplicationRepository applicationRepository,
+    public UserService(BasicMailService basicMailService, TOSService tosService, UserRepository userRepository, ConnectionRepository connectionRepository, RoleRepository roleRepository, ApplicationRepository applicationRepository,
                        @Value("${application.client.secret}") String clientSecret, @Value("${application.token.expiration.time}") long tokenExpirationTime,
                        @Value("${application.default.}") String applicationUUID, @Value("${application.long.term.token.expiration.time}") long longTermTokenExpirationTime) {
         super(User.class);
-        this.mailService = mailService;
+        this.basicMailService = basicMailService;
         this.tosService = tosService;
         this.userRepository = userRepository;
         this.connectionRepository = connectionRepository;
@@ -285,7 +284,7 @@ public class UserService extends BaseEntityService<User> {
                 String message = okResponse.getMessage();
                 for (User user : addedUsers) {
                     try {
-                        mailService.sendUsersAccessEmail(user);
+                        basicMailService.sendUsersAccessEmail(user);
                     } catch (MessagingException e) {
                         logger.error("Failed to send email! " + e.getLocalizedMessage());
                         logger.debug("Exception Trace: ", e);

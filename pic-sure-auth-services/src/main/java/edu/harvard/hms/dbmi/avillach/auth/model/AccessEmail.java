@@ -1,6 +1,5 @@
 package edu.harvard.hms.dbmi.avillach.auth.model;
 
-import edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 

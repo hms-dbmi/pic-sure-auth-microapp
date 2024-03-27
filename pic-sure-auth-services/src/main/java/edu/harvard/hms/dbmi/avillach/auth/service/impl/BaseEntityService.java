@@ -2,12 +2,13 @@ package edu.harvard.hms.dbmi.avillach.auth.service.impl;
 
 import edu.harvard.dbmi.avillach.data.entity.BaseEntity;
 import edu.harvard.dbmi.avillach.data.repository.BaseRepository;
-import edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import javax.validation.constraints.NotNull;
 import java.lang.reflect.Field;
@@ -27,7 +28,7 @@ public abstract class BaseEntityService<T extends BaseEntity> {
     protected final Class<T> type;
 
     private final String auditLogName;
-    
+
 
     protected BaseEntityService(Class<T> type){
         this.type = type;
@@ -36,7 +37,9 @@ public abstract class BaseEntityService<T extends BaseEntity> {
     }
 
     public ResponseEntity<?> getEntityById(String id, BaseRepository baseRepository){
-        logger.info("User: " + JAXRSConfiguration.getPrincipalName(securityContext)
+        SecurityContext securityContext = SecurityContextHolder.getContext();
+        String principalName = securityContext.getAuthentication().getName();
+        logger.info("User: " + principalName
                 + " Looking for " + type.getSimpleName() +
                 " by ID: " + id + "...");
 
@@ -50,7 +53,9 @@ public abstract class BaseEntityService<T extends BaseEntity> {
     }
 
     public ResponseEntity<?> getEntityAll(BaseRepository baseRepository){
-        logger.info("User: " + JAXRSConfiguration.getPrincipalName(securityContext) +
+        SecurityContext securityContext = SecurityContextHolder.getContext();
+        String principalName = securityContext.getAuthentication().getName();
+        logger.info("User: " + principalName +
                 " Getting all " + type.getSimpleName() +
                 "s...");
         List<T> ts = null;
@@ -66,7 +71,8 @@ public abstract class BaseEntityService<T extends BaseEntity> {
     }
 
     public ResponseEntity<?> addEntity(List<T> entities, BaseRepository baseRepository){
-    		String username = JAXRSConfiguration.getPrincipalName(securityContext);
+        SecurityContext securityContext = SecurityContextHolder.getContext();
+        String username = securityContext.getAuthentication().getName();
 		if (entities == null  ||  entities.isEmpty())
             return PICSUREResponse.protocolError("No " + type.getSimpleName().toLowerCase() +
                     " to be added.");
@@ -99,7 +105,8 @@ public abstract class BaseEntityService<T extends BaseEntity> {
             return PICSUREResponse.protocolError("No " + type.getSimpleName().toLowerCase() +
                     " to be updated.");
 
-        String username = JAXRSConfiguration.getPrincipalName(securityContext);
+        SecurityContext securityContext = SecurityContextHolder.getContext();
+        String username = securityContext.getAuthentication().getName();
 		logger.info("User: " + username + " is trying to update a list of "
                 + type.getSimpleName());
 
@@ -228,8 +235,8 @@ public abstract class BaseEntityService<T extends BaseEntity> {
     }
 
     public ResponseEntity<?> removeEntityById(String id, BaseRepository baseRepository) {
-
-        String username = JAXRSConfiguration.getPrincipalName(securityContext);
+        SecurityContext securityContext = SecurityContextHolder.getContext();
+        String username = securityContext.getAuthentication().getName();
 		logger.info("User: " + username + " is trying to REMOVE an entity: "
                 + type.getSimpleName() + ", by uuid: " + id);
 

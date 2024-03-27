@@ -152,8 +152,6 @@ public class JWTFilter extends OncePerRequestFilter {
         request.setAttribute("authenticatedApplication", authenticatedApplication);
     }
 
-    // TODO: Implement the ApplicationException thrown in this method
-
     /**
      * Sets the security context for the given user.
      * This method is responsible for validating the user claims, checking if the user is active,

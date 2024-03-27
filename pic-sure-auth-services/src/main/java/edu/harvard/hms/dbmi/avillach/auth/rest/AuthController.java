@@ -1,6 +1,5 @@
 package edu.harvard.hms.dbmi.avillach.auth.rest;
 
-import edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.AuthenticationService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.AuthorizationService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.FENCEAuthenticationService;

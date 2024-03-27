@@ -40,16 +40,16 @@ public class AuthenticationService {
 
     private final UserRepository userRepository;
 
-    private final MailService mailService;
+    private final BasicMailService basicMailService;
 
     private final UserService userService;
     private static final int AUTH_RETRY_LIMIT = 3;
 
     @Autowired
-    public AuthenticationService(OauthUserMatchingService matchingService, UserRepository userRepository, MailService mailService, UserService userService) {
+    public AuthenticationService(OauthUserMatchingService matchingService, UserRepository userRepository, BasicMailService basicMailService, UserService userService) {
         this.matchingService = matchingService;
         this.userRepository = userRepository;
-        this.mailService = mailService;
+        this.basicMailService = basicMailService;
         this.userService = userService;
     }
 
@@ -88,9 +88,11 @@ public class AuthenticationService {
             if (user == null) {
                 if (JAXRSConfiguration.deniedEmailEnabled.startsWith("true")) {
                     try {
-                        mailService.sendDeniedAccessEmail(userInfo);
-                    } catch (MessagingException e) {
+                        basicMailService.sendDeniedAccessEmail(userInfo);
+                    } catch (MessagingException e) { // TODO: We need to remove the javax.mail dependency
                         logger.warn("Failed to send user access denied email: ", e);
+                    } catch (jakarta.mail.MessagingException e) {
+                        throw new RuntimeException(e);
                     }
                 }
                 throw new NotAuthorizedException("No user matching user_id " + userId + " present in database");
