@@ -1,9 +1,8 @@
 package edu.harvard.hms.dbmi.avillach.auth.entity;
 
-import edu.harvard.dbmi.avillach.data.entity.BaseEntity;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
 import java.io.Serializable;
 
 /**

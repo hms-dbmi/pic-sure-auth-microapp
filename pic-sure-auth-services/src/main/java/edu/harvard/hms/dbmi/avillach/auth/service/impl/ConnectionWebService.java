@@ -1,51 +1,53 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.impl;
 
 import edu.harvard.hms.dbmi.avillach.auth.entity.Connection;
-import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.repository.ConnectionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 @Service
-public class ConnectionWebService extends BaseEntityService<Connection> {
+public class ConnectionWebService {
 
     private final ConnectionRepository connectionRepo;
 
     @Autowired
-    protected ConnectionWebService(Class<Connection> type, ConnectionRepository connectionRepo) {
-        super(type);
+    protected ConnectionWebService(ConnectionRepository connectionRepo) {
         this.connectionRepo = connectionRepo;
     }
 
-    public ResponseEntity<?> addEntity(List<Connection> connections){
+    public List<Connection> addConnection(List<Connection> connections) throws IllegalArgumentException {
         for (Connection c : connections){
             if (c.getSubPrefix() == null || c.getRequiredFields() == null || c.getLabel() == null || c.getId() == null){
-                return PICSUREResponse.protocolError("Id, Label, Subprefix, and RequiredFields cannot be null");
+                throw new IllegalArgumentException("Id, Label, Subprefix, and RequiredFields cannot be null");
             }
-            Connection conn = connectionRepo.findConnectionById(c.getId());
-            if (conn != null){
-                return PICSUREResponse.protocolError("Id must be unique, a connection with id " + c.getId() + " already exists in the database");
+            Optional<Connection> conn = connectionRepo.findById(UUID.fromString(c.getId()));
+            if (conn.isPresent()){
+                throw new IllegalArgumentException("Id must be unique, a connection with id " + c.getId() + " already exists in the database");
             }
         }
-        return addEntity(connections, connectionRepo); // TODO: This should be moved to an actual service class. We shouldn't need to pass a repo to the service class
+
+        return this.connectionRepo.saveAll(connections);
     }
 
-    public ResponseEntity<?> getEntityById(String connectionId) {
-        return getEntityById(connectionId, connectionRepo);
+    public Connection getConnectionById(String connectionId) {
+        return this.connectionRepo.findById(UUID.fromString(connectionId))
+                .orElseThrow(() -> new IllegalArgumentException("Connection with id " + connectionId + " not found"));
     }
 
-    public ResponseEntity<?> getEntityAll() {
-        return getEntityAll(connectionRepo);
+    public List<Connection> getAllConnections() {
+        return this.connectionRepo.findAll();
     }
 
-    public ResponseEntity<?> updateEntity(List<Connection> connections) {
-        return updateEntity(connections, connectionRepo);
+    public List<Connection> updateConnections(List<Connection> connections) {
+        return this.connectionRepo.saveAll(connections);
     }
 
-    public ResponseEntity<?> removeEntityById(String connectionId) {
-        return removeEntityById(connectionId, connectionRepo);
+    public List<Connection> removeConnectionById(String connectionId) {
+        this.connectionRepo.deleteById(UUID.fromString(connectionId));
+        return this.getAllConnections();
     }
 }

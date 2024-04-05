@@ -6,24 +6,20 @@ import edu.harvard.hms.dbmi.avillach.auth.enums.SecurityRoles;
 import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.repository.PrivilegeRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.RoleRepository;
-import edu.harvard.hms.dbmi.avillach.auth.service.impl.BaseEntityService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import javax.transaction.Transactional;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 @Service
-public class RoleService extends BaseEntityService<Role> {
+public class RoleService {
 
     private final static Logger logger = Logger.getLogger(RoleService.class.getName());
     private final RoleRepository roleRepository;
@@ -31,25 +27,27 @@ public class RoleService extends BaseEntityService<Role> {
     private final PrivilegeRepository privilegeRepo;
 
     @Autowired
-    protected RoleService(Class<Role> type, RoleRepository roleRepository, PrivilegeRepository privilegeRepo) {
-        super(type);
+    protected RoleService(RoleRepository roleRepository, PrivilegeRepository privilegeRepo) {
         this.roleRepository = roleRepository;
         this.privilegeRepo = privilegeRepo;
     }
 
-    public ResponseEntity<?> getEntityById(String roleId) {
-        return getEntityById(roleId, roleRepository);
+    public ResponseEntity<?> getRoleById(String roleId) {
+        Optional<Role> optionalRole = roleRepository.findById(UUID.fromString(roleId));
+        if (optionalRole.isEmpty()) {
+            return PICSUREResponse.protocolError("Role is not found by given role ID: " + roleId);
+        }
+        return PICSUREResponse.success(optionalRole.get());
     }
 
-
-    public ResponseEntity<?> getEntityAll() {
-        return getEntityAll(roleRepository);
+    public List<Role> getAllRoles() {
+        return roleRepository.findAll();
     }
 
     @Transactional
-    public ResponseEntity<?> addEntity(List<Role> roles) {
+    public List<Role> addRoles(List<Role> roles) {
         checkPrivilegeAssociation(roles);
-        return addEntity(roles, roleRepository);
+        return roleRepository.saveAll(roles);
     }
 
     /**
@@ -61,8 +59,14 @@ public class RoleService extends BaseEntityService<Role> {
     private void checkPrivilegeAssociation(List<Role> roles) throws RuntimeException {
         for (Role role: roles){
             if (role.getPrivileges() != null) {
-                Set<Privilege> privileges = new HashSet<>(); // TODO: Determine how we can fix this issue. The javax code does not work with java 21 in this case.
-                role.getPrivileges().stream().forEach(p -> privilegeRepo.addObjectToSet(privileges, privilegeRepo, p));
+                Set<Privilege> privileges = new HashSet<>();
+                for (Privilege p : role.getPrivileges()) {
+                    Optional<Privilege> privilege = privilegeRepo.findById(p.getUuid());
+                    if (privilege.isEmpty()) {
+                        throw new RuntimeException("Privilege not found - uuid: " + p.getUuid().toString());
+                    }
+                    privileges.add(privilege.get());
+                }
                 role.setPrivileges(privileges);
             }
         }
@@ -70,27 +74,40 @@ public class RoleService extends BaseEntityService<Role> {
     }
 
     @Transactional
-    public ResponseEntity<?> updateEntity(List<Role> roles) {
+    public List<Role> updateRoles(List<Role> roles) {
         checkPrivilegeAssociation(roles);
-        return updateEntity(roles, roleRepository);
+        return roleRepository.saveAll(roles);
     }
 
     @Transactional
-    public ResponseEntity<?> removeEntityById(String roleId) {
-        Role role = roleRepository.getById(UUID.fromString(roleId));
+    public Optional<List<Role>> removeRoleById(String roleId) {
+        Optional<Role> optionalRole = roleRepository.findById(UUID.fromString(roleId));
 
-        // Get principal roles from security context
+        if (optionalRole.isEmpty()) {
+            return Optional.empty();
+        }
+
         SecurityContext context = SecurityContextHolder.getContext();
         Set<String> roles = context.getAuthentication().getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority).collect(Collectors.toSet());
 
-
-        if (SecurityRoles.contains(roles, SecurityRoles.PIC_SURE_TOP_ADMIN.getRole())){
-            logger.info("User has PIC-SURE Top Admin role, can remove any role");
-            return PICSUREResponse.protocolError("Default System Role cannot be removed - uuid: " + role.getUuid().toString()
-                    + ", name: " + role.getName());
+        if (!SecurityRoles.contains(roles, SecurityRoles.PIC_SURE_TOP_ADMIN.getRole())){
+            logger.info("User doesn't have PIC-SURE Top Admin role, can't remove any role");
+            return Optional.empty();
         }
-        return removeEntityById(roleId, roleRepository);
+
+        roleRepository.deleteById(optionalRole.get().getUuid());
+        return Optional.of(roleRepository.findAll());
+    }
+
+    public void addObjectToSet(Set<Role> roles, Role t) {
+        // check if the role exists in the database
+        Role role = roleRepository.findById(t.getUuid()).orElse(null);
+        if (role == null) {
+            throw new RuntimeException("Role not found - uuid: " + t.getUuid().toString());
+        }
+
+        roles.add(t);
     }
 }
 

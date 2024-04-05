@@ -3,9 +3,8 @@ package edu.harvard.hms.dbmi.avillach.auth.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import edu.harvard.dbmi.avillach.data.entity.BaseEntity;
+import jakarta.persistence.*;
 
-import javax.persistence.*;
 import java.util.Set;
 import java.util.stream.Collectors;
 

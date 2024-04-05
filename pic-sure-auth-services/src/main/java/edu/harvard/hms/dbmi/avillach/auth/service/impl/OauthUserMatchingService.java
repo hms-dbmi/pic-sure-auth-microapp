@@ -2,8 +2,9 @@ package edu.harvard.hms.dbmi.avillach.auth.service.impl;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
-import edu.harvard.hms.dbmi.avillach.auth.rest.UserController;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,7 +31,7 @@ public class OauthUserMatchingService {
 
 	private final UserRepository userRepo;
 
-	private final UserController userController;
+	private final UserService userService;
 
 	private final UserMetadataMappingService mappingService;
 
@@ -39,9 +40,9 @@ public class OauthUserMatchingService {
 	private final ObjectMapper mapper = new ObjectMapper();
 
 	@Autowired
-    public OauthUserMatchingService(UserRepository userRepo, UserController userController, UserMetadataMappingService mappingService, ConnectionRepository connectionRepo) {
+    public OauthUserMatchingService(UserRepository userRepo, UserService userService, UserMetadataMappingService mappingService, ConnectionRepository connectionRepo) {
         this.userRepo = userRepo;
-        this.userController = userController;
+        this.userService = userService;
         this.mappingService = mappingService;
         this.connectionRepo = connectionRepo;
     }
@@ -66,9 +67,9 @@ public class OauthUserMatchingService {
 			List<String> connections = JsonPath.using(conf).parse(parsedInfo).read("$.identities[0].connection");
 			String connectionId = connections.get(0);
 
-			Connection connection = connectionRepo.getUniqueResultByColumn("id", connectionId);
+			Optional<Connection> connection = connectionRepo.findById(UUID.fromString(connectionId));
 
-			List<UserMetadataMapping> mappings = mappingService.getAllMappingsForConnection(connection);
+			List<UserMetadataMapping> mappings = mappingService.getAllMappingsForConnection(connection.orElse(null));
 
 			if (mappings == null || mappings.isEmpty()) {
 				//We don't have any mappings for this connection yet
@@ -77,7 +78,7 @@ public class OauthUserMatchingService {
 			}
 
 			//We only care about unmatched users
-			List<User> users = userRepo.listUnmatchedByConnectionId(connection);
+			List<User> users = userRepo.findByConnectionAndMatched(connection.orElse(null), false);
 			if (users == null || users.isEmpty()) {
 				logger.info("No unmatched users exist with connectionId " + connection);
 				return null;
@@ -110,7 +111,7 @@ public class OauthUserMatchingService {
 						u.setAuth0metadata(userInfoString);
 						u.setMatched(true);
 						u.setSubject(userId);
-						userController.updateEntity(Arrays.asList(u), userRepo);
+						userService.updateUser(Arrays.asList(u));
 						return u;
 					}
 				}

@@ -2,25 +2,20 @@ package edu.harvard.hms.dbmi.avillach.auth.service.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import edu.harvard.dbmi.avillach.util.HttpClientUtil;
 import edu.harvard.hms.dbmi.avillach.auth.entity.*;
 import edu.harvard.hms.dbmi.avillach.auth.exceptions.NotAuthorizedException;
 import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.repository.*;
+import edu.harvard.hms.dbmi.avillach.auth.utils.RestClientUtil;
 import jakarta.annotation.PostConstruct;
-import org.apache.http.Header;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.message.BasicHeader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClient;
-
-import
+import org.springframework.web.client.RestClientException;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,6 +23,7 @@ import java.util.*;
 
 @Service
 public class FENCEAuthenticationService {
+
     private final Logger logger = LoggerFactory.getLogger(FENCEAuthenticationService.class);
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -38,7 +34,7 @@ public class FENCEAuthenticationService {
 
     private final ConnectionRepository connectionRepo;
 
-    private final AccessRuleRepository accessruleRepo;
+    private final AccessRuleRepository accessRuleRepo;
 
     private final ApplicationRepository applicationRepo;
 
@@ -62,12 +58,9 @@ public class FENCEAuthenticationService {
     // ----------------- Template Path -----------------
     private final String templatePath;
 
-    // ----------------- HTTP Client -----------------
-    private final RestClient restClient;
-
     @Autowired
     public FENCEAuthenticationService(UserRepository userRepo, RoleRepository roleRepo, ConnectionRepository connectionRepo,
-                                      AccessRuleRepository accessruleRepo, ApplicationRepository applicationRepo,
+                                      AccessRuleRepository accessRuleRepo, ApplicationRepository applicationRepo,
                                       PrivilegeRepository privilegeRepo, UserService userService,
                                       @Value("${application.idp.provider}") String idpProviderUri,
                                       @Value("${application.fence.client.id") String fenceClientId,
@@ -80,7 +73,7 @@ public class FENCEAuthenticationService {
         this.userRepo = userRepo;
         this.roleRepo = roleRepo;
         this.connectionRepo = connectionRepo;
-        this.accessruleRepo = accessruleRepo;
+        this.accessRuleRepo = accessRuleRepo;
         this.applicationRepo = applicationRepo;
         this.privilegeRepo = privilegeRepo;
         this.userService = userService;
@@ -92,30 +85,35 @@ public class FENCEAuthenticationService {
         fence_harmonized_concept_path = fenceHarmonizedConceptPath;
         fence_standard_access_rules = fenceStandardAccessRules;
         this.templatePath = templatePath;
-        this.restClient = RestClient.builder()
-                .requestFactory(new HttpComponentsClientHttpRequestFactory())
-                .build();
     }
 
     @PostConstruct
     public void initializeFenceService() {
-        picSureApp = applicationRepo.getUniqueResultByColumn("name", "PICSURE");
-        fenceConnection = connectionRepo.getUniqueResultByColumn("label", "FENCE");
+        picSureApp = applicationRepo.findByName("PICSURE");
+        fenceConnection = connectionRepo.findByLabel("FENCE");
         fenceMapping = getFENCEMapping();
     }
 
     private JsonNode getFENCEUserProfile(String access_token) {
         logger.debug("getFENCEUserProfile() starting");
-        List<Header> headers = new ArrayList<>();
-        headers.add(new BasicHeader("Authorization", "Bearer " + access_token));
+        logger.debug("getFENCEUserProfile() getting user profile from uri:{}/user/user", this.idp_provider_uri);
 
-        logger.debug("getFENCEUserProfile() getting user profile from uri:" + this.idp_provider_uri + "/user/user");
-        JsonNode fence_user_profile_response = HttpClientUtil.simpleGet(
-                this.idp_provider_uri + "/user/user",
-                this.client,
-                this.objectMapper,
-                headers.toArray(new Header[headers.size()])
-        );
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Authorization", "Bearer " + access_token);
+
+        JsonNode fence_user_profile_response = null;
+        try {
+            ResponseEntity<String> response = RestClientUtil.retrieveGetResponse(
+                    this.idp_provider_uri + "/user/user",
+                    headers
+            );
+
+            fence_user_profile_response = objectMapper.readTree(response.getBody());
+        } catch (RestClientException ex) {
+            logger.error("getFENCEUserProfile() failed to call FENCE user service, {}", ex.getMessage());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 
         logger.debug("getFENCEUserProfile() finished, returning user profile" + fence_user_profile_response.asText());
         return fence_user_profile_response;
@@ -124,12 +122,12 @@ public class FENCEAuthenticationService {
     private JsonNode getFENCEAccessToken(String fence_code) {
         logger.debug("getFENCEAccessToken() starting, using FENCE code");
 
-        List<Header> headers = new ArrayList<>();
         Base64.Encoder encoder = Base64.getEncoder();
         String fence_auth_header = this.fence_client_id + ":" + this.fence_client_secret;
-        headers.add(new BasicHeader("Authorization",
-                "Basic " + encoder.encodeToString(fence_auth_header.getBytes())));
-        headers.add(new BasicHeader("Content-type", "application/x-www-form-urlencoded; charset=UTF-8"));
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Content-Type", "application/x-www-form-urlencoded");
+        headers.add("Authorization", "Basic " + encoder.encodeToString(fence_auth_header.getBytes()));
 
         // Build the request body, as JSON
         String query_string =
@@ -141,17 +139,17 @@ public class FENCEAuthenticationService {
 
         JsonNode resp = null;
         try {
-            resp = HttpClientUtil.simplePost(
+            ResponseEntity<String> response = RestClientUtil.retrievePostResponse(
                     fence_token_url,
-                    new StringEntity(query_string),
-                    this.client,
-                    this.objectMapper,
-                    headers.toArray(new Header[headers.size()])
+                    headers,
+                    query_string
             );
+
+            resp = objectMapper.readTree(response.getBody());
         } catch (Exception ex) {
-            logger.error("getFENCEAccessToken() failed to call FENCE token service, " + ex.getMessage());
+            logger.error("getFENCEAccessToken() failed to call FENCE token service, {}", ex.getMessage());
         }
-        logger.debug("getFENCEAccessToken() finished. " + resp.asText());
+        logger.debug("getFENCEAccessToken() finished. {}", resp.asText());
         return resp;
     }
 
@@ -165,12 +163,12 @@ public class FENCEAuthenticationService {
         try {
             logger.debug("getFENCEProfile() query FENCE for user profile with code");
             fence_user_profile = getFENCEUserProfile(getFENCEAccessToken(fence_code).get("access_token").asText());
-            logger.debug("getFENCEProfile() user profile structure:" + fence_user_profile.asText());
-            logger.debug("getFENCEProfile() .username:" + fence_user_profile.get("username"));
-            logger.debug("getFENCEProfile() .user_id:" + fence_user_profile.get("user_id"));
-            logger.debug("getFENCEProfile() .email:" + fence_user_profile.get("email"));
+            logger.debug("getFENCEProfile() user profile structure:{}", fence_user_profile.asText());
+            logger.debug("getFENCEProfile() .username:{}", fence_user_profile.get("username"));
+            logger.debug("getFENCEProfile() .user_id:{}", fence_user_profile.get("user_id"));
+            logger.debug("getFENCEProfile() .email:{}", fence_user_profile.get("email"));
         } catch (Exception ex) {
-            logger.error("getFENCEToken() could not retrieve the user profile from the auth provider, because " + ex.getMessage(), ex);
+            logger.error("getFENCEToken() could not retrieve the user profile from the auth provider, because {}", ex.getMessage(), ex);
             throw new NotAuthorizedException("Could not get the user profile " +
                     "from the Gen3 authentication provider." + ex.getMessage());
         }
@@ -180,13 +178,10 @@ public class FENCEAuthenticationService {
             // Create or retrieve the user profile from our database, based on the the key
             // in the Gen3/FENCE profile
             current_user = createUserFromFENCEProfile(fence_user_profile);
-            logger.info("getFENCEProfile() saved details for user with e-mail:"
-                    + current_user.getEmail()
-                    + " and subject:"
-                    + current_user.getSubject());
+            logger.info("getFENCEProfile() saved details for user with e-mail:{} and subject:{}", current_user.getEmail(), current_user.getSubject());
 
         } catch (Exception ex) {
-            logger.error("getFENCEToken() Could not persist the user information, because " + ex.getMessage());
+            logger.error("getFENCEToken() Could not persist the user information, because {}", ex.getMessage());
             throw new NotAuthorizedException("The user details could not be persisted. Please contact the administrator.");
         }
 
@@ -219,10 +214,10 @@ public class FENCEAuthenticationService {
             }
         }
         try {
-            userRepo.changeRole(current_user, current_user.getRoles());
-            logger.debug("upsertRole() updated user, who now has " + current_user.getRoles().size() + " roles.");
+            userService.changeRole(current_user, current_user.getRoles());
+            logger.debug("upsertRole() updated user, who now has {} roles.", current_user.getRoles().size());
         } catch (Exception ex) {
-            logger.error("upsertRole() Could not add roles to user, because " + ex.getMessage());
+            logger.error("upsertRole() Could not add roles to user, because {}", ex.getMessage());
         }
         HashMap<String, Object> claims = new HashMap<String, Object>();
         claims.put("name", fence_user_profile.get("name"));
@@ -254,13 +249,11 @@ public class FENCEAuthenticationService {
         new_user.setConnection(fenceConnection);
         logger.debug("createUserFromFENCEProfile() finished setting fields");
 
-        User actual_user = userRepo.findOrCreate(new_user);
-
         // Clear current set of roles every time we create or retrieve a user
-        actual_user.setRoles(new HashSet<>());
+        new_user.setRoles(new HashSet<>());
         logger.debug("createUserFromFENCEProfile() cleared roles");
 
-        userRepo.persist(actual_user);
+        User actual_user = userRepo.save(new_user);
         logger.debug("createUserFromFENCEProfile() finished, user record inserted");
         return actual_user;
     }
@@ -275,7 +268,7 @@ public class FENCEAuthenticationService {
      */
     private boolean upsertRole(User u, String roleName, String roleDescription) {
         boolean status = false;
-        logger.debug("upsertRole() starting for user subject:" + u.getSubject());
+        logger.debug("upsertRole() starting for user subject:{}", u.getSubject());
 
         // Get the User's list of Roles. The first time, this will be an empty Set.
         // This method is called for every Role, and the User's list of Roles will
@@ -283,7 +276,7 @@ public class FENCEAuthenticationService {
         try {
             Role r = null;
             // Create the Role in the repository, if it does not exist. Otherwise, add it.
-            Role existing_role = roleRepo.getUniqueResultByColumn("name", roleName);
+            Role existing_role = roleRepo.findByName(roleName);
             if (existing_role != null) {
                 // Role already exists
                 logger.info("upsertRole() role already exists");
@@ -296,13 +289,13 @@ public class FENCEAuthenticationService {
                 // Since this is a new Role, we need to ensure that the
                 // corresponding Privilege (with gates) and AccessRule is added.
                 //r.setPrivileges(upsertPrivilege(u, r));
-                roleRepo.persist(r);
+                roleRepo.save(r);
                 logger.info("upsertRole() created new role");
             }
             u.getRoles().add(r);
             status = true;
         } catch (Exception ex) {
-            logger.error("upsertRole() Could not inser/update role " + roleName + " to repo, because " + ex.getMessage());
+            logger.error("upsertRole() Could not inser/update role {} to repo, because {}", roleName, ex.getMessage());
         }
 
 
@@ -312,31 +305,30 @@ public class FENCEAuthenticationService {
 
     private Set<Privilege> upsertPrivilege(User u, Role r) {
         String roleName = r.getName();
-        logger.info("upsertPrivilege() starting, adding privilege to role " + roleName);
+        logger.info("upsertPrivilege() starting, adding privilege to role {}", roleName);
 
         String[] parts = roleName.split("_");
         String project_name = parts[1];
         String consent_group = parts[2];
-        // TODO: How to alert when the mapping is not in the list.
         String concept_path = fenceMapping.get(project_name);
 
         // Get privilege and assign it to this role.
         String privilegeName = r.getName().replaceFirst("FENCE_*", "PRIV_FENCE_");
-        logger.info("upsertPrivilege() Looking for privilege, with name : " + privilegeName);
+        logger.info("upsertPrivilege() Looking for privilege, with name : {}", privilegeName);
 
         Set<Privilege> privs = r.getPrivileges();
         if (privs == null) {
             privs = new HashSet<Privilege>();
         }
 
-        Privilege p = privilegeRepo.getUniqueResultByColumn("name", privilegeName);
+        Privilege p = privilegeRepo.findByName(privilegeName);
         if (p != null) {
-            logger.info("upsertPrivilege() Assigning privilege " + p.getName() + " to role " + r.getName());
+            logger.info("upsertPrivilege() Assigning privilege {} to role {}", p.getName(), r.getName());
             privs.add(p);
 
         } else {
             logger.info("upsertPrivilege() This is a new privilege");
-            logger.info("upsertPrivilege() project:" + project_name + " consent_group:" + consent_group + " concept_path:" + concept_path);
+            logger.info("upsertPrivilege() project:{} consent_group:{} concept_path:{}", project_name, consent_group, concept_path);
 
             // Add new privilege PRIV_FENCE_phs######_c# and PRIV_FENCE_phs######_c#_HARMONIZED
             privs.add(createNewPrivilege(project_name, consent_group, concept_path, false));
@@ -357,7 +349,6 @@ public class FENCEAuthenticationService {
             priv.setQueryScope(queryScopeConceptPath);
 
             String consent_concept_path = fence_consent_group_concept_path;
-            // TOOD: Change this to a mustache template
             String queryTemplateText = "{\"categoryFilters\": {\""
                     + consent_concept_path
                     + "\":\""
@@ -371,22 +362,20 @@ public class FENCEAuthenticationService {
             priv.setQueryScope(queryScopeConceptPath);
 
             AccessRule ar = upsertAccessRule(project_name, consent_group);
-            if (ar != null) {
-                Set<AccessRule> accessrules = new HashSet<AccessRule>();
-                accessrules.add(ar);
-                // Add additionanl access rules
-                for (String arName : fence_standard_access_rules.split(",")) {
-                    if (arName.startsWith("AR_")) {
-                        logger.info("Adding AccessRule " + arName + " to privilege " + priv.getName());
-                        accessrules.add(accessruleRepo.getUniqueResultByColumn("name", arName));
-                    }
+            Set<AccessRule> accessRules = new HashSet<AccessRule>();
+            accessRules.add(ar);
+            // Add additionanl access rules
+            for (String arName : fence_standard_access_rules.split(",")) {
+                if (arName.startsWith("AR_")) {
+                    logger.info("Adding AccessRule {} to privilege {}", arName, priv.getName());
+                    accessRules.add(accessRuleRepo.findByName(arName));
                 }
-                priv.setAccessRules(accessrules);
-                logger.info("createNewPrivilege() Added " + accessrules.size() + " access_rules to privilege");
             }
+            priv.setAccessRules(accessRules);
+            logger.info("createNewPrivilege() Added {} access_rules to privilege", accessRules.size());
 
-            privilegeRepo.persist(priv);
-            logger.info("createNewPrivilege() Added new privilege " + priv.getName() + " to DB");
+            privilegeRepo.save(priv);
+            logger.info("createNewPrivilege() Added new privilege {} to DB", priv.getName());
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error("createNewPrivilege() could not save privilege");
@@ -397,21 +386,20 @@ public class FENCEAuthenticationService {
     private AccessRule upsertAccessRule(String project_name, String consent_group) {
         logger.debug("upsertAccessRule() starting");
         String ar_name = "AR_" + project_name + "_" + consent_group;
-        AccessRule ar = accessruleRepo.getUniqueResultByColumn("name", ar_name);
+        AccessRule ar = accessRuleRepo.findByName(ar_name);
         if (ar != null) {
-            logger.info("upsertAccessRule() AccessRule " + ar_name + " already exists.");
+            logger.info("upsertAccessRule() AccessRule {} already exists.", ar_name);
             return ar;
         }
 
-        logger.info("upsertAccessRule() Creating new access rule " + ar_name);
+        logger.info("upsertAccessRule() Creating new access rule {}", ar_name);
         ar = new AccessRule();
         ar.setName(ar_name);
         ar.setDescription("FENCE AR for " + project_name + "/" + consent_group);
-        StringBuilder ruleText = new StringBuilder();
-        ruleText.append("$..categoryFilters.['");
-        ruleText.append(fence_consent_group_concept_path);
-        ruleText.append("']");
-        ar.setRule(ruleText.toString());
+        String ruleText = "$..categoryFilters.['" +
+                fence_consent_group_concept_path +
+                "']";
+        ar.setRule(ruleText);
         ar.setType(AccessRule.TypeNaming.ALL_EQUALS);
         ar.setValue(project_name + "." + consent_group);
         ar.setCheckMapKeyOnly(false);
@@ -423,16 +411,13 @@ public class FENCEAuthenticationService {
         Set<AccessRule> gates = new HashSet<AccessRule>();
         for (String accessruleName : fence_standard_access_rules.split("\\,")) {
             if (accessruleName.startsWith("GATE_")) {
-                logger.info("upsertAccessRule() Assign gate " + accessruleName +
-                        " to access_rule " + ar.getName());
-                gates.add(accessruleRepo.getUniqueResultByColumn("name", accessruleName));
-            } else {
-                continue;
+                logger.info("upsertAccessRule() Assign gate {} to access_rule {}", accessruleName, ar.getName());
+                gates.add(accessRuleRepo.findByName(accessruleName));
             }
         }
         ar.setGates(gates);
 
-        accessruleRepo.persist(ar);
+        accessRuleRepo.save(ar);
 
         logger.debug("upsertAccessRule() finished");
         return ar;
@@ -449,7 +434,7 @@ public class FENCEAuthenticationService {
                             new String[]{this.templatePath, "fence_mapping.json"}))
                     , Map.class);
         } catch (IOException e) {
-            logger.error("fence_mapping.json not found at " + this.templatePath);
+            logger.error("fence_mapping.json not found at {}", this.templatePath);
         }
         return Map.of();
     }

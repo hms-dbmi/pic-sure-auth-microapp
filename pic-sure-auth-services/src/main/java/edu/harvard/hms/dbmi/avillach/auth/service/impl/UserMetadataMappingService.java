@@ -11,12 +11,14 @@ import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 /**
  * <p>Provides business logic for UserMetadataMapping endpoint.</p>
  */
 @Service
-public class UserMetadataMappingService extends BaseEntityService<UserMetadataMapping> {
+public class UserMetadataMappingService {
 
     private final UserMetadataMappingRepository userMetadataMappingRepo;
 
@@ -24,7 +26,6 @@ public class UserMetadataMappingService extends BaseEntityService<UserMetadataMa
 
     @Autowired
     public UserMetadataMappingService(UserMetadataMappingRepository userMetadataMappingRepo, ConnectionRepository connectionRepo) {
-        super(UserMetadataMapping.class);
         this.userMetadataMappingRepo = userMetadataMappingRepo;
         this.connectionRepo = connectionRepo;
     }
@@ -34,38 +35,41 @@ public class UserMetadataMappingService extends BaseEntityService<UserMetadataMa
     }
 
     @Transactional
-    public ResponseEntity<?> addMappings(List<UserMetadataMapping> mappings) {
-        String errorMessage = "The following connectionIds do not exist:\n";
+    public List<UserMetadataMapping> addMappings(List<UserMetadataMapping> mappings) {
+        StringBuilder errorMessage = new StringBuilder("The following connectionIds do not exist:\n");
         boolean error = false;
         for (UserMetadataMapping umm : mappings) {
-            Connection c = connectionRepo.findConnectionById(umm.getConnection().getId());
-            if (c == null) {
+            Optional<Connection> c = connectionRepo.findById(UUID.fromString(umm.getConnection().getId()));
+            if (c.isEmpty()) {
                 error = true;
-                errorMessage += umm.getConnection().getId() + "\n";
+                errorMessage.append(umm.getConnection().getId()).append("\n");
             } else {
-                umm.setConnection(c);
+                umm.setConnection(c.get());
             }
         }
+
         if (error) {
-            return PICSUREResponse.success(errorMessage);
+            throw new IllegalArgumentException(errorMessage.toString());
         }
-        return addEntity(mappings, userMetadataMappingRepo);
+
+        return this.userMetadataMappingRepo.saveAll(mappings);
     }
 
     public List<UserMetadataMapping> getAllMappings() {
-        return userMetadataMappingRepo.list();
+        return userMetadataMappingRepo.findAll();
     }
 
-    public ResponseEntity<?> getAllMappingsForConnection(String connection) {
-        return PICSUREResponse.success(getAllMappingsForConnection(connectionRepo.getUniqueResultByColumn("id", connection)));
+    public ResponseEntity<?> getAllMappingsForConnection(String connectionId) {
+        Connection connection = this.connectionRepo.findById(UUID.fromString(connectionId)).orElseThrow(() -> new IllegalArgumentException("Connection not found"));
+        return PICSUREResponse.success(getAllMappingsForConnection(connection));
     }
 
-    public ResponseEntity<?> updateEntity(List<UserMetadataMapping> mappings) {
-        return this.updateEntity(mappings, userMetadataMappingRepo);
+    public List<UserMetadataMapping> updateUserMetadataMappings(List<UserMetadataMapping> mappings) {
+        return this.userMetadataMappingRepo.saveAll(mappings);
     }
 
-    @Transactional
-    public ResponseEntity<?> removeEntityById(String mappingId) {
-        return this.removeEntityById(mappingId, userMetadataMappingRepo);
+    public List<UserMetadataMapping> removeMetadataMappingByIdAndRetrieveAll(String mappingId) {
+        this.userMetadataMappingRepo.deleteById(UUID.fromString(mappingId));
+        return this.userMetadataMappingRepo.findAll();
     }
 }

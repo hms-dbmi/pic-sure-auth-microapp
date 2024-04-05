@@ -1,6 +1,7 @@
 package edu.harvard.hms.dbmi.avillach.auth.rest;
 
 import edu.harvard.hms.dbmi.avillach.auth.entity.Application;
+import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.ApplicationService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -11,8 +12,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
-import javax.transaction.Transactional;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import static edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming.AuthRoleNaming.SUPER_ADMIN;
 
@@ -38,13 +40,19 @@ public class ApplicationController {
     public ResponseEntity<?> getApplicationById(
             @ApiParam(required = true, value = "The UUID of the application to fetch information about")
             @PathVariable("applicationId") String applicationId) {
-        return applicationService.getEntityById(applicationId);
+        Optional<Application> entityById = applicationService.getApplicationByID(applicationId);
+
+        if (entityById.isEmpty()) {
+            return PICSUREResponse.protocolError("Application is not found by given Application ID: " + applicationId);
+        }
+
+        return PICSUREResponse.success(entityById.get());
     }
 
     @ApiOperation(value = "GET a list of existing Applications, no role restrictions")
     @GetMapping
     public ResponseEntity<?> getApplicationAll() {
-        return applicationService.getEntityAll();
+        return PICSUREResponse.success(applicationService.getAllApplications());
     }
 
     @ApiOperation(value = "POST a list of Applications, requires SUPER_ADMIN role")
@@ -53,7 +61,8 @@ public class ApplicationController {
     public ResponseEntity<?> addApplication(
             @ApiParam(required = true, value = "A list of AccessRule in JSON format")
             List<Application> applications) {
-        return applicationService.addNewApplications(applications);
+        applications = applicationService.addNewApplications(applications);
+        return PICSUREResponse.success(applications);
     }
 
     @ApiOperation(value = "Update a list of Applications, will only update the fields listed, requires SUPER_ADMIN role")
@@ -62,7 +71,8 @@ public class ApplicationController {
     public ResponseEntity<?> updateApplication(
             @ApiParam(required = true, value = "A list of AccessRule with fields to be updated in JSON format")
             List<Application> applications) {
-        return applicationService.updateApplications(applications);
+        applications = applicationService.updateApplications(applications);
+        return PICSUREResponse.success(applications);
     }
 
     @ApiOperation(value = "Refresh a token of an application by application Id, requires SUPER_ADMIN role")
@@ -71,7 +81,8 @@ public class ApplicationController {
     public ResponseEntity<?> refreshApplicationToken(
             @ApiParam(required = true, value = "A valid application Id")
             @PathVariable("applicationId") String applicationId) {
-        return applicationService.refreshApplicationToken(applicationId);
+        String newApplicationToken = applicationService.refreshApplicationToken(applicationId);
+        return PICSUREResponse.success(Map.of("token", newApplicationToken));
     }
 
     @ApiOperation(value = "DELETE an Application by Id only if the application is not associated by others, requires SUPER_ADMIN role")
@@ -80,7 +91,12 @@ public class ApplicationController {
     public ResponseEntity<?> removeById(
             @ApiParam(required = true, value = "A valid accessRule Id")
             @PathVariable("applicationId") final String applicationId) {
-        return applicationService.deleteApplicationById(applicationId);
+        try {
+            List<Application> applications = applicationService.deleteApplicationById(applicationId);
+            return PICSUREResponse.success(applications);
+        } catch (IllegalArgumentException e) {
+            return PICSUREResponse.protocolError(e.getMessage());
+        }
     }
 
 }

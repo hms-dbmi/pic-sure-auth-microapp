@@ -10,16 +10,17 @@ import java.util.Set;
  */
 public class AccessEmail {
 
-    private String systemName = JAXRSConfiguration.systemName;
+    private String systemName = null;
     private String documentation = null;
 
     private String username;
     private Set<Role> roles;
     private boolean rolesExists;
 
-    public AccessEmail(User u) {
+    public AccessEmail(User u, String systemName) {
         this.username = u.getName();
         this.roles = u.getRoles();
+        this.systemName = systemName;
     }
 
     public String getUsername() {

@@ -19,7 +19,7 @@ import javax.transaction.Transactional;
 import java.util.*;
 
 @Service
-public class ApplicationService extends BaseEntityService<Application> {
+public class ApplicationService {
 
     private final static Logger logger = LoggerFactory.getLogger(ApplicationService.class);
     private final ApplicationRepository applicationRepo;
@@ -30,7 +30,6 @@ public class ApplicationService extends BaseEntityService<Application> {
 
     @Autowired
     protected ApplicationService(ApplicationRepository applicationRepo, PrivilegeRepository privilegeRepo) {
-        super(Application.class);
         this.applicationRepo = applicationRepo;
         this.privilegeRepo = privilegeRepo;
     }
@@ -41,18 +40,18 @@ public class ApplicationService extends BaseEntityService<Application> {
      * @param applicationId the ID of the entity to retrieve
      * @return a ResponseEntity representing the result of the operation
      */
-    public ResponseEntity<?> getEntityById(String applicationId) {
-        return getEntityById(applicationId, applicationRepo);
+    public Optional<Application> getApplicationByID(String applicationId) {
+        return this.applicationRepo.findById(UUID.fromString(applicationId));
     }
 
-    public ResponseEntity<?> getEntityAll() {
-        return getEntityAll(applicationRepo);
+    public List<Application> getAllApplications() {
+        return this.applicationRepo.findAll();
     }
 
     @Transactional
-    public ResponseEntity<?> addNewApplications(List<Application> applications) {
+    public List<Application> addNewApplications(List<Application> applications) {
         checkAssociation(applications);
-        List<Application> appEntities = addOrUpdate(applications, true, applicationRepo);
+        List<Application> appEntities = this.applicationRepo.saveAll(applications);
         for (Application application : appEntities) {
             try {
                 application.setToken(
@@ -63,57 +62,61 @@ public class ApplicationService extends BaseEntityService<Application> {
             }
         }
 
-        return updateEntity(appEntities, applicationRepo);
+        return this.applicationRepo.saveAll(appEntities);
     }
 
     @Transactional
-    public ResponseEntity<?> deleteApplicationById(String applicationId) {
-        Application application = applicationRepo.getById(UUID.fromString(applicationId));
-        if (application == null) {
-            logger.error("deleteApplicationById() cannot find the application by applicationId: " + applicationId);
+    public List<Application> deleteApplicationById(String applicationId) {
+        Optional<Application> application = applicationRepo.findById(UUID.fromString(applicationId));
+
+        if (application.isEmpty()) {
+            logger.error("deleteApplicationById() cannot find the application by applicationId: {}", applicationId);
             throw new IllegalArgumentException("Cannot find application by the given applicationId: " + applicationId);
         }
 
-        return removeEntityById(applicationId, applicationRepo);
+        this.applicationRepo.delete(application.get());
+        return this.applicationRepo.findAll();
     }
 
-    public ResponseEntity<?> updateApplications(List<Application> applications) {
+    public List<Application> updateApplications(List<Application> applications) {
         checkAssociation(applications);
-        return updateEntity(applications, applicationRepo);
+        return this.applicationRepo.saveAll(applications);
     }
 
-    public ResponseEntity<?> refreshApplicationToken(String applicationId) {
-        Application application = applicationRepo.getById(UUID.fromString(applicationId));
-        if (application == null) {
-            logger.error("refreshApplicationToken() cannot find the application by applicationId: " + applicationId);
+    public String refreshApplicationToken(String applicationId) {
+        Optional<Application> application = applicationRepo.findById(UUID.fromString(applicationId));
+
+        if (application.isEmpty()) {
+            logger.error("refreshApplicationToken() cannot find the application by applicationId: {}", applicationId);
             throw new IllegalArgumentException("Cannot find application by the given applicationId: " + applicationId);
         }
 
-        String newApplicationToken = generateApplicationToken(application);
+        String newApplicationToken = generateApplicationToken(application.orElse(null));
         try {
-            application.setToken(
+            application.get().setToken(
                     newApplicationToken
             );
 
-            applicationRepo.merge(application);
+            this.applicationRepo.save(application.get());
         } catch (Exception e) {
             logger.error("", e);
         }
 
-        return PICSUREResponse.success(Map.of("token", newApplicationToken));
+        return newApplicationToken;
     }
 
-    private void checkAssociation(List<Application> applications) { //TODO: We need to refactor this into a service class
+    private void checkAssociation(List<Application> applications) {
         for (Application application : applications) {
             if (application.getPrivileges() != null) {
                 Set<Privilege> privileges = new HashSet<>();
                 application.getPrivileges().forEach(p -> {
-                    Privilege privilege = privilegeRepo.getById(p.getUuid());
-                    if (privilege != null) {
+                    Optional<Privilege> optionalPrivilege = privilegeRepo.findById(p.getUuid());
+                    if (optionalPrivilege.isPresent()) {
+                        Privilege privilege = optionalPrivilege.get();
                         privilege.setApplication(application);
                         privileges.add(privilege);
                     } else {
-                        logger.error("Didn't find privilege by uuid: " + p.getUuid());
+                        logger.error("Didn't find privilege by uuid: {}", p.getUuid());
                     }
                 });
                 application.setPrivileges(privileges);
@@ -122,10 +125,10 @@ public class ApplicationService extends BaseEntityService<Application> {
         }
     }
 
-    public String generateApplicationToken(Application application) { // TODO: Refactor this into a new service class
+    public String generateApplicationToken(Application application) {
         if (application == null || application.getUuid() == null) {
             logger.error("generateApplicationToken() application is null or uuid is missing to generate the application token");
-            throw new PropertyNotFoundException("Cannot generate application token, please contact admin");
+            throw new NullPointerException("Cannot generate application token, please contact admin");
         }
 
         return JWTUtil.createJwtToken(

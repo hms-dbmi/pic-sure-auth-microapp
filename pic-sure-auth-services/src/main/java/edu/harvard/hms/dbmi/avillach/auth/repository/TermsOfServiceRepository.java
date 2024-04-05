@@ -1,12 +1,9 @@
 package edu.harvard.hms.dbmi.avillach.auth.repository;
 
-import edu.harvard.dbmi.avillach.data.repository.BaseRepository;
 import edu.harvard.hms.dbmi.avillach.auth.entity.TermsOfService;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Root;
 import java.util.UUID;
 
 /**
@@ -14,20 +11,12 @@ import java.util.UUID;
  * @see TermsOfService
  */
 @Repository
-public class TermsOfServiceRepository extends BaseRepository<TermsOfService, UUID> {
+public interface TermsOfServiceRepository extends JpaRepository<TermsOfService, UUID> {
 
-    protected TermsOfServiceRepository() {
-        super(TermsOfService.class);
-    }
+    /**
+     * <p>Find the latest TermsOfService by date updated.</p>
+     * @return TermsOfService
+     */
+    TermsOfService findTopByOrderByDateUpdatedDesc();
 
-    public TermsOfService getLatest(){
-        CriteriaQuery<TermsOfService> query = cb().createQuery(TermsOfService.class);
-        Root<TermsOfService> queryRoot = query.from(TermsOfService.class);
-        query.select(queryRoot);
-        CriteriaBuilder cb = cb();
-        return em.createQuery(query
-                .orderBy(cb.desc(queryRoot.get("dateUpdated"))))
-                .setMaxResults(1)
-                .getSingleResult();
-    }
 }

@@ -80,7 +80,7 @@ public class BasicMailService implements MailService {
 			if (this.accessGrantEmailSubject != null && !this.accessGrantEmailSubject.isEmpty() && !this.accessGrantEmailSubject.equals("none")){
 				subject = this.accessGrantEmailSubject;
 			}
-			sendEmail(accessTemplate, user.getEmail(),subject, new AccessEmail(user));
+			sendEmail(accessTemplate, user.getEmail(),subject, new AccessEmail(user, this.systemName));
 		}
 	}
 

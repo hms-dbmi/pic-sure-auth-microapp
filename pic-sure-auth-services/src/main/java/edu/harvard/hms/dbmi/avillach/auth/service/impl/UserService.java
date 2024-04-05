@@ -2,18 +2,23 @@ package edu.harvard.hms.dbmi.avillach.auth.service.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import edu.harvard.dbmi.avillach.util.response.PICSUREResponseOKwithMsgAndContent;
-import edu.harvard.hms.dbmi.avillach.auth.entity.*;
+import edu.harvard.hms.dbmi.avillach.auth.entity.Application;
+import edu.harvard.hms.dbmi.avillach.auth.entity.Connection;
+import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
+import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
+import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.repository.ApplicationRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.ConnectionRepository;
-import edu.harvard.hms.dbmi.avillach.auth.repository.RoleRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.UserRepository;
+import edu.harvard.hms.dbmi.avillach.auth.service.RoleService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming;
 import edu.harvard.hms.dbmi.avillach.auth.utils.JWTUtil;
 import edu.harvard.hms.dbmi.avillach.auth.utils.JsonUtils;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
+import jakarta.mail.MessagingException;
+import jakarta.validation.constraints.NotNull;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,16 +30,15 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import javax.mail.MessagingException;
-import javax.transaction.Transactional;
-import javax.validation.constraints.NotNull;
+import jakarta.transaction.Transactional;
+
 import java.io.IOException;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.*;
 
 @Service
-public class UserService extends BaseEntityService<User> {
+public class UserService {
 
     private final Logger logger = LoggerFactory.getLogger(UserService.class.getName());
 
@@ -43,7 +47,7 @@ public class UserService extends BaseEntityService<User> {
     private final UserRepository userRepository;
     private final ConnectionRepository connectionRepository;
     private final ApplicationRepository applicationRepository;
-    private final RoleRepository roleRepository;
+    private final RoleService roleService;
     private final String clientSecret;
     private final long tokenExpirationTime;
     private static final long defaultTokenExpirationTime = 1000L * 60 * 60; // 1 hour
@@ -54,15 +58,14 @@ public class UserService extends BaseEntityService<User> {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Autowired
-    public UserService(BasicMailService basicMailService, TOSService tosService, UserRepository userRepository, ConnectionRepository connectionRepository, RoleRepository roleRepository, ApplicationRepository applicationRepository,
+    public UserService(BasicMailService basicMailService, TOSService tosService, UserRepository userRepository, ConnectionRepository connectionRepository, ApplicationRepository applicationRepository, RoleService roleService,
                        @Value("${application.client.secret}") String clientSecret, @Value("${application.token.expiration.time}") long tokenExpirationTime,
                        @Value("${application.default.}") String applicationUUID, @Value("${application.long.term.token.expiration.time}") long longTermTokenExpirationTime) {
-        super(User.class);
         this.basicMailService = basicMailService;
         this.tosService = tosService;
         this.userRepository = userRepository;
         this.connectionRepository = connectionRepository;
-        this.roleRepository = roleRepository;
+        this.roleService = roleService;
         this.clientSecret = clientSecret;
         this.tokenExpirationTime = tokenExpirationTime > 0 ? tokenExpirationTime : defaultTokenExpirationTime;
         this.applicationRepository = applicationRepository;
@@ -112,17 +115,22 @@ public class UserService extends BaseEntityService<User> {
         return responseMap;
     }
 
-    public ResponseEntity<?> getEntityById(String userId) {
-        return getEntityById(userId, this.userRepository);
+    public User getUserById(String userId) {
+        Optional<User> user = this.userRepository.findById(UUID.fromString(userId));
+        if (user.isEmpty()) {
+            logger.error("getUserById() cannot find user by UUID: {}", userId);
+            throw new IllegalArgumentException("Cannot find user by input UUID: " + userId);
+        }
+
+        return user.get();
     }
 
-    public ResponseEntity<?> getEntityAll() {
-        return getEntityAll(this.userRepository);
+    public List<User> getAllUsers() {
+        return this.userRepository.findAll();
     }
 
-    public ResponseEntity<?> addEntity(List<User> users) {
-        return addEntity(users, this.userRepository);
-
+    public List<User> addUser(List<User> users) {
+        return this.userRepository.saveAll(users);
     }
 
     /**
@@ -137,7 +145,7 @@ public class UserService extends BaseEntityService<User> {
      * if the state is changed, check if the user is a super admin to determine if the user could perform the action.
      *
      * @param currentUser  the user trying to perform the action
-     * @param inputUser   the user that is going to be updated
+     * @param inputUser    the user that is going to be updated
      * @param originalUser there could be no original user when adding a new user
      * @return true if the user could perform the action, false otherwise
      */
@@ -216,7 +224,7 @@ public class UserService extends BaseEntityService<User> {
             }
         }
 
-        ResponseEntity<?> updateResponse = addEntity(users);
+        ResponseEntity<?> updateResponse = PICSUREResponse.success(addUser(users));
         sendUserUpdateEmailsFromResponse(updateResponse);
         return updateResponse;
     }
@@ -232,18 +240,18 @@ public class UserService extends BaseEntityService<User> {
         for (User user : users) {
             if (user.getRoles() != null) {
                 Set<Role> roles = new HashSet<>();
-                user.getRoles().forEach(t -> this.roleRepository.addObjectToSet(roles, this.roleRepository, t)); // TODO: We need to fix the exception that is thrown here
+                user.getRoles().forEach(t -> this.roleService.addObjectToSet(roles, t)); // TODO: We need to fix the exception that is thrown here
                 user.setRoles(roles);
             }
 
             if (user.getConnection() != null) {
-                Connection connection = this.connectionRepository.getUniqueResultByColumn("id", user.getConnection().getId());
-                user.setConnection(connection);
+                Optional<Connection> connection = this.connectionRepository.findById(UUID.fromString(user.getConnection().getId()));
+                user.setConnection(connection.orElse(null));
             }
         }
     }
 
-    @Transactional // TODO: Can this be moved further down the call hierarchy to improve performance?
+    @Transactional
     public ResponseEntity<?> updateUser(List<User> users) {
         SecurityContext securityContext = SecurityContextHolder.getContext();
         User currentUser = (User) securityContext.getAuthentication().getPrincipal();
@@ -256,20 +264,20 @@ public class UserService extends BaseEntityService<User> {
         boolean allowUpdate = true;
         for (User user : users) {
 
-            User originalUser = this.userRepository.getById(user.getUuid());
-            if (!allowUpdateSuperAdminRole(currentUser, user, originalUser)) {
+            Optional<User> originalUser = this.userRepository.findById(user.getUuid());
+            if (!allowUpdateSuperAdminRole(currentUser, user, originalUser.orElse(null))) {
                 allowUpdate = false;
                 break;
             }
         }
 
         if (allowUpdate) {
-            ResponseEntity<?> updateResponse = updateEntity(users, this.userRepository);
+            users = this.userRepository.saveAll(users);
+            ResponseEntity<?> updateResponse = PICSUREResponse.success(users);
             sendUserUpdateEmailsFromResponse(updateResponse);
             return updateResponse;
         } else {
-            logger.error("updateUser() user - " + currentUser.getUuid() + " - with roles [" + currentUser.getRoleString() + "] - is not allowed to grant or remove "
-                    + AuthNaming.AuthRoleNaming.SUPER_ADMIN + " privilege.");
+            logger.error("updateUser() user - {} - with roles [{}] - is not allowed to grant or remove " + AuthNaming.AuthRoleNaming.SUPER_ADMIN + " privilege.", currentUser.getUuid(), currentUser.getRoleString());
             throw new IllegalArgumentException("Not allowed to update a user with changes associated to " + AuthNaming.AuthRoleNaming.SUPER_ADMIN + " privilege.");
         }
     }
@@ -278,15 +286,14 @@ public class UserService extends BaseEntityService<User> {
         logger.debug("Sending email");
         try {
             Object entity = updateResponse.getBody(); // TODO: Determine how to replicate this given the new approach
-            if (entity != null && entity instanceof PICSUREResponseOKwithMsgAndContent) {
-                PICSUREResponseOKwithMsgAndContent okResponse = (PICSUREResponseOKwithMsgAndContent) entity;
+            if (entity instanceof PICSUREResponseOKwithMsgAndContent okResponse) {
                 List<User> addedUsers = (List<User>) okResponse.getContent();
                 String message = okResponse.getMessage();
                 for (User user : addedUsers) {
                     try {
                         basicMailService.sendUsersAccessEmail(user);
                     } catch (MessagingException e) {
-                        logger.error("Failed to send email! " + e.getLocalizedMessage());
+                        logger.error("Failed to send email! {}", e.getLocalizedMessage());
                         logger.debug("Exception Trace: ", e);
                         okResponse.setMessage(message + "  WARN - could not send email to user " + user.getEmail() + " see logs for more info");
                     }
@@ -298,6 +305,7 @@ public class UserService extends BaseEntityService<User> {
         logger.debug("finished email sending method");
     }
 
+    @Transactional
     public ResponseEntity<?> getCurrentUser(String authorizationHeader, Boolean hasToken) {
         SecurityContext securityContext = SecurityContextHolder.getContext();
         User user = (User) securityContext.getAuthentication().getPrincipal();
@@ -327,10 +335,10 @@ public class UserService extends BaseEntityService<User> {
             privileges.stream().filter(privilege -> privilege.getQueryScope() != null).forEach(privilege -> {
                 try {
                     Arrays.stream(objectMapper.readValue(privilege.getQueryScope(), String[].class))
-                            .filter(x -> x != null)
-                            .forEach(scopeList -> scopes.addAll(Arrays.asList(scopeList)));
+                            .filter(Objects::nonNull)
+                            .forEach(scopes::add);
                 } catch (IOException e) {
-                    logger.error("Parsing issue for privilege " + privilege.getUuid() + " queryScope", e);
+                    logger.error("Parsing issue for privilege {} queryScope", privilege.getUuid(), e);
                 }
             });
             userForDisplay.setQueryScopes(scopes);
@@ -342,7 +350,7 @@ public class UserService extends BaseEntityService<User> {
                 userForDisplay.setToken(user.getToken());
             } else {
                 user.setToken(generateUserLongTermToken(authorizationHeader));
-                this.userRepository.merge(user);
+                this.userRepository.save(user);
                 userForDisplay.setToken(user.getToken());
             }
         }
@@ -350,38 +358,44 @@ public class UserService extends BaseEntityService<User> {
         return PICSUREResponse.success(userForDisplay);
     }
 
-    public ResponseEntity<?> getQueryTemplate(String applicationId) {
+    @Transactional
+    public Optional<String> getQueryTemplate(String applicationId) {
         if (applicationId == null || applicationId.trim().isEmpty()) {
             logger.error("getQueryTemplate() input application UUID is null or empty.");
             throw new IllegalArgumentException("Input application UUID is incorrect.");
         }
 
         SecurityContext securityContext = SecurityContextHolder.getContext();
-        User user = (User) securityContext.getAuthentication().getPrincipal();
-        if (user == null || user.getUuid() == null) {
+        Optional<User> user = Optional.ofNullable((User) securityContext.getAuthentication().getPrincipal());
+        if (user.isEmpty() || user.get().getUuid() == null) {
             logger.error("Security context didn't have a user stored.");
-            return PICSUREResponse.applicationError("Inner application error, please contact admin.");
+            return Optional.empty();
         }
 
-        user = this.userRepository.getById(user.getUuid());
-        if (user == null) {
+        user = this.userRepository.findById(user.get().getUuid());
+        if (user.isEmpty()) {
             logger.error("When retrieving current user, it returned null");
-            return PICSUREResponse.applicationError("Inner application error, please contact admin.");
+            return Optional.empty();
         }
 
-        Application application = this.applicationRepository.getById(UUID.fromString(applicationId));
-
-        if (application == null) {
-            logger.error("getQueryTemplate() cannot find corresponding application by UUID: " + applicationId);
+        Optional<Application> application = this.applicationRepository.findById(UUID.fromString(applicationId));
+        if (application.isEmpty()) {
+            logger.error("getQueryTemplate() cannot find corresponding application by UUID: {}", applicationId);
             throw new IllegalArgumentException("Cannot find application by input UUID: " + applicationId);
         }
 
-        return PICSUREResponse.success(
-                Map.of("queryTemplate", mergeTemplate(user, application)));
+        return Optional.ofNullable(mergeTemplate(user.orElse(null), application.orElse(null)));
     }
 
     public ResponseEntity<?> getDefaultQueryTemplate() {
-        return getQueryTemplate(this.applicationUUID);
+        Optional<String> mergedTemplate = getQueryTemplate(this.applicationUUID);
+
+        if (mergedTemplate.isEmpty()) {
+            logger.error("getDefaultQueryTemplate() cannot find corresponding application by UUID: {}", this.applicationUUID);
+            return PICSUREResponse.applicationError("Inner application error, please contact admin.");
+        }
+
+        return PICSUREResponse.success(Map.of("queryTemplate", mergedTemplate.orElse(null)));
     }
 
     private String mergeTemplate(User user, Application application) {
@@ -397,7 +411,7 @@ public class UserService extends BaseEntityService<User> {
             try {
                 templateMap = objectMapper.readValue(template, Map.class);
             } catch (IOException ex) {
-                logger.error("mergeTemplate() cannot convert stored queryTemplate using Jackson, the queryTemplate is: " + template);
+                logger.error("mergeTemplate() cannot convert stored queryTemplate using Jackson, the queryTemplate is: {}", template);
                 throw new IllegalArgumentException("Inner application error, please contact admin.");
             }
 
@@ -416,7 +430,7 @@ public class UserService extends BaseEntityService<User> {
         try {
             resultJSON = objectMapper.writeValueAsString(mergedTemplateMap);
         } catch (JsonProcessingException ex) {
-            logger.error("mergeTemplate() cannot convert map to json string. The map mergedTemplate is: " + mergedTemplateMap);
+            logger.error("mergeTemplate() cannot convert map to json string. The map mergedTemplate is: {}", mergedTemplateMap);
             throw new IllegalArgumentException("Inner application error, please contact admin.");
         }
 
@@ -427,23 +441,23 @@ public class UserService extends BaseEntityService<User> {
     @Transactional
     public ResponseEntity<?> refreshUserToken(HttpHeaders httpHeaders) {
         SecurityContext securityContext = SecurityContextHolder.getContext();
-        User user = (User) securityContext.getAuthentication().getPrincipal();
-        if (user == null || user.getUuid() == null) {
+        Optional<User> user = Optional.ofNullable((User) securityContext.getAuthentication().getPrincipal());
+        if (user.isEmpty() || user.get().getUuid() == null) {
             logger.error("Security context didn't have a user stored.");
             return PICSUREResponse.applicationError("Inner application error, please contact admin.");
         }
 
-        user = this.userRepository.getById(user.getUuid());
-        if (user == null) {
+        user = this.userRepository.findById(user.get().getUuid());
+        if (user.isEmpty()) {
             logger.error("When retrieving current user, it returned null");
             return PICSUREResponse.applicationError("Inner application error, please contact admin.");
         }
 
         String authorizationHeader = httpHeaders.getFirst("Authorization");
         String longTermToken = generateUserLongTermToken(authorizationHeader);
-        user.setToken(longTermToken);
+        user.get().setToken(longTermToken);
 
-        this.userRepository.merge(user);
+        this.userRepository.save(user.get());
 
         return PICSUREResponse.success(Map.of("userLongTermToken", longTermToken));
     }
@@ -485,5 +499,11 @@ public class UserService extends BaseEntityService<User> {
                 claims,
                 AuthNaming.LONG_TERM_TOKEN_PREFIX + "|" + tokenSubject,
                 this.longTermTokenExpirationTime);
+    }
+
+    public void changeRole(User currentUser, Set<Role> roles) {
+        // set the users roles and merge the user
+        currentUser.setRoles(roles);
+        this.userRepository.save(currentUser);
     }
 }

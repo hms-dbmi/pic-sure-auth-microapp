@@ -2,11 +2,10 @@ package edu.harvard.hms.dbmi.avillach.auth.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import edu.harvard.dbmi.avillach.data.entity.BaseEntity;
 import edu.harvard.hms.dbmi.avillach.auth.rest.UserController;
+import jakarta.persistence.*;
 import org.hibernate.annotations.Type;
 
-import javax.persistence.*;
 import java.io.Serializable;
 import java.security.Principal;
 import java.util.Date;
@@ -190,12 +189,12 @@ public class User extends BaseEntity implements Serializable, Principal {
 		if (totalPrivilegeSet == null)
 			return null;
 
-		return totalPrivilegeSet.stream().map(p -> p.getName()).collect(Collectors.joining(","));
+		return totalPrivilegeSet.stream().map(Privilege::getName).collect(Collectors.joining(","));
 	}
 
 	@JsonIgnore
 	public String getRoleString(){
-		return (roles==null)?null:roles.stream().map(r -> r.name)
+		return (roles==null)?null:roles.stream().map(Role::getName)
 				.collect(Collectors.joining(","));
 	}
 

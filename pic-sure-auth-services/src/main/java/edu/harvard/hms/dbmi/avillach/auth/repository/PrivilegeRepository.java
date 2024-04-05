@@ -1,7 +1,7 @@
 package edu.harvard.hms.dbmi.avillach.auth.repository;
 
-import edu.harvard.dbmi.avillach.data.repository.BaseRepository;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.UUID;
@@ -12,9 +12,8 @@ import java.util.UUID;
  */
 
 @Repository
-public class PrivilegeRepository extends BaseRepository<Privilege, UUID> {
+public interface PrivilegeRepository extends JpaRepository<Privilege, UUID> {
 
-    protected PrivilegeRepository() {
-        super(Privilege.class);
-    }
+    Privilege findByName(String name);
+
 }

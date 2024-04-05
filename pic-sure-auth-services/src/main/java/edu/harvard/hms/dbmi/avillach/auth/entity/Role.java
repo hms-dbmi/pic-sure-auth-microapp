@@ -1,9 +1,8 @@
 package edu.harvard.hms.dbmi.avillach.auth.entity;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import edu.harvard.dbmi.avillach.data.entity.BaseEntity;
+import jakarta.persistence.*;
 
-import javax.persistence.*;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -14,15 +13,15 @@ import java.util.stream.Collectors;
 @Entity(name = "role")
 public class Role extends BaseEntity {
 
-    String name;
+    private String name;
 
-    String description;
+    private String description;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "role_privilege",
             joinColumns = {@JoinColumn(name = "role_id")},
             inverseJoinColumns = {@JoinColumn(name = "privilege_id")})
-    Set<Privilege> privileges;
+    private Set<Privilege> privileges;
 
     public String getName() {
         return name;

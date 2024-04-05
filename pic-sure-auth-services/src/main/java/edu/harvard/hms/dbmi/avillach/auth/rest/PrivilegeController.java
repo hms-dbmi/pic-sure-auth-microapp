@@ -1,6 +1,7 @@
 package edu.harvard.hms.dbmi.avillach.auth.rest;
 
 import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
+import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.service.PrivilegeService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -37,14 +38,21 @@ public class PrivilegeController {
     public ResponseEntity<?> getPrivilegeById(
             @ApiParam(value="The UUID of the privilege to fetch information about")
             @PathVariable("privilegeId") String privilegeId) {
-        return this.privilegeService.getEntityById(privilegeId);
+        Privilege privilegeById = this.privilegeService.getPrivilegeById(privilegeId);
+
+        if (privilegeById == null) {
+            return PICSUREResponse.protocolError("Privilege not found");
+        }
+
+        return PICSUREResponse.success(privilegeById);
     }
 
     @ApiOperation(value = "GET a list of existing privileges, requires ADMIN or SUPER_ADMIN role")
     @RolesAllowed({ADMIN, SUPER_ADMIN})
     @GetMapping(path = "/", produces = "application/json")
     public ResponseEntity<?> getPrivilegeAll() {
-        return this.privilegeService.getEntityAll();
+        List<Privilege> privilegesAll = this.privilegeService.getPrivilegesAll();
+        return PICSUREResponse.success(privilegesAll);
     }
 
     @ApiOperation(value = "POST a list of privileges, requires SUPER_ADMIN role")
@@ -53,7 +61,8 @@ public class PrivilegeController {
     public ResponseEntity<?> addPrivilege(
             @ApiParam(required = true, value = "A list of privileges in JSON format")
             List<Privilege> privileges){
-        return this.privilegeService.addEntity(privileges);
+        privileges = this.privilegeService.addPrivileges(privileges);
+        return PICSUREResponse.success(privileges);
     }
 
     @ApiOperation(value = "Update a list of privileges, will only update the fields listed, requires SUPER_ADMIN role")
@@ -62,7 +71,8 @@ public class PrivilegeController {
     public ResponseEntity<?> updatePrivilege(
             @ApiParam(required = true, value = "A list of privilege with fields to be updated in JSON format")
             List<Privilege> privileges){
-        return this.privilegeService.updateEntity(privileges);
+         privileges = this.privilegeService.updatePrivileges(privileges);
+            return ResponseEntity.ok(privileges);
     }
 
     @ApiOperation(value = "DELETE an privilege by Id only if the privilege is not associated by others, requires SUPER_ADMIN role")
@@ -71,7 +81,8 @@ public class PrivilegeController {
     public ResponseEntity<?> removeById(
             @ApiParam(required = true, value = "A valid privilege Id")
             @PathVariable("privilegeId") final String privilegeId) {
-        return this.privilegeService.deletePrivilegeByPrivilegeId(privilegeId);
+        List<Privilege> privileges = this.privilegeService.deletePrivilegeByPrivilegeId(privilegeId);
+        return ResponseEntity.ok(privileges);
     }
 
 }

@@ -1,9 +1,11 @@
 package edu.harvard.hms.dbmi.avillach.auth.entity;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import edu.harvard.dbmi.avillach.data.entity.BaseEntity;
-
-import javax.persistence.*;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.OneToMany;
 
 import java.security.Principal;
 import java.util.Set;

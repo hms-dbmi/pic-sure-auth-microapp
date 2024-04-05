@@ -24,10 +24,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static edu.harvard.hms.dbmi.avillach.auth.utils.JWTUtil.parseToken;
@@ -143,7 +140,7 @@ public class TokenService {
             isLongTermToken = true;
         }
 
-        user = this.userRepository.getUniqueResultByColumn("subject", subject);
+        user = this.userRepository.findBySubject(subject);
         logger.info("_inspectToken() user with subject - " + subject + " - exists in database");
         if (user == null) {
             logger.error("_inspectToken() could not find user with subject " + subject);
@@ -238,18 +235,18 @@ public class TokenService {
             return PICSUREResponse.applicationError("Inner application error, please contact admin.");
         }
 
-        user = this.userRepository.getById(user.getUuid());
-        if (user == null) {
+        Optional<User> loadUser = this.userRepository.findById(user.getUuid());
+        if (loadUser.isEmpty()) {
             logger.error("refreshToken() When retrieving current user, it returned null, the user might be removed from database");
             throw new NotAuthorizedException("User doesn't exist anymore");
         }
 
-        if (!user.isActive()) {
+        if (!loadUser.get().isActive()) {
             logger.error("refreshToken() The user has just been deactivated.");
             throw new NotAuthorizedException("User has been deactivated.");
         }
 
-        String subject = user.getSubject();
+        String subject = loadUser.get().getSubject();
         if (subject == null || subject.isEmpty()) {
             logger.error("refreshToken() subject doesn't exist in the user.");
         }

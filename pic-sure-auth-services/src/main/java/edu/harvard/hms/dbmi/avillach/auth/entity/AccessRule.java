@@ -2,9 +2,17 @@ package edu.harvard.hms.dbmi.avillach.auth.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import edu.harvard.dbmi.avillach.data.entity.BaseEntity;
 
-import javax.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Transient;
+
 import java.lang.reflect.Field;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -34,7 +42,6 @@ import java.util.Set;
  */
 @Entity(name = "access_rule")
 public class AccessRule extends BaseEntity {
-
     /**
      * please do not modify the existing values, in case the value has
      * already saved in the database. But you can add more constant values, or

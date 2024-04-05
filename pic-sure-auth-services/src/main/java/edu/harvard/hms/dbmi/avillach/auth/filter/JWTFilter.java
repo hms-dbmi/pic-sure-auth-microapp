@@ -23,6 +23,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -92,8 +93,8 @@ public class JWTFilter extends OncePerRequestFilter {
             logger.debug(" token: {}", token);
 
             // Parse the token
-            Jws<Claims> jws = parseToken(token); // TODO: We shouldn't be implementing a method that should be in the JWTUtils class
-            String userId = jws.getBody().get(this.userClaimId, String.class); // TODO: Update when we remove the JAXRSConfiguration class
+            Jws<Claims> jws = parseToken(token);
+            String userId = jws.getBody().get(this.userClaimId, String.class);
 
             if (userId.startsWith(AuthNaming.LONG_TERM_TOKEN_PREFIX)) {
                 // For profile information, we do indeed allow long term token
@@ -122,14 +123,14 @@ public class JWTFilter extends OncePerRequestFilter {
                 }
 
                 // Authenticate as Application
-                Application authenticatedApplication = applicationRepo.getById(UUID.fromString(userId.split("\\|")[1]));
-                if (authenticatedApplication == null) {
+                Optional<Application> authenticatedApplication = applicationRepo.findById(UUID.fromString(userId.split("\\|")[1]));
+                if (authenticatedApplication.isEmpty()) {
                     logger.error("Cannot find an application by userId: " + userId);
                     response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Your token doesn't contain valid identical information, please contact admin.");
                     return;
                 }
 
-                if (!authenticatedApplication.getToken().equals(token)) {
+                if (!authenticatedApplication.get().getToken().equals(token)) {
                     logger.error("filter() incoming application token - " + token +
                             " - is not the same as record, might because the token has been refreshed. Subject: " + userId);
                     response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Your token has been inactivated, please contact admin to grab you the latest one.");
@@ -137,7 +138,7 @@ public class JWTFilter extends OncePerRequestFilter {
 
                 // This is the application token that is being used to authenticate the user by other applications
                 // Set the security context for the application
-                setSecurityContextForApplication(request, authenticatedApplication);
+                setSecurityContextForApplication(request, authenticatedApplication.orElse(null));
             } else {
                 logger.debug("UserID: {} is not a long term token and not a PSAMA application token.", userId);
                 // Authenticate as User

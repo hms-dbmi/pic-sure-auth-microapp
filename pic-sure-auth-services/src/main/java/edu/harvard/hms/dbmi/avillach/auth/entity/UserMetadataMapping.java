@@ -1,8 +1,9 @@
 package edu.harvard.hms.dbmi.avillach.auth.entity;
 
-import edu.harvard.dbmi.avillach.data.entity.BaseEntity;
-
-import javax.persistence.*;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 
 /**
  * <p>Model defining how to map an admin added user to an Oauth user profile.</p>

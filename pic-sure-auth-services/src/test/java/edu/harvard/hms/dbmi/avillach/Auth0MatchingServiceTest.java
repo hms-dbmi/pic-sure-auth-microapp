@@ -9,9 +9,9 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.entity.UserMetadataMapping;
 import edu.harvard.hms.dbmi.avillach.auth.repository.ConnectionRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.UserRepository;
-import edu.harvard.hms.dbmi.avillach.auth.rest.UserController;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.OauthUserMatchingService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.UserMetadataMappingService;
+import edu.harvard.hms.dbmi.avillach.auth.service.impl.UserService;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.InjectMocks;
@@ -42,10 +42,10 @@ public class Auth0MatchingServiceTest {
     UserMetadataMappingService mappingService = mock(UserMetadataMappingService.class);
 
     @Mock
-    UserController userController = mock(UserController.class);
+    UserService userService = mock(UserService.class);
 
     @InjectMocks
-    OauthUserMatchingService cut = new OauthUserMatchingService(userRepo, userController, mappingService, mock(ConnectionRepository.class));
+    OauthUserMatchingService cut = new OauthUserMatchingService(userRepo, userService, mappingService, mock(ConnectionRepository.class));
 
     User persistedUser;
     ObjectMapper mapper = new ObjectMapper();
@@ -55,7 +55,7 @@ public class Auth0MatchingServiceTest {
         MockitoAnnotations.initMocks(this);
         //Instead of calling the database
         doAnswer(invocation -> (listUnmatchedByConnectionIdMock(invocation.getArgument(0)))).
-                when(userRepo).listUnmatchedByConnectionId(any());
+                when(userRepo).findByConnectionAndMatched(any(), any());
         doAnswer(invocation -> (getAllMappingsForConnectionMock(invocation.getArgument(0)))).
                 when(mappingService).getAllMappingsForConnection((Connection) any());
         //So we can check that the user is persisted
@@ -65,7 +65,7 @@ public class Auth0MatchingServiceTest {
                 persistedUser = userList.get(0);
                 return null;
             }
-        }).when(userController).updateUser(any(List.class));
+        }).when(userService).updateUser(any(List.class));
     }
 
     @Test
