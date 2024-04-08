@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import edu.harvard.hms.dbmi.avillach.auth.rest.UserController;
 import jakarta.persistence.*;
-import org.hibernate.annotations.Type;
 
 import java.io.Serializable;
 import java.security.Principal;
@@ -53,11 +52,9 @@ public class User extends BaseEntity implements Serializable, Principal {
 	private Date acceptedTOS;
 
 	@Column(name = "auth0_metadata")
-	@Type(type = "text")
 	private String auth0metadata;
 
 	@Column(name = "general_metadata")
-	@Type(type = "text")
 	private String generalMetadata;
 
 	@Column(name = "is_active")

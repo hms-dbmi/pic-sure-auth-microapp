@@ -286,16 +286,16 @@ public class UserService {
         logger.debug("Sending email");
         try {
             Object entity = updateResponse.getBody(); // TODO: Determine how to replicate this given the new approach
-            if (entity instanceof PICSUREResponseOKwithMsgAndContent okResponse) {
-                List<User> addedUsers = (List<User>) okResponse.getContent();
-                String message = okResponse.getMessage();
+            if (entity instanceof HashMap okResponse) {
+                List<User> addedUsers = (List<User>) okResponse.get("content");
+                String message = okResponse.get("message") != null ? okResponse.get("message").toString() : "";
                 for (User user : addedUsers) {
                     try {
                         basicMailService.sendUsersAccessEmail(user);
                     } catch (MessagingException e) {
                         logger.error("Failed to send email! {}", e.getLocalizedMessage());
                         logger.debug("Exception Trace: ", e);
-                        okResponse.setMessage(message + "  WARN - could not send email to user " + user.getEmail() + " see logs for more info");
+                        okResponse.put("message", message + "  WARN - could not send email to user " + user.getEmail() + " see logs for more info");
                     }
                 }
             }
