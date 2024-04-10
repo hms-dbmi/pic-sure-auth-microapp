@@ -4,8 +4,8 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.AccessRule;
 import edu.harvard.hms.dbmi.avillach.auth.repository.AccessRuleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import javax.transaction.Transactional;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -16,7 +16,7 @@ public class AccessRuleService {
     private final AccessRuleRepository accessRuleRepo;
 
     @Autowired
-    protected AccessRuleService(Class<AccessRule> type, AccessRuleRepository accessRuleRepo) {
+    protected AccessRuleService(AccessRuleRepository accessRuleRepo) {
         this.accessRuleRepo = accessRuleRepo;
     }
 

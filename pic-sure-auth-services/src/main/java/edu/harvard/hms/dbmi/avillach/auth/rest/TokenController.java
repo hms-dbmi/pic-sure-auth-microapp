@@ -2,9 +2,9 @@ package edu.harvard.hms.dbmi.avillach.auth.rest;
 
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.AuthorizationService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.TokenService;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiParam;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -23,7 +23,7 @@ import java.util.Map;
  * is authorized to access the URLs they queried and send data along with them. The AuthorizationService class handles authorization
  * {@link AuthorizationService} at the access rule level, but this endpoint handles token validation and pre-check at the privilege level.</p>
  */
-@Api
+@Tag(name = "Token Management")
 @Controller("/token")
 public class TokenController {
 
@@ -34,16 +34,16 @@ public class TokenController {
         this.tokenService = tokenService;
     }
 
-    @ApiOperation(value = "Token introspection endpoint for user to retrieve a valid token")
+    @Operation(description = "Token introspection endpoint for user to retrieve a valid token")
     @PostMapping(path = "/inspect", produces = "application/json")
     public ResponseEntity<?> inspectToken(
-            @ApiParam(required = true, value = "A JSON object that at least" +
+            @Parameter(required = true, description = "A JSON object that at least" +
                     " include a user the token for validation")
             Map<String, Object> inputMap) {
         return this.tokenService.inspectToken(inputMap);
     }
 
-    @ApiOperation(value = "To refresh current user's token if the user is an active user")
+    @Operation(description = "To refresh current user's token if the user is an active user")
     @GetMapping(path = "/refresh", produces = "application/json")
     public ResponseEntity<?> refreshToken(@RequestHeader("Authorization") String authorizationHeader) {
         return this.tokenService.refreshToken(authorizationHeader);

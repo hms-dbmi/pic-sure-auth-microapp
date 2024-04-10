@@ -3,9 +3,9 @@ package edu.harvard.hms.dbmi.avillach.auth.rest;
 import edu.harvard.hms.dbmi.avillach.auth.entity.*;
 import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.UserService;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiParam;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.security.RolesAllowed;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,7 +15,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
-import javax.transaction.Transactional;
 import java.util.*;
 
 import static edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming.AuthRoleNaming.ADMIN;
@@ -24,7 +23,7 @@ import static edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming.AuthRoleNaming
 /**
  * <p>Endpoint for service handling business logic for users.</p>
  */
-@Api
+@Tag(name = "User Management")
 @Controller("/user")
 public class UserController {
 
@@ -38,17 +37,17 @@ public class UserController {
         this.userService = userService;
     }
 
-    @ApiOperation(value = "GET information of one user with the UUID, requires ADMIN or SUPER_ADMIN roles")
+    @Operation(description = "GET information of one user with the UUID, requires ADMIN or SUPER_ADMIN roles")
     @RolesAllowed({ADMIN, SUPER_ADMIN})
     @GetMapping(path = "/{userId}", produces = "application/json")
     public ResponseEntity<?> getUserById(
-            @ApiParam(required = true, value = "The UUID of the user to fetch information about")
+            @Parameter(required = true, description = "The UUID of the user to fetch information about")
             @PathVariable("userId") String userId) {
         User userById = this.userService.getUserById(userId);
         return ResponseEntity.ok(userById);
     }
 
-    @ApiOperation(value = "GET a list of existing users, requires ADMIN or SUPER_ADMIN roles")
+    @Operation(description = "GET a list of existing users, requires ADMIN or SUPER_ADMIN roles")
     @RolesAllowed({ADMIN, SUPER_ADMIN})
     @GetMapping(produces = "application/json")
     public ResponseEntity<?> getUserAll() {
@@ -56,18 +55,17 @@ public class UserController {
         return ResponseEntity.ok(entityAll);
     }
 
-    @ApiOperation(value = "POST a list of users, requires ADMIN role")
-    @Transactional // TODO: Move this to the service layer
+    @Operation(description = "POST a list of users, requires ADMIN role")
     @RolesAllowed({ADMIN})
     @PostMapping(produces = "application/json")
     public ResponseEntity<?> addUser(
-            @ApiParam(required = true, value = "A list of user in JSON format")
+            @Parameter(required = true, description = "A list of user in JSON format")
             List<User> users) {
         return this.userService.addUsers(users);
 
     }
 
-    @ApiOperation(value = "Update a list of users, will only update the fields listed, requires ADMIN role")
+    @Operation(description = "Update a list of users, will only update the fields listed, requires ADMIN role")
     @RolesAllowed({ADMIN})
     @PutMapping(produces = "application/json")
     public ResponseEntity<?> updateUser(List<User> users) {
@@ -82,19 +80,19 @@ public class UserController {
      * @param hasToken
      * @return
      */
-    @ApiOperation(value = "Retrieve information of current user")
+    @Operation(description = "Retrieve information of current user")
     @GetMapping(produces = "application/json", path = "/me")
     public ResponseEntity<?> getCurrentUser(
             @RequestHeader("Authorization") String authorizationHeader,
-            @ApiParam(required = false, value = "Attribute that represents if a long term token will attach to the response")
+            @Parameter(required = false, description = "Attribute that represents if a long term token will attach to the response")
             @RequestParam("hasToken") Boolean hasToken) {
         return this.userService.getCurrentUser(authorizationHeader, hasToken);
     }
 
-    @ApiOperation(value = "Retrieve the queryTemplate of certain application by given application Id for the currentUser ")
+    @Operation(description = "Retrieve the queryTemplate of certain application by given application Id for the currentUser ")
     @GetMapping(path = "/me/queryTemplate/{applicationId}", produces = "application/json")
     public ResponseEntity<?> getQueryTemplate(
-            @ApiParam(value = "Application Id for the returning queryTemplate")
+            @Parameter(description = "Application Id for the returning queryTemplate")
             @PathVariable("applicationId") String applicationId) {
         Optional<String> mergedTemplate = this.userService.getQueryTemplate(applicationId);
 
@@ -106,7 +104,7 @@ public class UserController {
         return PICSUREResponse.success(Map.of("queryTemplate", mergedTemplate.orElse(null)));
     }
 
-    @ApiOperation(value = "Retrieve the queryTemplate of default application")
+    @Operation(description = "Retrieve the queryTemplate of default application")
     @GetMapping(path = "/me/queryTemplate", produces = "application/json")
     public ResponseEntity<?> getQueryTemplate() {
         return this.userService.getDefaultQueryTemplate();
@@ -121,7 +119,7 @@ public class UserController {
      * @param httpHeaders the http headers
      * @return the refreshed long term token
      */
-    @ApiOperation(value = "refresh the long term tokne of current user")
+    @Operation(description = "refresh the long term tokne of current user")
     @GetMapping(path = "/me/refresh_long_term_token", produces = "application/json")
     public ResponseEntity<?> refreshUserToken(
             @RequestHeader HttpHeaders httpHeaders) {

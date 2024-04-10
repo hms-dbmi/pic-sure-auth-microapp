@@ -2,7 +2,6 @@ package edu.harvard.hms.dbmi.avillach.auth.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import edu.harvard.hms.dbmi.avillach.auth.rest.UserController;
 import jakarta.persistence.*;
 
 import java.io.Serializable;
@@ -24,8 +23,8 @@ public class User extends BaseEntity implements Serializable, Principal {
 
 	@ManyToMany(fetch = FetchType.EAGER)
 	@JoinTable(name = "user_role",
-			joinColumns = {@JoinColumn(name = "user_id", nullable = false, updatable = false)},
-			inverseJoinColumns = {@JoinColumn(name = "role_id", nullable = false, updatable = false)})
+			joinColumns = {@JoinColumn(name = "user_id", nullable = false, referencedColumnName = "uuid")},
+			inverseJoinColumns = {@JoinColumn(name = "role_id", nullable = false, referencedColumnName = "uuid")})
 	private Set<Role> roles;
 
 	private String email;
@@ -41,7 +40,6 @@ public class User extends BaseEntity implements Serializable, Principal {
 	 * <p><b>
 	 * Note: This is because of the checkAssociation() method in UserService.
 	 * </b></p><br>
-	 * @see UserController
 	 */
 	@ManyToOne
 	@JoinColumn(name = "connectionId")

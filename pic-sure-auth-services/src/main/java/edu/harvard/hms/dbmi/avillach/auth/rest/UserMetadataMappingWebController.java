@@ -3,9 +3,9 @@ package edu.harvard.hms.dbmi.avillach.auth.rest;
 import edu.harvard.hms.dbmi.avillach.auth.entity.UserMetadataMapping;
 import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.UserMetadataMappingService;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiParam;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.security.RolesAllowed;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -21,7 +21,7 @@ import static edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming.AuthRoleNaming
  * <p>Endpoint for service handling business logic for user metadata mapping.</p>
  * <p><Note: Only users with the super admin role can access this endpoint.</p>
  */
-@Api
+@Tag(name = "User Metadata Mapping Management")
 @Controller
 @RequestMapping("/mapping")
 public class UserMetadataMappingWebController {
@@ -33,14 +33,14 @@ public class UserMetadataMappingWebController {
         this.mappingService = mappingService;
     }
 
-    @ApiOperation(value = "GET information of one UserMetadataMapping with the UUID, requires ADMIN or SUPER_ADMIN role")
+    @Operation(description = "GET information of one UserMetadataMapping with the UUID, requires ADMIN or SUPER_ADMIN role")
     @RolesAllowed({ADMIN, SUPER_ADMIN})
     @GetMapping(path = "{connectionId}", produces = "application/json")
     public ResponseEntity<?> getMappingsForConnection(@PathVariable("connectionId") String connection) {
         return this.mappingService.getAllMappingsForConnection(connection);
     }
 
-    @ApiOperation(value = "GET a list of existing UserMetadataMappings, requires ADMIN or SUPER_ADMIN role")
+    @Operation(description = "GET a list of existing UserMetadataMappings, requires ADMIN or SUPER_ADMIN role")
     @RolesAllowed({ADMIN, SUPER_ADMIN})
     @GetMapping(path = "/", produces = "application/json")
     public ResponseEntity<?> getAllMappings() {
@@ -48,11 +48,11 @@ public class UserMetadataMappingWebController {
         return PICSUREResponse.success(allMappings);
     }
 
-    @ApiOperation(value = "POST a list of UserMetadataMappings, requires SUPER_ADMIN role")
+    @Operation(description = "POST a list of UserMetadataMappings, requires SUPER_ADMIN role")
     @RolesAllowed({SUPER_ADMIN})
     @PostMapping(path = "/", consumes = "application/json", produces = "application/json")
     public ResponseEntity<?> addMapping(
-            @ApiParam(required = true, value = "A list of UserMetadataMapping in JSON format")
+            @Parameter(required = true, description = "A list of UserMetadataMapping in JSON format")
             List<UserMetadataMapping> mappings) {
 
         try {
@@ -63,11 +63,11 @@ public class UserMetadataMappingWebController {
         }
     }
 
-    @ApiOperation(value = "Update a list of UserMetadataMappings, will only update the fields listed, requires SUPER_ADMIN role")
+    @Operation(description = "Update a list of UserMetadataMappings, will only update the fields listed, requires SUPER_ADMIN role")
     @RolesAllowed({SUPER_ADMIN})
     @PutMapping(path = "/", consumes = "application/json", produces = "application/json")
     public ResponseEntity<?> updateMapping(
-            @ApiParam(required = true, value = "A list of UserMetadataMapping with fields to be updated in JSON format")
+            @Parameter(required = true, description = "A list of UserMetadataMapping with fields to be updated in JSON format")
             List<UserMetadataMapping> mappings) {
         List<UserMetadataMapping> userMetadataMappings = this.mappingService.updateUserMetadataMappings(mappings);
 
@@ -78,11 +78,11 @@ public class UserMetadataMappingWebController {
         return PICSUREResponse.success(userMetadataMappings);
     }
 
-    @ApiOperation(value = "DELETE an UserMetadataMapping by Id only if the UserMetadataMapping is not associated by others, requires SUPER_ADMIN role")
+    @Operation(description = "DELETE an UserMetadataMapping by Id only if the UserMetadataMapping is not associated by others, requires SUPER_ADMIN role")
     @RolesAllowed({SUPER_ADMIN})
     @DeleteMapping(path = "/{mappingId}", produces = "application/json")
     public ResponseEntity<?> removeById(
-            @ApiParam(required = true, value = "A valid UserMetadataMapping Id")
+            @Parameter(required = true, description = "A valid UserMetadataMapping Id")
             @PathVariable("mappingId") final String mappingId) {
         List<UserMetadataMapping> userMetadataMappings = this.mappingService.removeMetadataMappingByIdAndRetrieveAll(mappingId);
         return PICSUREResponse.success(userMetadataMappings);

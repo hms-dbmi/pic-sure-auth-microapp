@@ -2,20 +2,17 @@ package edu.harvard.hms.dbmi.avillach.auth.service.impl;
 
 import edu.harvard.hms.dbmi.avillach.auth.entity.Application;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
-import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.repository.ApplicationRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.PrivilegeRepository;
 import edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming;
 import edu.harvard.hms.dbmi.avillach.auth.utils.JWTUtil;
-import org.hibernate.PropertyNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import javax.transaction.Transactional;
 import java.util.*;
 
 @Service
@@ -29,7 +26,7 @@ public class ApplicationService {
     private String CLIENT_SECRET;
 
     @Autowired
-    protected ApplicationService(ApplicationRepository applicationRepo, PrivilegeRepository privilegeRepo) {
+    ApplicationService(ApplicationRepository applicationRepo, PrivilegeRepository privilegeRepo) {
         this.applicationRepo = applicationRepo;
         this.privilegeRepo = privilegeRepo;
     }

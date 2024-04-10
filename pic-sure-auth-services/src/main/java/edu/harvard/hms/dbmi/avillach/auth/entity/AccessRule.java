@@ -132,8 +132,8 @@ public class AccessRule extends BaseEntity {
      */
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "accessRule_gate",
-            joinColumns = {@JoinColumn(name = "accessRule_id", nullable = false, updatable = false)},
-            inverseJoinColumns = {@JoinColumn(name = "gate_id", nullable = false, updatable = false)})
+            joinColumns = {@JoinColumn(name = "accessRule_id", nullable = false)},
+            inverseJoinColumns = {@JoinColumn(name = "gate_id", nullable = false)})
     private Set<AccessRule> gates;
 
     /**

@@ -5,7 +5,6 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.repository.TermsOfServiceRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.UserRepository;
 import edu.harvard.hms.dbmi.avillach.auth.rest.TermsOfSerivceController;
-import edu.harvard.hms.dbmi.avillach.auth.rest.UserController;
 import jakarta.persistence.NoResultException;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -33,13 +32,11 @@ public class TOSService {
 
     private final UserRepository userRepo;
 
-    private final UserController userService; // TODO: This isn't a service its a controller. Why are we doing this?
 
     @Autowired
-    public TOSService(TermsOfServiceRepository termsOfServiceRepo, UserRepository userRepo, UserController userService) {
+    public TOSService(TermsOfServiceRepository termsOfServiceRepo, UserRepository userRepo) {
         this.termsOfServiceRepo = termsOfServiceRepo;
         this.userRepo = userRepo;
-        this.userService = userService;
     }
 
 
@@ -74,17 +71,16 @@ public class TOSService {
         }
     }
 
-    public void acceptTermsOfService(String userId) {
+    public User acceptTermsOfService(String userId) {
         logger.info("User {} accepting TOS", userId);
         User user = userRepo.findBySubject(userId);
         if (user == null) {
             throw new RuntimeException("User does not exist");
         }
         user.setAcceptedTOS(new Date());
-        List<User> users = List.of(user);
         Date tosDate = termsOfServiceRepo.findTopByOrderByDateUpdatedDesc().getDateUpdated();
-        userService.updateUser(users);
         logger.info("TOS_LOG : User {} accepted the Terms of Service dated {}", !StringUtils.isBlank(user.getEmail()) ? user.getEmail() : user.getGeneralMetadata(), tosDate.toString());
+        return user;
     }
 
     private boolean checkAgainstTOSDate(String userId) {

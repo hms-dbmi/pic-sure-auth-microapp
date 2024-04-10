@@ -3,9 +3,9 @@ package edu.harvard.hms.dbmi.avillach.auth.rest;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.service.RoleService;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiParam;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.security.RolesAllowed;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -23,7 +23,7 @@ import static edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming.AuthRoleNaming
  * <p>Endpoint for service handling business logic for user roles.
  * <br>Note: Users with admin level access can view roles, but only super admin users can modify them.</p>
  */
-@Api
+@Tag(name = "Role Management")
 @Controller
 @RequestMapping(value = "/role")
 public class RoleController {
@@ -35,16 +35,16 @@ public class RoleController {
         this.roleService = roleService;
     }
 
-    @ApiOperation(value = "GET information of one Role with the UUID, requires ADMIN or SUPER_ADMIN role")
+    @Operation(description = "GET information of one Role with the UUID, requires ADMIN or SUPER_ADMIN role")
     @RolesAllowed({ADMIN, SUPER_ADMIN})
     @GetMapping(produces = "application/json", path = "/{roleId}")
     public ResponseEntity<?> getRoleById(
-            @ApiParam(value = "The UUID of the Role to fetch information about")
+            @Parameter(description = "The UUID of the Role to fetch information about")
             @PathVariable("roleId") String roleId) {
         return this.roleService.getRoleById(roleId);
     }
 
-    @ApiOperation(value = "GET a list of existing Roles, requires ADMIN or SUPER_ADMIN role")
+    @Operation(description = "GET a list of existing Roles, requires ADMIN or SUPER_ADMIN role")
     @GetMapping(produces = "application/json")
     @RolesAllowed({ADMIN, SUPER_ADMIN})
     public ResponseEntity<?> getRoleAll() {
@@ -52,21 +52,21 @@ public class RoleController {
         return PICSUREResponse.success(allRoles);
     }
 
-    @ApiOperation(value = "POST a list of Roles, requires SUPER_ADMIN role")
+    @Operation(description = "POST a list of Roles, requires SUPER_ADMIN role")
     @RolesAllowed({SUPER_ADMIN})
     @PostMapping(produces = "application/json")
     public ResponseEntity<?> addRole(
-            @ApiParam(required = true, value = "A list of Roles in JSON format")
+            @Parameter(required = true, description = "A list of Roles in JSON format")
             List<Role> roles) {
         List<Role> savedRoles = this.roleService.addRoles(roles);
         return PICSUREResponse.success("All roles are added.", savedRoles);
     }
 
-    @ApiOperation(value = "Update a list of Roles, will only update the fields listed, requires SUPER_ADMIN role")
+    @Operation(description = "Update a list of Roles, will only update the fields listed, requires SUPER_ADMIN role")
     @RolesAllowed({SUPER_ADMIN})
     @PutMapping(produces = "application/json")
     public ResponseEntity<?> updateRole(
-            @ApiParam(required = true, value = "A list of Roles with fields to be updated in JSON format")
+            @Parameter(required = true, description = "A list of Roles with fields to be updated in JSON format")
             List<Role> roles) {
         List<Role> updatedRoles = this.roleService.updateRoles(roles);
         if (updatedRoles.isEmpty()) {
@@ -76,11 +76,11 @@ public class RoleController {
         return PICSUREResponse.success("All Roles are updated.", updatedRoles);
     }
 
-    @ApiOperation(value = "DELETE an Role by Id only if the Role is not associated by others, requires SUPER_ADMIN role")
+    @Operation(description = "DELETE an Role by Id only if the Role is not associated by others, requires SUPER_ADMIN role")
     @RolesAllowed({SUPER_ADMIN})
     @DeleteMapping(produces = "application/json", path = "/{roleId}")
     public ResponseEntity<?> removeById(
-            @ApiParam(required = true, value = "A valid Role Id")
+            @Parameter(required = true, description = "A valid Role Id")
             @PathVariable("roleId") final String roleId) {
         Optional<List<Role>> roles = this.roleService.removeRoleById(roleId);
         if (roles.isEmpty()) {

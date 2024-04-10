@@ -22,23 +22,6 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
    List<User> findByConnectionAndMatched(Connection connection, boolean matched);
 
-//
-//	public User changeRole(User user, Set<Role> roles){
-//		logger.info("Starting changing the role of user: " + user.getUuid()
-//				+ ", with subject: " + user.getSubject() + ", to " + roles.stream().map(role -> role.getName()).collect(Collectors.joining(",")));
-//		user.setRoles(roles);
-//		em().merge(user);
-//		User updatedUser = getById(user.getUuid());
-//		logger.info("User: " + updatedUser.getUuid() + ", with subject: " +
-//				updatedUser.getSubject() + ", now has a new role: " + updatedUser.getRoleString());
-//		return updatedUser;
-//	}
-//
-//	@Override
-//	public void persist(User user) {
-//		findOrCreate(user);
-//	}
-
    /**
     * <p>Find a user by email.</p>
     * @param email the email to search for

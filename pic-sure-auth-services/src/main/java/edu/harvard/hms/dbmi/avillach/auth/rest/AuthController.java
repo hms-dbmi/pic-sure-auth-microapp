@@ -3,9 +3,9 @@ package edu.harvard.hms.dbmi.avillach.auth.rest;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.AuthenticationService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.AuthorizationService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.FENCEAuthenticationService;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiParam;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,7 +22,7 @@ import java.util.Map;
 /**
  * <p>The authentication endpoint for PSAMA.</p>
  */
-@Api
+@Tag(name = "Authentication")
 @Controller
 @RequestMapping("/")
 public class AuthController {
@@ -44,9 +44,9 @@ public class AuthController {
         this.idp_provider = idpProvider;
     }
 
-    @ApiOperation(value = "The authentication endpoint for retrieving a valid user token")
+    @Operation(description = "The authentication endpoint for retrieving a valid user token")
     @PostMapping(path = "/authentication", consumes = "application/json", produces = "application/json")
-    public ResponseEntity<?> authentication(@ApiParam(required = true, value = "A json object that includes all Oauth authentication needs, for example, access_token and redirectURI") Map<String, String> authRequest) throws IOException {
+    public ResponseEntity<?> authentication(@Parameter(required = true, description = "A json object that includes all Oauth authentication needs, for example, access_token and redirectURI") Map<String, String> authRequest) throws IOException {
         logger.debug("authentication() starting...");
         if (this.idp_provider.equalsIgnoreCase("fence")) {
             logger.debug("authentication() FENCE authentication");

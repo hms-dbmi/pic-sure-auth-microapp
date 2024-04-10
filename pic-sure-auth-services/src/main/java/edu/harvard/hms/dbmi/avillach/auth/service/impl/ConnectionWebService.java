@@ -4,6 +4,7 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.Connection;
 import edu.harvard.hms.dbmi.avillach.auth.repository.ConnectionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -19,6 +20,7 @@ public class ConnectionWebService {
         this.connectionRepo = connectionRepo;
     }
 
+    @Transactional
     public List<Connection> addConnection(List<Connection> connections) throws IllegalArgumentException {
         for (Connection c : connections){
             if (c.getSubPrefix() == null || c.getRequiredFields() == null || c.getLabel() == null || c.getId() == null){
@@ -46,6 +48,7 @@ public class ConnectionWebService {
         return this.connectionRepo.saveAll(connections);
     }
 
+    @Transactional
     public List<Connection> removeConnectionById(String connectionId) {
         this.connectionRepo.deleteById(UUID.fromString(connectionId));
         return this.getAllConnections();

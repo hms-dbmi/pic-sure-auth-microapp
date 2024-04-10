@@ -1,10 +1,13 @@
 package edu.harvard.hms.dbmi.avillach.auth.rest;
 
+import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.TOSService;
+import edu.harvard.hms.dbmi.avillach.auth.service.impl.UserService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming;
-import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiParam;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.security.RolesAllowed;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -15,37 +18,42 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
+import java.util.List;
+
 import static edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming.AuthRoleNaming.SUPER_ADMIN;
 
 /**
  * <p>Endpoint for creating and updating terms of service entities. Records when a user accepts a term of service.</p>
  */
+@Tag(name = "Terms of Service Management")
 @Controller
 @RequestMapping("/tos")
 public class TermsOfSerivceController {
 
     private final TOSService tosService;
+    private final UserService userService;
 
     @Autowired
-    public TermsOfSerivceController(TOSService tosService) {
+    public TermsOfSerivceController(TOSService tosService, UserService userService) {
         this.tosService = tosService;
+        this.userService = userService;
     }
 
-    @ApiOperation(value = "GET the latest Terms of Service")
+    @Operation(description = "GET the latest Terms of Service")
     @GetMapping(path = "/latest", produces = "text/html")
     public ResponseEntity<?> getLatestTermsOfService(){
         return PICSUREResponse.success(tosService.getLatest());
     }
 
-    @ApiOperation(value = "Update the Terms of Service html body")
+    @Operation(description = "Update the Terms of Service html body")
     @RolesAllowed({AuthNaming.AuthRoleNaming.ADMIN, SUPER_ADMIN})
     @PostMapping(path = "/update", consumes = "text/html", produces = "application/json")
     public ResponseEntity<?> updateTermsOfService(
-            @ApiParam(required = true, value = "A html page for updating") String html){
+            @Parameter(required = true, description = "A html page for updating") String html){
         return PICSUREResponse.success(tosService.updateTermsOfService(html));
     }
 
-    @ApiOperation(value = "GET if current user has acceptted his TOS or not")
+    @Operation(description = "GET if current user has acceptted his TOS or not")
     @GetMapping(path = "/", produces = "text/plain")
     public ResponseEntity<?> hasUserAcceptedTOS(){
         SecurityContext context = SecurityContextHolder.getContext();
@@ -53,12 +61,13 @@ public class TermsOfSerivceController {
         return PICSUREResponse.success(tosService.hasUserAcceptedLatest(userSubject));
     }
 
-    @ApiOperation(value = "Endpoint for current user to accept his terms of service")
+    @Operation(description = "Endpoint for current user to accept his terms of service")
     @PostMapping(path = "/accept", produces = "application/json")
     public ResponseEntity<?> acceptTermsOfService(){
         SecurityContext context = SecurityContextHolder.getContext();
         String userSubject = context.getAuthentication().getName();
-        tosService.acceptTermsOfService(userSubject);
+        User user = tosService.acceptTermsOfService(userSubject);
+        userService.updateUser(List.of(user));
         return PICSUREResponse.success();
     }
 

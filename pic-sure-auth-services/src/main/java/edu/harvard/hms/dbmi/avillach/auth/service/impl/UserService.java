@@ -29,8 +29,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.time.ZoneOffset;
@@ -60,7 +59,7 @@ public class UserService {
     @Autowired
     public UserService(BasicMailService basicMailService, TOSService tosService, UserRepository userRepository, ConnectionRepository connectionRepository, ApplicationRepository applicationRepository, RoleService roleService,
                        @Value("${application.client.secret}") String clientSecret, @Value("${application.token.expiration.time}") long tokenExpirationTime,
-                       @Value("${application.default.}") String applicationUUID, @Value("${application.long.term.token.expiration.time}") long longTermTokenExpirationTime) {
+                       @Value("${application.default.uuid}") String applicationUUID, @Value("${application.long.term.token.expiration.time}") long longTermTokenExpirationTime) {
         this.basicMailService = basicMailService;
         this.tosService = tosService;
         this.userRepository = userRepository;
@@ -194,6 +193,7 @@ public class UserService {
 
     }
 
+    @Transactional
     public ResponseEntity<?> addUsers(List<User> users) {
         SecurityContext securityContext = SecurityContextHolder.getContext();
         User currentUser = (User) securityContext.getAuthentication().getPrincipal();
