@@ -81,7 +81,6 @@ public class JWTFilter extends OncePerRequestFilter {
      * @throws IOException if an I/O error occurs during the execution of the filter
      */
     @Override
-    // Ends that are allowed are handled by the configured security filter chain in the SecurityConfig class
     protected void doFilterInternal(HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain) throws IOException {
         // Get headers from the request
         String authorizationHeader = request.getHeader("Authorization");
@@ -120,21 +119,20 @@ public class JWTFilter extends OncePerRequestFilter {
                 // Check if user is attempting to access the correct introspect endpoint. If not reject the request
                 // log an error indicating the user's token may be being used by a malicious actor.
                 if (!request.getRequestURI().endsWith("token/inspect")) {
-                    logger.error(userId + " attempted to perform request " + request.getRequestURI() + " token may be compromised.");
+                    logger.error("{} attempted to perform request {} token may be compromised.", userId, request.getRequestURI());
                     response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User is deactivated");
                 }
 
                 // Authenticate as Application
                 Optional<Application> authenticatedApplication = applicationRepo.findById(UUID.fromString(userId.split("\\|")[1]));
                 if (authenticatedApplication.isEmpty()) {
-                    logger.error("Cannot find an application by userId: " + userId);
+                    logger.error("Cannot find an application by userId: {}", userId);
                     response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Your token doesn't contain valid identical information, please contact admin.");
                     return;
                 }
 
                 if (!authenticatedApplication.get().getToken().equals(token)) {
-                    logger.error("filter() incoming application token - " + token +
-                            " - is not the same as record, might because the token has been refreshed. Subject: " + userId);
+                    logger.error("filter() incoming application token - {} - is not the same as record, might because the token has been refreshed. Subject: {}", token, userId);
                     response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Your token has been inactivated, please contact admin to grab you the latest one.");
                 }
 
