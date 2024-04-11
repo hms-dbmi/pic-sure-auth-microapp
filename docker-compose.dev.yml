@@ -1,0 +1,30 @@
+version: '3.8'
+services:
+  pic-sure-auth-service:
+    build:
+        context: ./pic-sure-auth-services/
+        dockerfile: dev.Dockerfile
+    environment:
+      JAVA_OPTS: "-Xmx1024m -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005"
+    ports:
+      - "8090:8090" # Application port
+      - "5005:5005" # Debug port
+    depends_on:
+      pic-sure-auth-db:
+        condition: service_healthy
+
+  pic-sure-auth-db:
+    build:
+      context: ./pic-sure-auth-db/
+      dockerfile: Dockerfile
+    environment:
+        MYSQL_DATABASE: auth
+        MYSQL_ROOT_PASSWORD: password
+#    command: --default-authentication-plugin=mysql_native_password
+    ports:
+        - "3306:3306" # MySQL port
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
