@@ -80,8 +80,7 @@ public class AuthenticationService {
         }
         String userId = userIdNode.asText();
 
-        logger.info("Successfully retrieved userId, " + userId +
-                ", from the provided code and redirectURI");
+        logger.info("Successfully retrieved userId, {}, from the provided code and redirectURI", userId);
 
         String connectionId;
         try {
