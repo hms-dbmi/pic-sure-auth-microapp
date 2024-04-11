@@ -2,7 +2,7 @@ package edu.harvard.hms.dbmi.avillach.auth.utils;
 
 import edu.harvard.hms.dbmi.avillach.auth.exceptions.NotAuthorizedException;
 import io.jsonwebtoken.*;
-import org.apache.commons.codec.binary.Base64;
+import org.apache.tomcat.util.codec.binary.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -88,7 +88,7 @@ public class JWTUtil {
             try {
                 if (clientSecretIsBase64) {
                     // handle if client secret is base64 encoded
-                    jws = Jwts.parser().setSigningKey(Base64.decodeBase64(clientSecret.getBytes(StandardCharsets.UTF_8))).parseClaimsJws(token);
+                    jws = Jwts.parser().setSigningKey(Base64.decodeBase64(clientSecret)).parseClaimsJws(token);
                 } else {
                     // handle if client secret is not base64 encoded
                     jws = Jwts.parser().setSigningKey(clientSecret.getBytes(StandardCharsets.UTF_8)).parseClaimsJws(token);
