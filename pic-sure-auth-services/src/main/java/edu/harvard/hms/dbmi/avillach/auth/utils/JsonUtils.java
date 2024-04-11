@@ -1,6 +1,6 @@
 package edu.harvard.hms.dbmi.avillach.auth.utils;
 
-import org.jetbrains.annotations.NotNull;
+import jakarta.validation.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
