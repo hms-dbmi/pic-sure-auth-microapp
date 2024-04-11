@@ -20,7 +20,7 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
-            <version>RELEASE</version>
+            <version>3.2.4</version>
             <scope>compile</scope>
         </dependency>
 
@@ -30,12 +30,14 @@
             <artifactId>spring-web</artifactId>
             <version>6.1.5</version>
         </dependency>
+
         <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-web -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
             <version>3.2.3</version>
         </dependency>
+
         <!--		Spring autoconfiguration -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

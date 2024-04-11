@@ -2,8 +2,8 @@ version: '3.8'
 services:
   pic-sure-auth-service:
     build:
-        context: ./pic-sure-auth-services/
-        dockerfile: dev.Dockerfile
+        context: .
+        dockerfile: ./pic-sure-auth-services/dev.Dockerfile
     environment:
       JAVA_OPTS: "-Xmx1024m -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005"
     ports:
@@ -13,7 +13,7 @@ services:
       pic-sure-auth-db:
         condition: service_healthy
 
-  pic-sure-auth-db:
+  picsure-db:
     build:
       context: ./pic-sure-auth-db/
       dockerfile: Dockerfile
