@@ -20,7 +20,6 @@ services:
     environment:
         MYSQL_DATABASE: auth
         MYSQL_ROOT_PASSWORD: password
-#    command: --default-authentication-plugin=mysql_native_password
     ports:
         - "3306:3306" # MySQL port
     healthcheck:
