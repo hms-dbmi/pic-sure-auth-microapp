@@ -24,13 +24,13 @@ public class SecurityConfig {
     public SecurityConfig(JWTFilter jwtFilter) {
         this.jwtFilter = jwtFilter;
     }
-//"/actuator/health", "/actuator/info", "/authentication/**", "/swagger.yaml", "/swagger.json","/auth/authentication"
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement((session) -> session.sessionCreationPolicy(STATELESS))
                 .authorizeHttpRequests((authorizeRequests) ->
-                    authorizeRequests.requestMatchers("/auth/authentication", "/authentication").permitAll()
+                    authorizeRequests.requestMatchers("/actuator/health", "/actuator/info", "/authentication/**", "/swagger.yaml", "/swagger.json","/authentication").permitAll()
                             .anyRequest().authenticated()
                 )
                 .httpBasic(AbstractHttpConfigurer::disable)
