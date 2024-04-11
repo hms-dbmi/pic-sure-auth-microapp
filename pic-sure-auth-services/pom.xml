@@ -199,6 +199,13 @@
                     <mainClass>edu.harvard.hms.dbmi.avillach.auth.Application</mainClass>
                     <layout>JAR</layout>
                 </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
             <!-- This plugin is used to reserve a network port for use during the build process. -->
             <plugin>
