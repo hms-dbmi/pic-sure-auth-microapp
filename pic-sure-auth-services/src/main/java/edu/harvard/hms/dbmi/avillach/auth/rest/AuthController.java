@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import java.io.IOException;
@@ -46,8 +47,22 @@ public class AuthController {
 
     @Operation(description = "The authentication endpoint for retrieving a valid user token")
     @PostMapping(path = "/authentication", consumes = "application/json", produces = "application/json")
-    public ResponseEntity<?> authentication(@Parameter(required = true, description = "A json object that includes all Oauth authentication needs, for example, access_token and redirectURI") Map<String, String> authRequest) throws IOException {
+    public ResponseEntity<?> authentication(
+            @Parameter(required = true, description = "A json object that includes all Oauth authentication needs, for example, access_token and redirectURI")
+            @RequestBody Map<String, String> authRequest) throws IOException {
         logger.debug("authentication() starting...");
+
+        if(authRequest == null) {
+            logger.error("authentication() authRequest is null");
+            return ResponseEntity.badRequest().body("authRequest is null");
+        }
+
+        if(authRequest.containsKey("test")) {
+            logger.debug("authentication() test authentication");
+            // This is a test request, just return a 200
+            return ResponseEntity.ok().build();
+        }
+
         if (this.idp_provider.equalsIgnoreCase("fence")) {
             logger.debug("authentication() FENCE authentication");
             return fenceAuthenticationService.getFENCEProfile(authRequest);

@@ -11,6 +11,7 @@ import edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.StringUtils;
@@ -81,13 +82,14 @@ public class JWTFilter extends OncePerRequestFilter {
      * @throws IOException if an I/O error occurs during the execution of the filter
      */
     @Override
-    protected void doFilterInternal(HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain) throws IOException {
+    protected void doFilterInternal(HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain) throws IOException, ServletException {
         // Get headers from the request
         String authorizationHeader = request.getHeader("Authorization");
 
         if (!StringUtils.isNotBlank(authorizationHeader)) {
-            // If the header is not present, then the request is not authorized
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "No authorization header found.");
+            // If the header is not present, we allow the request to pass through
+            // without any authentication or authorization checks
+            filterChain.doFilter(request, response);
         } else {
             // If the header is present, we need to check the token
             String token = authorizationHeader.substring(6).trim();
