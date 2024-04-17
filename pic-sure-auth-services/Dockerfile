@@ -1,7 +1,7 @@
 FROM maven:3.9.6-amazoncorretto-21 as build
 
 # Copy the source code into the container
-COPY ../ /app
+COPY ./ /app
 
 # Change the working directory
 WORKDIR /app
