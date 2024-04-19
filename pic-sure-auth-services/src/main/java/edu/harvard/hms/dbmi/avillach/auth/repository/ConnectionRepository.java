@@ -19,4 +19,6 @@ public interface ConnectionRepository extends JpaRepository<Connection, UUID> {
 
     Optional<Connection> findById(String id);
 
+    void deleteById(String id);
+
 }

@@ -58,7 +58,7 @@ public class OauthUserMatchingService {
 		// This retrieves a map of UserInfo as JSON.
 		try {
 			String userInfoString = mapper.writeValueAsString(userInfo);
-			logger.info("Attempting to find match for user with info: " + userInfo);
+            logger.info("Attempting to find match for user with info: {}", userInfo);
 
 			//Parse this once so it doesn't get re-parsed every time we read from it
 			Configuration conf = Configuration.defaultConfiguration().addOptions(Option.DEFAULT_PATH_LEAF_TO_NULL).addOptions(Option.ALWAYS_RETURN_LIST);
@@ -66,28 +66,27 @@ public class OauthUserMatchingService {
 			//Return lists or null so that we don't have to worry about whether it's a single object or an array, or catch errors
 			List<String> connections = JsonPath.using(conf).parse(parsedInfo).read("$.identities[0].connection");
 			String connectionId = connections.get(0);
-
-			Optional<Connection> connection = connectionRepo.findById(UUID.fromString(connectionId));
+			Optional<Connection> connection = connectionRepo.findById(connectionId);
 
 			List<UserMetadataMapping> mappings = mappingService.getAllMappingsForConnection(connection.orElse(null));
 
 			if (mappings == null || mappings.isEmpty()) {
 				//We don't have any mappings for this connection yet
-				logger.warn("Unable to find user metadata mappings for connectionId " + connection);
+                logger.warn("Unable to find user metadata mappings for connectionId {}", connection);
 				return null;
 			}
 
 			//We only care about unmatched users
 			List<User> users = userRepo.findByConnectionAndMatched(connection.orElse(null), false);
 			if (users == null || users.isEmpty()) {
-				logger.info("No unmatched users exist with connectionId " + connection);
+                logger.info("No unmatched users exist with connectionId {}", connection);
 				return null;
 			}
 			for (UserMetadataMapping umm : mappings) {
 				List<String> auth0values = JsonPath.using(conf).parse(parsedInfo).read(umm.getAuth0MetadataJsonPath());
 				if (auth0values == null || auth0values.isEmpty()) {
 					//Well, nothing found, let's move on.
-					logger.info("Fetched data has no value at " + umm.getAuth0MetadataJsonPath());
+                    logger.info("Fetched data has no value at {}", umm.getAuth0MetadataJsonPath());
 					break;
 				}
 				String auth0value = auth0values.get(0);
@@ -96,18 +95,18 @@ public class OauthUserMatchingService {
 					try{
 						values = JsonPath.using(conf).parse(u.getGeneralMetadata()).read(umm.getGeneralMetadataJsonPath());
 					} catch (JsonPathException e) {
-						logger.warn("User " + u.getUuid() + " has invalid general metadata: " + u.getGeneralMetadata());
+                        logger.warn("User {} has invalid general metadata: {}", u.getUuid(), u.getGeneralMetadata());
 						continue;
 					}
 					if (values == null || values.isEmpty()) {
-						logger.warn("User " + u.getUuid() + " has no value at " + umm.getGeneralMetadataJsonPath());
+                        logger.warn("User {} has no value at {}", u.getUuid(), umm.getGeneralMetadataJsonPath());
 						continue;
 					}
 					String generalValue = values.get(0);
 					if (auth0value.equalsIgnoreCase(generalValue)) {
 						//Match found!!
 						String userId = JsonPath.read(parsedInfo, "$.user_id");
-						logger.info("Matching user with user_id " + userId);
+                        logger.info("Matching user with user_id {}", userId);
 						u.setAuth0metadata(userInfoString);
 						u.setMatched(true);
 						u.setSubject(userId);

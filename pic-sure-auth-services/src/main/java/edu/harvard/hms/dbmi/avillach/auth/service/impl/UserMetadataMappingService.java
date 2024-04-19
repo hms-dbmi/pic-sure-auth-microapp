@@ -39,7 +39,7 @@ public class UserMetadataMappingService {
         StringBuilder errorMessage = new StringBuilder("The following connectionIds do not exist:\n");
         boolean error = false;
         for (UserMetadataMapping umm : mappings) {
-            Optional<Connection> c = connectionRepo.findById(UUID.fromString(umm.getConnection().getId()));
+            Optional<Connection> c = connectionRepo.findById(umm.getConnection().getId());
             if (c.isEmpty()) {
                 error = true;
                 errorMessage.append(umm.getConnection().getId()).append("\n");
@@ -60,7 +60,7 @@ public class UserMetadataMappingService {
     }
 
     public ResponseEntity<?> getAllMappingsForConnection(String connectionId) {
-        Connection connection = this.connectionRepo.findById(UUID.fromString(connectionId)).orElseThrow(() -> new IllegalArgumentException("Connection not found"));
+        Connection connection = this.connectionRepo.findById(connectionId).orElseThrow(() -> new IllegalArgumentException("Connection not found"));
         return PICSUREResponse.success(getAllMappingsForConnection(connection));
     }
 

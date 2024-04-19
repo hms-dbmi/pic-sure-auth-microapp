@@ -26,7 +26,7 @@ public class ConnectionWebService {
             if (c.getSubPrefix() == null || c.getRequiredFields() == null || c.getLabel() == null || c.getId() == null){
                 throw new IllegalArgumentException("Id, Label, Subprefix, and RequiredFields cannot be null");
             }
-            Optional<Connection> conn = connectionRepo.findById(UUID.fromString(c.getId()));
+            Optional<Connection> conn = connectionRepo.findById(c.getId());
             if (conn.isPresent()){
                 throw new IllegalArgumentException("Id must be unique, a connection with id " + c.getId() + " already exists in the database");
             }
@@ -36,7 +36,7 @@ public class ConnectionWebService {
     }
 
     public Connection getConnectionById(String connectionId) {
-        return this.connectionRepo.findById(UUID.fromString(connectionId))
+        return this.connectionRepo.findById(connectionId)
                 .orElseThrow(() -> new IllegalArgumentException("Connection with id " + connectionId + " not found"));
     }
 
@@ -50,7 +50,7 @@ public class ConnectionWebService {
 
     @Transactional
     public List<Connection> removeConnectionById(String connectionId) {
-        this.connectionRepo.deleteById(UUID.fromString(connectionId));
+        this.connectionRepo.deleteById(connectionId);
         return this.getAllConnections();
     }
 }
