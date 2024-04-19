@@ -120,6 +120,9 @@ public class AuthenticationService {
     }
 
     private JsonNode retrieveUserInfo(String accessToken) throws IOException {
+        // TODO: Remove this after debugging
+        logger.info("accessToken: {}", accessToken);
+        logger.info("auth0host: {}", this.auth0host);
         String auth0UserInfoURI = this.auth0host + "/userinfo";
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
