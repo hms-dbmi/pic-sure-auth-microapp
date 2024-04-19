@@ -90,7 +90,7 @@ public class AuthenticationService {
             throw new NotAuthorizedException("cannot get sufficient user information. Please contact admin.");
         }
 
-        Connection connection = connectionRepository.findById(UUID.fromString(connectionId)).orElseThrow(() -> new NotAuthorizedException("No connection found for connection_id " + connectionId));
+        Connection connection = connectionRepository.findById(connectionId).orElseThrow(() -> new NotAuthorizedException("No connection found for connection_id " + connectionId));
         //Do we have this user already?
         User user = userRepository.findBySubjectAndConnection(userId, connection);
         if (user == null) {
