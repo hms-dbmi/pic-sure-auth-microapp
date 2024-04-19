@@ -75,7 +75,7 @@ public class AuthenticationService {
         JsonNode userInfo = retrieveUserInfo(accessToken);
         JsonNode userIdNode = userInfo.get("user_id");
         if (userIdNode == null) {
-            logger.error("getToken() cannot find user_id by retrieveUserInfo(), return json response: " + userInfo.toString());
+            logger.error("getToken() cannot find user_id by retrieveUserInfo(), return json response: {}", userInfo.toString());
             throw new NotAuthorizedException("cannot get sufficient user information. Please contact admin.");
         }
         String userId = userIdNode.asText();
@@ -86,7 +86,7 @@ public class AuthenticationService {
         try {
             connectionId = userInfo.get("identities").get(0).get("connection").asText();
         } catch (Exception e) {
-            logger.error("getToken() cannot find connection_id by retrieveUserInfo(), return json response: " + userInfo.toString());
+            logger.error("getToken() cannot find connection_id by retrieveUserInfo(), return json response: {}", userInfo.toString());
             throw new NotAuthorizedException("cannot get sufficient user information. Please contact admin.");
         }
 

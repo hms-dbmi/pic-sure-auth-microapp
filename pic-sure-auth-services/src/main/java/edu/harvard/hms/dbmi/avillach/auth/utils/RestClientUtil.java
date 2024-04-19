@@ -28,6 +28,8 @@ public class RestClientUtil {
     }
 
     public static ResponseEntity<String> retrieveGetResponse(String uri, HttpHeaders headers) {
+        logger.info("HttpClientUtilSpring retrieveGetResponse()");
+        logger.info("uri: {}", uri);
         try {
             logger.debug("HttpClientUtilSpring retrieveGetResponse()");
             HttpEntity<String> entity = new HttpEntity<>("parameters", headers);
@@ -62,7 +64,7 @@ public class RestClientUtil {
             HttpEntity<String> entity = new HttpEntity<>(body, headers);
             return restTemplate.postForEntity(uri, entity, String.class);
         } catch (HttpClientErrorException ex) {
-            logger.error("HttpClientErrorException: " + ex.getMessage());
+            logger.error("HttpClientErrorException: {}", ex.getMessage());
             throw ex;
         }
     }
