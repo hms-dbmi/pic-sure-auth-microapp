@@ -83,7 +83,7 @@ public class JWTUtil {
                 .issuedAt(now)
                 .subject(subject)
                 .issuer(issuer)
-                .encryptWith(signingKey, Jwts.ENC.A128CBC_HS256);
+                .encryptWith(signingKey, Jwts.ENC.A256CBC_HS512);
 
         //if it has been specified, let's add the expiration
         long expMillis = nowMillis + ttlMillis;
