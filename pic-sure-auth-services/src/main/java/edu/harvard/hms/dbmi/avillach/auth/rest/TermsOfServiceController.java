@@ -68,7 +68,7 @@ public class TermsOfServiceController {
     public ResponseEntity<?> hasUserAcceptedTOS(){
         SecurityContext context = SecurityContextHolder.getContext();
         String userSubject = context.getAuthentication().getName();
-        logger.info("Checking if user {} has accepted the latest TOS", userSubject);
+        logger.info("hasUserAcceptedTOS for user {}", userSubject);
         return PICSUREResponse.success(tosService.hasUserAcceptedLatest(userSubject));
     }
 

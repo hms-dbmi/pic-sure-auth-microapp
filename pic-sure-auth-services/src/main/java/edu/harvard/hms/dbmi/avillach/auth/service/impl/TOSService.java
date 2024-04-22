@@ -44,15 +44,16 @@ public class TOSService {
         logger.info("Checking if user {} has accepted the latest TOS", userId);
         // If TOS is not enabled, then the user has accepted it
         if (!isToSEnabled) {
+            logger.info("TOS is disabled");
             return true;
         }
 
         // If there is no TOS, then the user has accepted it
         if (getLatest() == null) {
+            logger.info("No TOS found in database");
             return true;
         }
 
-        logger.info("Checking Terms Of Service acceptance for user with id {}", userId);
         return checkAgainstTOSDate(userId);
     }
 

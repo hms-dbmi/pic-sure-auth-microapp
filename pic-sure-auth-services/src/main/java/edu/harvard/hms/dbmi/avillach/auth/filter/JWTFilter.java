@@ -184,7 +184,8 @@ public class JWTFilter extends OncePerRequestFilter {
 
         logger.info("User with ID: {} is active.", authenticatedUser.getUuid());
         logger.info("Checking if user has accepted the latest terms of service.");
-        if (this.tosEnabled && tosService.getLatest() != null && !tosService.hasUserAcceptedLatest(authenticatedUser.getSubject())) {
+        if (!tosService.hasUserAcceptedLatest(authenticatedUser.getSubject())) {
+            logger.info("User with ID: {} has not accepted the latest terms of service.", authenticatedUser.getUuid());
             //If user has not accepted terms of service and is attempted to get information other than the terms of service, don't authenticate
             try {
                 response.sendError(HttpServletResponse.SC_FORBIDDEN, "User must accept terms of service");
