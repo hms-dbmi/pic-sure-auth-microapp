@@ -4,7 +4,7 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.TermsOfService;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.repository.TermsOfServiceRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.UserRepository;
-import edu.harvard.hms.dbmi.avillach.auth.rest.TermsOfSerivceController;
+import edu.harvard.hms.dbmi.avillach.auth.rest.TermsOfServiceController;
 import jakarta.persistence.NoResultException;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -18,7 +18,7 @@ import java.util.*;
 /**
  * <p>Provides business logic for the TermsOfService endpoint.</p>>
  *
- * @see TermsOfSerivceController
+ * @see TermsOfServiceController
  */
 @Service
 public class TOSService {
@@ -41,6 +41,7 @@ public class TOSService {
 
 
     public boolean hasUserAcceptedLatest(String userId) {
+        logger.info("Checking if user {} has accepted the latest TOS", userId);
         // If TOS is not enabled, then the user has accepted it
         if (!isToSEnabled) {
             return true;

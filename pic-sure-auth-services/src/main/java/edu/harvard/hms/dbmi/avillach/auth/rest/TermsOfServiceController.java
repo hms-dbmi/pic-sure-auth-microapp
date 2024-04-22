@@ -10,6 +10,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.security.RolesAllowed;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContext;
@@ -30,13 +32,14 @@ import static edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming.AuthRoleNaming
 @Tag(name = "Terms of Service Management")
 @Controller
 @RequestMapping("/tos")
-public class TermsOfSerivceController {
+public class TermsOfServiceController {
 
+    private final Logger logger = LoggerFactory.getLogger(TermsOfServiceController.class);
     private final TOSService tosService;
     private final UserService userService;
 
     @Autowired
-    public TermsOfSerivceController(TOSService tosService, UserService userService) {
+    public TermsOfServiceController(TOSService tosService, UserService userService) {
         this.tosService = tosService;
         this.userService = userService;
     }
@@ -44,6 +47,7 @@ public class TermsOfSerivceController {
     @Operation(description = "GET the latest Terms of Service")
     @GetMapping(path = "/latest", produces = "text/html")
     public ResponseEntity<?> getLatestTermsOfService(){
+        logger.info("Getting latest Terms of Service");
         return PICSUREResponse.success(tosService.getLatest());
     }
 
@@ -64,6 +68,7 @@ public class TermsOfSerivceController {
     public ResponseEntity<?> hasUserAcceptedTOS(){
         SecurityContext context = SecurityContextHolder.getContext();
         String userSubject = context.getAuthentication().getName();
+        logger.info("Checking if user {} has accepted the latest TOS", userSubject);
         return PICSUREResponse.success(tosService.hasUserAcceptedLatest(userSubject));
     }
 

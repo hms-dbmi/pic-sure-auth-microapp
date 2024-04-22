@@ -182,6 +182,8 @@ public class JWTFilter extends OncePerRequestFilter {
             throw new NotAuthorizedException("User is deactivated");
         }
 
+        logger.info("User with ID: {} is active.", authenticatedUser.getUuid());
+        logger.info("Checking if user has accepted the latest terms of service.");
         if (this.tosEnabled && tosService.getLatest() != null && !tosService.hasUserAcceptedLatest(authenticatedUser.getSubject())) {
             //If user has not accepted terms of service and is attempted to get information other than the terms of service, don't authenticate
             try {

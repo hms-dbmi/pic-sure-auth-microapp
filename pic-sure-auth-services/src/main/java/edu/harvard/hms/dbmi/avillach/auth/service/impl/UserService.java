@@ -307,28 +307,29 @@ public class UserService {
     @Transactional
     public ResponseEntity<?> getCurrentUser(String authorizationHeader, Boolean hasToken) {
         SecurityContext securityContext = SecurityContextHolder.getContext();
-        User user = (User) securityContext.getAuthentication().getPrincipal();
-        if (user == null || user.getUuid() == null) {
+        Optional<User> user = Optional.ofNullable((User) securityContext.getAuthentication().getPrincipal());
+        if (user.isEmpty() || user.get().getUuid() == null) {
             logger.error("Security context didn't have a user stored.");
             return PICSUREResponse.applicationError("Inner application error, please contact admin.");
         }
 
-        user = this.userRepository.getById(user.getUuid());
-        if (user == null) {
+        user = this.userRepository.findById(user.get().getUuid());
+        if (user.isEmpty()) {
             logger.error("When retrieving current user, it returned null");
             return PICSUREResponse.applicationError("Inner application error, please contact admin.");
         }
 
+        logger.info("getCurrentUser() user found: {}", user.get().getEmail());
         User.UserForDisplay userForDisplay = new User.UserForDisplay()
-                .setEmail(user.getEmail())
-                .setPrivileges(user.getPrivilegeNameSet())
-                .setUuid(user.getUuid().toString())
-                .setAcceptedTOS(this.tosService.hasUserAcceptedLatest(user.getSubject()));
+                .setEmail(user.get().getEmail())
+                .setPrivileges(user.get().getPrivilegeNameSet())
+                .setUuid(user.get().getUuid().toString())
+                .setAcceptedTOS(this.tosService.hasUserAcceptedLatest(user.get().getSubject()));
 
         // currently, the queryScopes are simple combination of queryScope string together as a set.
         // We are expecting the queryScope string as plain string. If it is a JSON, we could change the
         // code to use JsonUtils.mergeTemplateMap(Map, Map)
-        Set<Privilege> privileges = user.getTotalPrivilege();
+        Set<Privilege> privileges = user.get().getTotalPrivilege();
         if (privileges != null && !privileges.isEmpty()) {
             Set<String> scopes = new TreeSet<>();
             privileges.stream().filter(privilege -> privilege.getQueryScope() != null).forEach(privilege -> {
@@ -345,12 +346,12 @@ public class UserService {
 
         if (hasToken != null) {
 
-            if (user.getToken() != null && !user.getToken().isEmpty()) {
-                userForDisplay.setToken(user.getToken());
+            if (user.get().getToken() != null && !user.get().getToken().isEmpty()) {
+                userForDisplay.setToken(user.get().getToken());
             } else {
-                user.setToken(generateUserLongTermToken(authorizationHeader));
-                this.userRepository.save(user);
-                userForDisplay.setToken(user.getToken());
+                user.get().setToken(generateUserLongTermToken(authorizationHeader));
+                this.userRepository.save(user.get());
+                userForDisplay.setToken(user.get().getToken());
             }
         }
 

@@ -94,7 +94,7 @@ public class TokenService {
             inputMap.remove("token");
         } catch (NotAuthorizedException ex) {
             // only when the token is for sure invalid, we can dump it into the log.
-            logger.error("_inspectToken() the token - " + token + " - is invalid with exception: " + ex.getMessage());
+            logger.error("_inspectToken() the token - {} - is invalid with exception: {}", token, ex.getMessage());
             tokenInspection.setMessage(ex.getMessage());
             return tokenInspection;
         }
@@ -121,7 +121,7 @@ public class TokenService {
             throw new NullPointerException("Inner application error, please ask admin to check the log.");
         }
 
-        String subject = jws.getBody().getSubject();
+        String subject = jws.getPayload().getSubject();
 
         // get the user based on subject field in token
         User user;
@@ -158,8 +158,7 @@ public class TokenService {
         if (isLongTermToken && !token.equals(user.getToken())) {
             // in long_term_token mode, the token needs to be exactly the same as the token in user table
             isLongTermTokenCompromised = true;
-            logger.error("_inspectToken User " + user.getUuid() + "|" + user.getSubject()
-                    + "is sending a long term token that is not matching the record in database user table.");
+            logger.error("_inspectToken User {}|{}is sending a long term token that is not matching the record in database user table.", user.getUuid(), user.getSubject());
             errorMsg = "Cannot find matched long term token, your token might have been refreshed.";
         }
 
@@ -171,9 +170,7 @@ public class TokenService {
             // if no privileges associated
             isAuthorizationPassed = true;
             //we still want to log this, though.
-            logger.info("ACCESS_LOG ___ " + user.getUuid() + "," + user.getEmail() + "," + user.getName() +
-                    " ___ has been granted access to execute query ___ " + inputMap.get("request") + " ___ in application ___ " + application.getName()
-                    + " ___ NO APP PRIVILEGES DEFINED");
+            logger.info("ACCESS_LOG ___ {},{},{} ___ has been granted access to execute query ___ {} ___ in application ___ {} ___ NO APP PRIVILEGES DEFINED", user.getUuid(), user.getEmail(), user.getName(), inputMap.get("request"), application.getName());
         } else if (!isLongTermTokenCompromised
                 && user.getRoles() != null
                 // The protocol between applications and PSAMA is application will
@@ -190,7 +187,7 @@ public class TokenService {
 
         if (isAuthorizationPassed) {
             tokenInspection.addField("active", true);
-            ArrayList<String> roles = new ArrayList<String>();
+            ArrayList<String> roles = new ArrayList<>();
             for (Privilege p : user.getTotalPrivilege()) {
                 roles.add(p.getName());
             }
@@ -200,14 +197,13 @@ public class TokenService {
             return tokenInspection;
         }
 
-        tokenInspection.addAllFields(jws.getBody());
+        tokenInspection.addAllFields(jws.getPayload());
 
         // attach all privileges associated with the application to the responseMap
         tokenInspection.addField("privileges", user.getPrivilegeNameSetByApplication(application));
 
 
-        logger.info("_inspectToken() Successfully inspect and return response map: "
-                + tokenInspection.getResponseMap().entrySet()
+        logger.info("_inspectToken() Successfully inspect and return response map: {}", tokenInspection.getResponseMap().entrySet()
                 .stream()
                 .map(entry -> entry.getKey() + " - " + entry.getValue())
                 .collect(Collectors.joining(", ")));
