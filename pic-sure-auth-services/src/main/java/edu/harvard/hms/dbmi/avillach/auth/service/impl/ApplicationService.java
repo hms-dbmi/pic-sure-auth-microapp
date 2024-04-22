@@ -129,7 +129,7 @@ public class ApplicationService {
         }
 
         return JWTUtil.createJwtToken(
-                this.CLIENT_SECRET, null, null,
+                null, null,
                 new HashMap<>(
                         Map.of(
                                 "user_id", AuthNaming.PSAMA_APPLICATION_TOKEN_PREFIX + "|" + application.getName()

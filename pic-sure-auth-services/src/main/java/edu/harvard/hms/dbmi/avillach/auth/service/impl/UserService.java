@@ -84,7 +84,6 @@ public class UserService {
         logger.info("getUserProfileResponse() using claims:" + claims.toString());
 
         String token = JWTUtil.createJwtToken(
-                this.clientSecret,
                 "whatever",
                 "edu.harvard.hms.dbmi.psama",
                 claims,
@@ -493,7 +492,7 @@ public class UserService {
             tokenSubject = tokenSubject.substring(AuthNaming.LONG_TERM_TOKEN_PREFIX.length() + 1);
         }
 
-        return JWTUtil.createJwtToken(clientSecret,
+        return JWTUtil.createJwtToken(
                 claims.getId(),
                 claims.getIssuer(),
                 claims,

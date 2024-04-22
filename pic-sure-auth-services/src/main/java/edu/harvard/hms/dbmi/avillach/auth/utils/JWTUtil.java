@@ -1,16 +1,22 @@
 package edu.harvard.hms.dbmi.avillach.auth.utils;
 
+import com.auth0.json.mgmt.client.SigningKey;
 import edu.harvard.hms.dbmi.avillach.auth.exceptions.NotAuthorizedException;
-import io.jsonwebtoken.*;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
+import io.jsonwebtoken.JwtBuilder;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureException;
+import io.jsonwebtoken.security.Keys;
 import org.apache.tomcat.util.codec.binary.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import javax.crypto.spec.SecretKeySpec;
+import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
-import java.security.Key;
 import java.util.Date;
 import java.util.Map;
 import java.util.Optional;
@@ -31,16 +37,22 @@ public class JWTUtil {
     @Value("${application.client.secret.base64}")
     private static boolean clientSecretIsBase64;
 
+    private static String getDecodedClientSecret() {
+        if (clientSecretIsBase64) {
+            return new String(Base64.decodeBase64(clientSecret));
+        }
+
+        return clientSecret;
+    }
+
     /**
-     * @param clientSecret - client secret
      * @param id - id
      * @param issuer - issuer
      * @param claims - claims
      * @param subject - subject
-     * @param ttlMillis - time to live in milliseconds
      * @return JWT token
      */
-    public static String createJwtToken(String clientSecret, String id, String issuer, Map<String, Object> claims, String subject, long ttlMillis) {
+    public static String createJwtToken(String id, String issuer, Map<String, Object> claims, String subject, long ttlMillis) {
         logger.debug("createJwtToken() starting...");
         String jwt_token = null;
 
@@ -52,58 +64,44 @@ public class JWTUtil {
             ttlMillis = 999L * 1000 * 60 * 60 * 24;
         }
 
-        SignatureAlgorithm signatureAlgorithm = SignatureAlgorithm.HS256;
         long nowMillis = System.currentTimeMillis();
         Date now = new Date(nowMillis);
 
-        //We will sign our JWT with our ApiKey secret
-        byte[] apiKeySecretBytes = clientSecret.getBytes();
-
-        Key signingKey = new SecretKeySpec(apiKeySecretBytes, signatureAlgorithm.getJcaName());
+        String clientSecret = getDecodedClientSecret();
+        SecretKey signingKey = Keys.hmacShaKeyFor(clientSecret.getBytes(StandardCharsets.UTF_8));
 
         //Builds the JWT and serializes it to a compact, URL-safe string
         JwtBuilder builder = Jwts.builder()
-                .setClaims(claims)
-                .setId(id)
-                .setIssuedAt(now)
-                .setSubject(subject)
-                .setIssuer(issuer)
-                .signWith(signatureAlgorithm, signingKey);
+                .claims(claims)
+                .id(id)
+                .issuedAt(now)
+                .subject(subject)
+                .issuer(issuer)
+                .encryptWith(signingKey, Jwts.ENC.A128CBC_HS256);
 
         //if it has been specified, let's add the expiration
         long expMillis = nowMillis + ttlMillis;
         Date exp = new Date(expMillis);
-        builder.setExpiration(exp);
+        builder.expiration(exp);
         jwt_token = builder.compact();
 
         return jwt_token;
     }
 
     public static Jws<Claims> parseToken(String token) {
-        Jws<Claims> jws = null;
+        String clientSecret = getDecodedClientSecret();
+        SecretKey signingKey = Keys.hmacShaKeyFor(clientSecret.getBytes(StandardCharsets.UTF_8));
 
+        Jws<Claims> jws;
         try {
-            jws = Jwts.parser().setSigningKey(clientSecret.getBytes(StandardCharsets.UTF_8)).parseClaimsJws(token);
-        } catch (SignatureException e) {
-            try {
-                if (clientSecretIsBase64) {
-                    // handle if client secret is base64 encoded
-                    jws = Jwts.parser().setSigningKey(Base64.decodeBase64(clientSecret)).parseClaimsJws(token);
-                } else {
-                    // handle if client secret is not base64 encoded
-                    jws = Jwts.parser().setSigningKey(clientSecret.getBytes(StandardCharsets.UTF_8)).parseClaimsJws(token);
-                }
-            } catch (JwtException | IllegalArgumentException ex) {
-                logger.error("parseToken() throws: " + e.getClass().getSimpleName() + ", " + e.getMessage());
-                throw new NotAuthorizedException(ex.getClass().getSimpleName() + ": " + ex.getMessage());
-            }
+            jws = Jwts.parser().decryptWith(signingKey).build().parseSignedClaims(token);
         } catch (JwtException | IllegalArgumentException e) {
-            logger.error("parseToken() throws: " + e.getClass().getSimpleName() + ", " + e.getMessage());
+            logger.error("parseToken() throws: {}, {}", e.getClass().getSimpleName(), e.getMessage());
             throw new NotAuthorizedException(e.getClass().getSimpleName() + ": " + e.getMessage());
         }
 
         if (jws == null) {
-            logger.error("parseToken() get null for jws body by parsing Token - " + token);
+            logger.error("parseToken() get null for jws body by parsing Token - {}", token);
             throw new NotAuthorizedException("Please contact admin to see the log");
         }
 

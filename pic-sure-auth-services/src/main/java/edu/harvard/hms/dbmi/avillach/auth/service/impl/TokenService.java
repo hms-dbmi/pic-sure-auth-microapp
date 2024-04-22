@@ -271,7 +271,7 @@ public class TokenService {
         }
 
         Date expirationDate = new Date(Calendar.getInstance().getTimeInMillis() + this.tokenExpirationTime);
-        String refreshedToken = JWTUtil.createJwtToken(this.clientSecret,
+        String refreshedToken = JWTUtil.createJwtToken(
                 claims.getId(),
                 claims.getIssuer(),
                 claims,
