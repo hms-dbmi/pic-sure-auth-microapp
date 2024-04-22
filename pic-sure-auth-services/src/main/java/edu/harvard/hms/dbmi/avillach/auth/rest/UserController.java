@@ -77,8 +77,6 @@ public class UserController {
      * every time a user hit this endpoint <code>/me</code> with the query parameter ?hasToken presented,
      * it will refresh the long term token.
      *
-     * @param hasToken
-     * @return
      */
     @Operation(description = "Retrieve information of current user")
     @GetMapping(produces = "application/json", path = "/me")
@@ -86,6 +84,7 @@ public class UserController {
             @RequestHeader("Authorization") String authorizationHeader,
             @Parameter(required = false, description = "Attribute that represents if a long term token will attach to the response")
             @RequestParam("hasToken") Boolean hasToken) {
+        logger.info("getCurrentUser() authorizationHeader: {}, hasToken {}", authorizationHeader, hasToken);
         return this.userService.getCurrentUser(authorizationHeader, hasToken);
     }
 
@@ -94,6 +93,7 @@ public class UserController {
     public ResponseEntity<?> getQueryTemplate(
             @Parameter(description = "Application Id for the returning queryTemplate")
             @PathVariable("applicationId") String applicationId) {
+        logger.info("getQueryTemplate() applicationId: {}", applicationId);
         Optional<String> mergedTemplate = this.userService.getQueryTemplate(applicationId);
 
         if (mergedTemplate.isEmpty()) {
