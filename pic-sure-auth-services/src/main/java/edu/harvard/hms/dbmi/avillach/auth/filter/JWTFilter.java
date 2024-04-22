@@ -148,6 +148,8 @@ public class JWTFilter extends OncePerRequestFilter {
                 // Authenticate as User
                 setSecurityContextForUser(request, response, jws.getPayload().getSubject());
             }
+
+            filterChain.doFilter(request, response);
         }
 
     }
@@ -177,8 +179,10 @@ public class JWTFilter extends OncePerRequestFilter {
             throw new IllegalArgumentException("Cannot validate user claims, based on information stored in the JWT token.");
         }
 
+        logger.info("User with email: {} is found.", authenticatedUser.getEmail());
+
         if (!authenticatedUser.isActive()) {
-            logger.warn("User with ID: " + authenticatedUser.getUuid() + " is deactivated.");
+            logger.warn("User with ID: {} is deactivated.", authenticatedUser.getUuid());
             throw new NotAuthorizedException("User is deactivated");
         }
 
