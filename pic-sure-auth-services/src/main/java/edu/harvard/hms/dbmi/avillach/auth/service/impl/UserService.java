@@ -47,7 +47,6 @@ public class UserService {
     private final ConnectionRepository connectionRepository;
     private final ApplicationRepository applicationRepository;
     private final RoleService roleService;
-    private final String clientSecret;
     private final long tokenExpirationTime;
     private static final long defaultTokenExpirationTime = 1000L * 60 * 60; // 1 hour
 
@@ -55,20 +54,21 @@ public class UserService {
 
     private final String applicationUUID;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final JWTUtil jwtUtil;
 
     @Autowired
     public UserService(BasicMailService basicMailService, TOSService tosService, UserRepository userRepository, ConnectionRepository connectionRepository, ApplicationRepository applicationRepository, RoleService roleService,
-                       @Value("${application.client.secret}") String clientSecret, @Value("${application.token.expiration.time}") long tokenExpirationTime,
-                       @Value("${application.default.uuid}") String applicationUUID, @Value("${application.long.term.token.expiration.time}") long longTermTokenExpirationTime) {
+                       @Value("${application.token.expiration.time}") long tokenExpirationTime,
+                       @Value("${application.default.uuid}") String applicationUUID, @Value("${application.long.term.token.expiration.time}") long longTermTokenExpirationTime, JWTUtil jwtUtil) {
         this.basicMailService = basicMailService;
         this.tosService = tosService;
         this.userRepository = userRepository;
         this.connectionRepository = connectionRepository;
         this.roleService = roleService;
-        this.clientSecret = clientSecret;
         this.tokenExpirationTime = tokenExpirationTime > 0 ? tokenExpirationTime : defaultTokenExpirationTime;
         this.applicationRepository = applicationRepository;
         this.applicationUUID = applicationUUID;
+        this.jwtUtil = jwtUtil;
 
         long defaultLongTermTokenExpirationTime = 1000L * 60 * 60 * 24 * 30; //
         this.longTermTokenExpirationTime = longTermTokenExpirationTime > 0 ? longTermTokenExpirationTime : defaultLongTermTokenExpirationTime;
@@ -81,9 +81,9 @@ public class UserService {
         HashMap<String, String> responseMap = new HashMap<String, String>();
         logger.info("getUserProfileResponse() initialized map");
 
-        logger.info("getUserProfileResponse() using claims:" + claims.toString());
+        logger.info("getUserProfileResponse() using claims:{}", claims.toString());
 
-        String token = JWTUtil.createJwtToken(
+        String token = this.jwtUtil.createJwtToken(
                 "whatever",
                 "edu.harvard.hms.dbmi.psama",
                 claims,
@@ -480,9 +480,9 @@ public class UserService {
             throw new IllegalArgumentException("Token is not presented in the authorization header.");
         }
 
-        Jws<Claims> jws = JWTUtil.parseToken(token.get());
+        Jws<Claims> jws = this.jwtUtil.parseToken(token.get());
 
-        Claims claims = jws.getBody();
+        Claims claims = jws.getPayload();
         String tokenSubject = claims.getSubject();
 
         if (tokenSubject.startsWith(AuthNaming.LONG_TERM_TOKEN_PREFIX + "|")) {
@@ -492,7 +492,7 @@ public class UserService {
             tokenSubject = tokenSubject.substring(AuthNaming.LONG_TERM_TOKEN_PREFIX.length() + 1);
         }
 
-        return JWTUtil.createJwtToken(
+        return this.jwtUtil.createJwtToken(
                 claims.getId(),
                 claims.getIssuer(),
                 claims,

@@ -27,7 +27,6 @@ import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static edu.harvard.hms.dbmi.avillach.auth.utils.JWTUtil.parseToken;
 
 @Service
 public class TokenService {
@@ -39,18 +38,17 @@ public class TokenService {
     private final UserRepository userRepository;
 
     private final long tokenExpirationTime;
-    private final String clientSecret;
 
     private static final long defaultTokenExpirationTime = 1000L * 60 * 60; // 1 hour TODO: Move to a global configuration or enum?
+    private final JWTUtil jwtUtil;
 
     @Autowired
     public TokenService(AuthorizationService authorizationService, UserRepository userRepository,
-                        @Value("${application.client.secret}") String clientSecret,
-                        @Value("${application.token.expiration.time}") long tokenExpirationTime) {
+                        @Value("${application.token.expiration.time}") long tokenExpirationTime, JWTUtil jwtUtil) {
         this.authorizationService = authorizationService;
         this.userRepository = userRepository;
-        this.clientSecret = clientSecret;
         this.tokenExpirationTime = tokenExpirationTime > 0 ? tokenExpirationTime : defaultTokenExpirationTime;
+        this.jwtUtil = jwtUtil;
     }
 
     public ResponseEntity<?> inspectToken(Map<String, Object> inputMap) {
@@ -87,7 +85,7 @@ public class TokenService {
         // don't need to check if jws is null or not, since parse function has already checked
         Jws<Claims> jws;
         try {
-            jws = JWTUtil.parseToken(token);
+            jws = this.jwtUtil.parseToken(token);
 
             /*
              * token has been verified, now we remove it from inputMap, so further logs will not be able to log
@@ -255,13 +253,13 @@ public class TokenService {
         Jws<Claims> jws;
         try {
             String token = JWTUtil.getTokenFromAuthorizationHeader(authorizationHeader).orElseThrow(() -> new NotAuthorizedException("Token not found"));
-            jws = parseToken(token);
+            jws = this.jwtUtil.parseToken(token);
 
         } catch (NotAuthorizedException ex) {
             return PICSUREResponse.protocolError("Cannot parse original token");
         }
 
-        Claims claims = jws.getBody();
+        Claims claims = jws.getPayload();
 
         // just check if the subject is along with the database record,
         // just in case something has changed in middle
@@ -271,7 +269,7 @@ public class TokenService {
         }
 
         Date expirationDate = new Date(Calendar.getInstance().getTimeInMillis() + this.tokenExpirationTime);
-        String refreshedToken = JWTUtil.createJwtToken(
+        String refreshedToken = this.jwtUtil.createJwtToken(
                 claims.getId(),
                 claims.getIssuer(),
                 claims,

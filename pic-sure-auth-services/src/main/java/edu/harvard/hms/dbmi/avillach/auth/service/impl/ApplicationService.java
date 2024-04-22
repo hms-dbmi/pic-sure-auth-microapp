@@ -21,14 +21,13 @@ public class ApplicationService {
     private final static Logger logger = LoggerFactory.getLogger(ApplicationService.class);
     private final ApplicationRepository applicationRepo;
     private final PrivilegeRepository privilegeRepo;
-
-    @Value("${application.client.secret}")
-    private String CLIENT_SECRET;
+    private final JWTUtil jwtUtil;
 
     @Autowired
-    ApplicationService(ApplicationRepository applicationRepo, PrivilegeRepository privilegeRepo) {
+    ApplicationService(ApplicationRepository applicationRepo, PrivilegeRepository privilegeRepo, JWTUtil jwtUtil) {
         this.applicationRepo = applicationRepo;
         this.privilegeRepo = privilegeRepo;
+        this.jwtUtil = jwtUtil;
     }
 
     /**
@@ -128,7 +127,7 @@ public class ApplicationService {
             throw new NullPointerException("Cannot generate application token, please contact admin");
         }
 
-        return JWTUtil.createJwtToken(
+        return this.jwtUtil.createJwtToken(
                 null, null,
                 new HashMap<>(
                         Map.of(

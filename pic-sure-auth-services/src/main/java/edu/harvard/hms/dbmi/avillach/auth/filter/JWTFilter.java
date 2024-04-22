@@ -8,6 +8,7 @@ import edu.harvard.hms.dbmi.avillach.auth.repository.ApplicationRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.UserRepository;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.TOSService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming;
+import edu.harvard.hms.dbmi.avillach.auth.utils.JWTUtil;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import jakarta.servlet.FilterChain;
@@ -29,7 +30,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-import static edu.harvard.hms.dbmi.avillach.auth.utils.JWTUtil.parseToken;
 
 /**
  * The main gate for PSAMA that filters all incoming requests against PSAMA.
@@ -58,15 +58,17 @@ public class JWTFilter extends OncePerRequestFilter {
     private final String userClaimId;
 
     private final boolean tosEnabled;
+    private final JWTUtil jwtUtil;
 
     @Autowired
     public JWTFilter(UserRepository userRepo, ApplicationRepository applicationRepo, TOSService tosService,
-                     @Value("${application.user.id.claim}") String userClaimId, @Value("${application.tos.enabled}") boolean tosEnabled) {
+                     @Value("${application.user.id.claim}") String userClaimId, @Value("${application.tos.enabled}") boolean tosEnabled, JWTUtil jwtUtil) {
         this.userRepo = userRepo;
         this.applicationRepo = applicationRepo;
         this.tosService = tosService;
         this.userClaimId = userClaimId;
         this.tosEnabled = tosEnabled;
+        this.jwtUtil = jwtUtil;
     }
 
     /**
@@ -96,8 +98,8 @@ public class JWTFilter extends OncePerRequestFilter {
             logger.debug(" token: {}", token);
 
             // Parse the token
-            Jws<Claims> jws = parseToken(token);
-            String userId = jws.getBody().get(this.userClaimId, String.class);
+            Jws<Claims> jws = this.jwtUtil.parseToken(token);
+            String userId = jws.getPayload().get(this.userClaimId, String.class);
 
             if (userId.startsWith(AuthNaming.LONG_TERM_TOKEN_PREFIX)) {
                 // For profile information, we do indeed allow long term token
@@ -105,7 +107,7 @@ public class JWTFilter extends OncePerRequestFilter {
                 if (request.getRequestURI().startsWith("/user/me")) {
                     // Get the subject claim, remove the LONG_TERM_TOKEN_PREFIX, and use that String value to
                     // look up the existing user.
-                    String realClaimsSubject = jws.getBody().getSubject().substring(AuthNaming.LONG_TERM_TOKEN_PREFIX.length() + 1);
+                    String realClaimsSubject = jws.getPayload().getSubject().substring(AuthNaming.LONG_TERM_TOKEN_PREFIX.length() + 1);
 
                     setSecurityContextForUser(request, response, realClaimsSubject);
                 } else {
@@ -144,7 +146,7 @@ public class JWTFilter extends OncePerRequestFilter {
             } else {
                 logger.debug("UserID: {} is not a long term token and not a PSAMA application token.", userId);
                 // Authenticate as User
-                setSecurityContextForUser(request, response, jws.getBody().getSubject());
+                setSecurityContextForUser(request, response, jws.getPayload().getSubject());
             }
         }
 

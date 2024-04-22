@@ -1,13 +1,11 @@
 package edu.harvard.hms.dbmi.avillach.auth.utils;
 
-import com.auth0.json.mgmt.client.SigningKey;
 import edu.harvard.hms.dbmi.avillach.auth.exceptions.NotAuthorizedException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureException;
 import io.jsonwebtoken.security.Keys;
 import org.apache.tomcat.util.codec.binary.Base64;
 import org.slf4j.Logger;
@@ -27,17 +25,24 @@ import java.util.Optional;
  */
 @Component
 public class JWTUtil {
+
     private final static Logger logger = LoggerFactory.getLogger(JWTUtil.class);
 
     private static final long defaultTTLMillis = 1000L * 60 * 60 * 24 * 7;
 
     @Value("${application.client.secret}")
-    private static String clientSecret;
+    private String clientSecret;
 
     @Value("${application.client.secret.base64}")
-    private static boolean clientSecretIsBase64;
+    private boolean clientSecretIsBase64;
 
-    private static String getDecodedClientSecret() {
+    public JWTUtil(@Value("${application.client.secret}") String clientSecret,
+                    @Value("${application.client.secret.base64}") boolean clientSecretIsBase64) {
+        this.clientSecret = clientSecret;
+        this.clientSecretIsBase64 = clientSecretIsBase64;
+    }
+
+    private String getDecodedClientSecret() {
         logger.info("Client secret {}", clientSecret);
         if (clientSecretIsBase64) {
             return new String(Base64.decodeBase64(clientSecret));
@@ -53,7 +58,7 @@ public class JWTUtil {
      * @param subject - subject
      * @return JWT token
      */
-    public static String createJwtToken(String id, String issuer, Map<String, Object> claims, String subject, long ttlMillis) {
+    public String createJwtToken(String id, String issuer, Map<String, Object> claims, String subject, long ttlMillis) {
         logger.debug("createJwtToken() starting...");
         String jwt_token = null;
 
@@ -89,7 +94,7 @@ public class JWTUtil {
         return jwt_token;
     }
 
-    public static Jws<Claims> parseToken(String token) {
+    public Jws<Claims> parseToken(String token) {
         String clientSecret = getDecodedClientSecret();
         SecretKey signingKey = Keys.hmacShaKeyFor(clientSecret.getBytes(StandardCharsets.UTF_8));
 
