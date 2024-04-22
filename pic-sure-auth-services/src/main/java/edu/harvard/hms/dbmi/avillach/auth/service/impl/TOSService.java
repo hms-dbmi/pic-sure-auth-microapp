@@ -55,7 +55,7 @@ public class TOSService {
         return checkAgainstTOSDate(userId);
     }
 
-    public TermsOfService updateTermsOfService(String html) {
+    public Optional<TermsOfService> updateTermsOfService(String html) {
         TermsOfService updatedTOS = new TermsOfService();
         updatedTOS.setContent(html);
         termsOfServiceRepo.save(updatedTOS);
@@ -64,7 +64,12 @@ public class TOSService {
 
     public String getLatest() {
         try {
-            return termsOfServiceRepo.findTopByOrderByDateUpdatedDesc().getContent();
+            Optional<TermsOfService> termsOfService = termsOfServiceRepo.findTopByOrderByDateUpdatedDesc();
+            if (termsOfService.isPresent()) {
+                return termsOfService.get().getContent();
+            }
+
+            throw new NoResultException();
         } catch (NoResultException e) {
             logger.info("Terms Of Service disabled: No Terms of Service found in database");
             return null;
@@ -78,8 +83,12 @@ public class TOSService {
             throw new RuntimeException("User does not exist");
         }
         user.setAcceptedTOS(new Date());
-        Date tosDate = termsOfServiceRepo.findTopByOrderByDateUpdatedDesc().getDateUpdated();
-        logger.info("TOS_LOG : User {} accepted the Terms of Service dated {}", !StringUtils.isBlank(user.getEmail()) ? user.getEmail() : user.getGeneralMetadata(), tosDate.toString());
+        Optional<TermsOfService> tosDate = termsOfServiceRepo.findTopByOrderByDateUpdatedDesc();
+        if (tosDate.isEmpty()) {
+            throw new RuntimeException("No Terms of Service found in database");
+        }
+
+        logger.info("TOS_LOG : User {} accepted the Terms of Service dated {}", !StringUtils.isBlank(user.getEmail()) ? user.getEmail() : user.getGeneralMetadata(), tosDate.get().getDateUpdated());
         return user;
     }
 
@@ -88,11 +97,13 @@ public class TOSService {
         if (optUser.isPresent()) {
             User user = optUser.get();
             Date acceptedTOS = user.getAcceptedTOS();
+            logger.info("User {} accepted TOS on {}", userId, acceptedTOS);
             if (acceptedTOS == null) {
                 return false;
             }
-            Date latestTOS = this.termsOfServiceRepo.findTopByOrderByDateUpdatedDesc().getDateUpdated();
-            return acceptedTOS.after(latestTOS);
+
+            Optional<TermsOfService> latestTOS = this.termsOfServiceRepo.findTopByOrderByDateUpdatedDesc();
+            return latestTOS.filter(termsOfService -> acceptedTOS.after(termsOfService.getDateUpdated())).isPresent();
         }
 
         return false;

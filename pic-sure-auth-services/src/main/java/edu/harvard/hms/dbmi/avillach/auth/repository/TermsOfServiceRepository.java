@@ -4,6 +4,7 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.TermsOfService;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -17,6 +18,6 @@ public interface TermsOfServiceRepository extends JpaRepository<TermsOfService, 
      * <p>Find the latest TermsOfService by date updated.</p>
      * @return TermsOfService
      */
-    TermsOfService findTopByOrderByDateUpdatedDesc();
+    Optional<TermsOfService> findTopByOrderByDateUpdatedDesc();
 
 }

@@ -47,6 +47,7 @@ public class User extends BaseEntity implements Serializable, Principal {
 
 	private boolean matched;
 
+	@Column(nullable = true)
 	private Date acceptedTOS;
 
 	@Column(name = "auth0_metadata")

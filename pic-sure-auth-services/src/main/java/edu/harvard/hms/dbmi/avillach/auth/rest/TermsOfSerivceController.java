@@ -1,5 +1,6 @@
 package edu.harvard.hms.dbmi.avillach.auth.rest;
 
+import edu.harvard.hms.dbmi.avillach.auth.entity.TermsOfService;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.TOSService;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import java.util.List;
+import java.util.Optional;
 
 import static edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming.AuthRoleNaming.SUPER_ADMIN;
 
@@ -50,7 +52,11 @@ public class TermsOfSerivceController {
     @PostMapping(path = "/update", consumes = "text/html", produces = "application/json")
     public ResponseEntity<?> updateTermsOfService(
             @Parameter(required = true, description = "A html page for updating") String html){
-        return PICSUREResponse.success(tosService.updateTermsOfService(html));
+        Optional<TermsOfService> termsOfService = tosService.updateTermsOfService(html);
+        if (termsOfService.isEmpty()){
+            return PICSUREResponse.success();
+        }
+        return PICSUREResponse.success(termsOfService.get());
     }
 
     @Operation(description = "GET if current user has acceptted his TOS or not")
