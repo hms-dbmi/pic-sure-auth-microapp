@@ -100,7 +100,7 @@ public class JWTUtil {
 
         Jws<Claims> jws;
         try {
-            jws = Jwts.parser().decryptWith(signingKey).build().parseSignedClaims(token);
+            jws = Jwts.parser().verifyWith(signingKey).build().parseSignedClaims(token);
         } catch (JwtException | IllegalArgumentException e) {
             logger.error("parseToken() throws: {}, {}", e.getClass().getSimpleName(), e.getMessage());
             throw new NotAuthorizedException(e.getClass().getSimpleName() + ": " + e.getMessage());
