@@ -5,6 +5,7 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.exceptions.NotAuthorizedException;
 import edu.harvard.hms.dbmi.avillach.auth.model.CustomApplicationDetails;
+import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
 import edu.harvard.hms.dbmi.avillach.auth.repository.ApplicationRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.UserRepository;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.TOSService;
@@ -224,8 +225,7 @@ public class JWTFilter extends OncePerRequestFilter {
 
         assert userRoles != null;
         logger.info("User with email {} has roles {}.", authenticatedUser.getEmail(), userRoles.stream().map(Role::getName).toList());
-
-        UserDetails userDetails = userService.loadUserByUsername(authenticatedUser.getEmail());
+        CustomUserDetails userDetails = new CustomUserDetails(authenticatedUser);
         UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
         SecurityContextHolder.getContext().setAuthentication(authentication);
