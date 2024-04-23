@@ -15,7 +15,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import static org.springframework.security.config.http.SessionCreationPolicy.STATELESS;
 
 @Configuration
-@EnableMethodSecurity()
+@EnableMethodSecurity(prePostEnabled = false)
 @EnableWebSecurity
 public class SecurityConfig {
 
