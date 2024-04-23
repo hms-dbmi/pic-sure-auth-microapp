@@ -2,12 +2,10 @@ package edu.harvard.hms.dbmi.avillach.auth.filter;
 
 import edu.harvard.hms.dbmi.avillach.auth.entity.Application;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
-import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.exceptions.NotAuthorizedException;
 import edu.harvard.hms.dbmi.avillach.auth.model.CustomApplicationDetails;
 import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
 import edu.harvard.hms.dbmi.avillach.auth.repository.ApplicationRepository;
-import edu.harvard.hms.dbmi.avillach.auth.repository.UserRepository;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.TOSService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.UserService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming;
@@ -56,26 +54,21 @@ public class JWTFilter extends OncePerRequestFilter {
 
     private final static Logger logger = LoggerFactory.getLogger(JWTFilter.class);
 
-    private final UserRepository userRepo;
-
     private final ApplicationRepository applicationRepo;
 
     private final TOSService tosService;
 
     private final String userClaimId;
 
-    private final boolean tosEnabled;
     private final JWTUtil jwtUtil;
     private final UserService userService;
 
     @Autowired
-    public JWTFilter(UserRepository userRepo, ApplicationRepository applicationRepo, TOSService tosService,
-                     @Value("${application.user.id.claim}") String userClaimId, @Value("${application.tos.enabled}") boolean tosEnabled, JWTUtil jwtUtil, UserService userService) {
-        this.userRepo = userRepo;
+    public JWTFilter(ApplicationRepository applicationRepo, TOSService tosService,
+                     @Value("${application.user.id.claim}") String userClaimId, JWTUtil jwtUtil, UserService userService) {
         this.applicationRepo = applicationRepo;
         this.tosService = tosService;
         this.userClaimId = userClaimId;
-        this.tosEnabled = tosEnabled;
         this.jwtUtil = jwtUtil;
         this.userService = userService;
     }
@@ -184,7 +177,7 @@ public class JWTFilter extends OncePerRequestFilter {
     private void setSecurityContextForUser(HttpServletRequest request, HttpServletResponse response, String realClaimsSubject) {
         logger.info("Setting security context for user: {}", realClaimsSubject);
 
-        User authenticatedUser = userRepo.findBySubject(realClaimsSubject);
+        CustomUserDetails authenticatedUser = userService.loadUserByUsername(realClaimsSubject);
 
         if (authenticatedUser == null) {
             logger.error("Cannot validate user claims, based on information stored in the JWT token.");
@@ -223,10 +216,8 @@ public class JWTFilter extends OncePerRequestFilter {
             }
         }
 
-        assert userRoles != null;
-        logger.info("User with email {} has roles {}.", authenticatedUser.getEmail(), userRoles.stream().map(Role::getName).toList());
-        CustomUserDetails userDetails = new CustomUserDetails(authenticatedUser);
-        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+        logger.info("User with email {} has roles {}.", authenticatedUser.getEmail(), userRoles != null ? userRoles.stream().map(Role::getName).toList() : null);
+        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(authenticatedUser, null, authenticatedUser.getAuthorities());
         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
         SecurityContextHolder.getContext().setAuthentication(authentication);
     }
