@@ -120,7 +120,7 @@ public class JWTFilter extends OncePerRequestFilter {
 
             }
 
-            if (authorizationHeader.startsWith(AuthNaming.PSAMA_APPLICATION_TOKEN_PREFIX)) {
+            if (userId.startsWith(AuthNaming.PSAMA_APPLICATION_TOKEN_PREFIX)) {
                 logger.info("User Authentication Starts with {}", AuthNaming.PSAMA_APPLICATION_TOKEN_PREFIX);
 
                 // Check if user is attempting to access the correct introspect endpoint. If not reject the request
@@ -162,7 +162,9 @@ public class JWTFilter extends OncePerRequestFilter {
         UserDetails userDetails = new CustomApplicationDetails(authenticatedApplication);
         UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-        SecurityContextHolder.getContext().setAuthentication(authentication);
+        SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
+        securityContext.setAuthentication(authentication);
+        SecurityContextHolder.setContext(securityContext);
     }
 
     /**
