@@ -83,8 +83,8 @@ public class UserController {
     @GetMapping(produces = "application/json", path = "/me")
     public ResponseEntity<?> getCurrentUser(
             @RequestHeader("Authorization") String authorizationHeader,
-            @Parameter(required = false, description = "Attribute that represents if a long term token will attach to the response")
-            @RequestParam("hasToken") Boolean hasToken) {
+            @Parameter(description = "Attribute that represents if a long term token will attach to the response")
+            @RequestParam(name = "hasToken", required = false) Boolean hasToken) {
         logger.info("getCurrentUser() authorizationHeader: {}, hasToken {}", authorizationHeader, hasToken);
         return this.userService.getCurrentUser(authorizationHeader, hasToken);
     }
