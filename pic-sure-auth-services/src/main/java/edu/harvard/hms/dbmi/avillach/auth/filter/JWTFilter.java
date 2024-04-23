@@ -130,10 +130,13 @@ public class JWTFilter extends OncePerRequestFilter {
                     response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User is deactivated");
                 }
 
+                String applicationId = userId.split("\\|")[1];
+                logger.info("Application ID: {}", applicationId);
+
                 // Authenticate as Application
-                Optional<Application> authenticatedApplication = applicationRepo.findById(UUID.fromString(userId.split("\\|")[1]));
+                Optional<Application> authenticatedApplication = applicationRepo.findByUuid(UUID.fromString(applicationId));
                 if (authenticatedApplication.isEmpty()) {
-                    logger.error("Cannot find an application by userId: {}", userId);
+                    logger.error("Cannot find an application by userId: {}", applicationId);
                     response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Your token doesn't contain valid identical information, please contact admin.");
                     return;
                 }
