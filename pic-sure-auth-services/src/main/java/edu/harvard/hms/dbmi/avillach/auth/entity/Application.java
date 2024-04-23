@@ -26,7 +26,7 @@ public class Application extends BaseEntity implements Principal {
     private boolean enable = true;
 
     @OneToMany(mappedBy = "application",
-            fetch = FetchType.LAZY,
+            fetch = FetchType.EAGER,
             cascade = CascadeType.ALL,
             orphanRemoval = true)
     private Set<Privilege> privileges;
@@ -39,6 +39,10 @@ public class Application extends BaseEntity implements Principal {
         this.url = authenticatedApplication.getUrl();
         this.enable = authenticatedApplication.isEnable();
         this.privileges = authenticatedApplication.getPrivileges();
+    }
+
+    public Application() {
+
     }
 
     public String getName() {
