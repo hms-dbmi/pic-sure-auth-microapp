@@ -24,7 +24,8 @@ import static edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming.AuthRoleNaming
  * <p>Endpoint for service handling business logic for users.</p>
  */
 @Tag(name = "User Management")
-@Controller("/user")
+@Controller
+@RequestMapping("/user")
 public class UserController {
 
     private final static Logger logger = LoggerFactory.getLogger(UserController.class);

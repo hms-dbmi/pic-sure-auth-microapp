@@ -8,7 +8,7 @@ import java.util.Collection;
 
 public class CustomUserDetails extends User implements UserDetails {
 
-    private Collection<? extends GrantedAuthority> authorities;
+    private final Collection<? extends GrantedAuthority> authorities;
 
     public CustomUserDetails(User user) {
         super(user);
