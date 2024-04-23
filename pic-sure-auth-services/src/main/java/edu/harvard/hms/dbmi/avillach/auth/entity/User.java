@@ -29,6 +29,18 @@ public class User extends BaseEntity implements Serializable, Principal {
 
 	private String email;
 
+	public User(User user) {
+		this.subject = user.getSubject();
+		this.roles = user.getRoles();
+		this.email = user.getEmail();
+		this.connection = user.getConnection();
+		this.matched = user.isMatched();
+		this.acceptedTOS = user.getAcceptedTOS();
+		this.auth0metadata = user.getAuth0metadata();
+		this.generalMetadata = user.getGeneralMetadata();
+		this.active = user.isActive();
+		this.token = user.getToken();
+	}
 
 	/**
 	 * <p>NOTICE</p>
@@ -61,6 +73,10 @@ public class User extends BaseEntity implements Serializable, Principal {
 
 	@Column(name = "long_term_token")
 	private String token;
+
+	public User() {
+
+	}
 
 	public String getSubject() {
 		return subject;

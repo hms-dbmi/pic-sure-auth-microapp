@@ -7,6 +7,7 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.Connection;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
+import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
 import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.repository.ApplicationRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.ConnectionRepository;
@@ -28,6 +29,9 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,7 +41,7 @@ import java.time.ZonedDateTime;
 import java.util.*;
 
 @Service
-public class UserService {
+public class UserService implements UserDetailsService {
 
     private final Logger logger = LoggerFactory.getLogger(UserService.class.getName());
 
@@ -90,7 +94,7 @@ public class UserService {
                 claims.get("sub").toString(),
                 this.tokenExpirationTime
         );
-        logger.info("getUserProfileResponse() PSAMA JWT token has been generated. Token:" + token);
+        logger.info("getUserProfileResponse() PSAMA JWT token has been generated. Token:{}", token);
         responseMap.put("token", token);
 
         logger.info("getUserProfileResponse() .usedId field is set");
@@ -505,5 +509,15 @@ public class UserService {
         // set the users roles and merge the user
         currentUser.setRoles(roles);
         this.userRepository.save(currentUser);
+    }
+
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        User user = this.userRepository.findByEmail(username);
+        if (user == null) {
+            throw new UsernameNotFoundException("User not found with email: " + username);
+        }
+
+        return new CustomUserDetails(user);
     }
 }

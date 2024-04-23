@@ -4,9 +4,11 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.Application;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.exceptions.NotAuthorizedException;
+import edu.harvard.hms.dbmi.avillach.auth.model.CustomApplicationDetails;
 import edu.harvard.hms.dbmi.avillach.auth.repository.ApplicationRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.UserRepository;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.TOSService;
+import edu.harvard.hms.dbmi.avillach.auth.service.impl.UserService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming;
 import edu.harvard.hms.dbmi.avillach.auth.utils.JWTUtil;
 import io.jsonwebtoken.Claims;
@@ -22,6 +24,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.annotation.Order;
 import org.springframework.lang.NonNull;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -59,16 +65,18 @@ public class JWTFilter extends OncePerRequestFilter {
 
     private final boolean tosEnabled;
     private final JWTUtil jwtUtil;
+    private final UserService userService;
 
     @Autowired
     public JWTFilter(UserRepository userRepo, ApplicationRepository applicationRepo, TOSService tosService,
-                     @Value("${application.user.id.claim}") String userClaimId, @Value("${application.tos.enabled}") boolean tosEnabled, JWTUtil jwtUtil) {
+                     @Value("${application.user.id.claim}") String userClaimId, @Value("${application.tos.enabled}") boolean tosEnabled, JWTUtil jwtUtil, UserService userService) {
         this.userRepo = userRepo;
         this.applicationRepo = applicationRepo;
         this.tosService = tosService;
         this.userClaimId = userClaimId;
         this.tosEnabled = tosEnabled;
         this.jwtUtil = jwtUtil;
+        this.userService = userService;
     }
 
     /**
@@ -156,7 +164,10 @@ public class JWTFilter extends OncePerRequestFilter {
 
     private void setSecurityContextForApplication(HttpServletRequest request, Application authenticatedApplication) {
         logger.info("Setting security context for application: {}", authenticatedApplication.getName());
-        request.setAttribute("authenticatedApplication", authenticatedApplication);
+        UserDetails userDetails = new CustomApplicationDetails(authenticatedApplication);
+        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+        SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 
     /**
@@ -211,9 +222,10 @@ public class JWTFilter extends OncePerRequestFilter {
             }
         }
 
-        // TODO: Spring is generally expecting ROLE_ prefix for roles. We may need to add this prefix to all the user roles.
-        // We don't want to add this to the database, because it may break backward compatibility for the UI.
-        request.setAttribute("authenticatedUser", authenticatedUser);
+        UserDetails userDetails = userService.loadUserByUsername(authenticatedUser.getEmail());
+        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+        SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 
 }
