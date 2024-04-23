@@ -49,7 +49,7 @@ public class PrivilegeController {
 
     @Operation(description = "GET a list of existing privileges, requires ADMIN or SUPER_ADMIN role")
     @RolesAllowed({ADMIN, SUPER_ADMIN})
-    @GetMapping(path = "/", produces = "application/json")
+    @GetMapping(produces = "application/json")
     public ResponseEntity<?> getPrivilegeAll() {
         List<Privilege> privilegesAll = this.privilegeService.getPrivilegesAll();
         return PICSUREResponse.success(privilegesAll);
