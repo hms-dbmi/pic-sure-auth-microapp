@@ -363,7 +363,6 @@ public class UserService implements UserDetailsService {
         return PICSUREResponse.success(userForDisplay);
     }
 
-    @Transactional
     public Optional<String> getQueryTemplate(String applicationId) {
         if (applicationId == null || applicationId.trim().isEmpty()) {
             logger.error("getQueryTemplate() input application UUID is null or empty.");
@@ -383,7 +382,7 @@ public class UserService implements UserDetailsService {
             return Optional.empty();
         }
 
-        Optional<Application> application = this.applicationRepository.findById(UUID.fromString(applicationId));
+        Optional<Application> application = this.applicationRepository.findByUuid(UUID.fromString(applicationId));
         if (application.isEmpty()) {
             logger.error("getQueryTemplate() cannot find corresponding application by UUID: {}", applicationId);
             throw new IllegalArgumentException("Cannot find application by input UUID: " + applicationId);
