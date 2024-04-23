@@ -30,6 +30,7 @@ public class User extends BaseEntity implements Serializable, Principal {
 	private String email;
 
 	public User(User user) {
+		this.uuid = user.getUuid();
 		this.subject = user.getSubject();
 		this.roles = user.getRoles();
 		this.email = user.getEmail();
