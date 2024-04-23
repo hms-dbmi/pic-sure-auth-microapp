@@ -310,6 +310,8 @@ public class UserService implements UserDetailsService {
     @Transactional
     public ResponseEntity<?> getCurrentUser(String authorizationHeader, Boolean hasToken) {
         SecurityContext securityContext = SecurityContextHolder.getContext();
+        logger.info("Security context: {}", securityContext);
+
         Optional<User> user = Optional.ofNullable((User) securityContext.getAuthentication().getPrincipal());
         if (user.isEmpty() || user.get().getUuid() == null) {
             logger.error("Security context didn't have a user stored.");
