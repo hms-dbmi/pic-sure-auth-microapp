@@ -5,24 +5,19 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
+import java.util.List;
 
 public class CustomApplicationDetails implements UserDetails {
-
-    private final Collection<? extends GrantedAuthority> authorities;
 
     public CustomApplicationDetails(Application authenticatedApplication) {
         if (authenticatedApplication == null) {
             throw new IllegalArgumentException("Application cannot be null");
         }
-
-        this.authorities = authenticatedApplication.getPrivileges().stream()
-                .map(privilege -> (GrantedAuthority) privilege::getName)
-                .toList();
     }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return this.authorities;
+        return List.of();
     }
 
     @Override
