@@ -349,15 +349,12 @@ public class UserService implements UserDetailsService {
             userForDisplay.setQueryScopes(scopes);
         }
 
-        if (hasToken != null) {
-
-            if (user.get().getToken() != null && !user.get().getToken().isEmpty()) {
-                userForDisplay.setToken(user.get().getToken());
-            } else {
-                user.get().setToken(generateUserLongTermToken(authorizationHeader));
-                this.userRepository.save(user.get());
-                userForDisplay.setToken(user.get().getToken());
-            }
+        if (user.get().getToken() != null && !user.get().getToken().isEmpty()) {
+            userForDisplay.setToken(user.get().getToken());
+        } else {
+            user.get().setToken(generateUserLongTermToken(authorizationHeader));
+            this.userRepository.save(user.get());
+            userForDisplay.setToken(user.get().getToken());
         }
 
         return PICSUREResponse.success(userForDisplay);
@@ -382,10 +379,10 @@ public class UserService implements UserDetailsService {
             return Optional.empty();
         }
 
-        Optional<Application> application = this.applicationRepository.findByUuid(UUID.fromString(applicationId));
+        Optional<Application> application = this.applicationRepository.findById(UUID.fromString(applicationId));
         if (application.isEmpty()) {
-            logger.error("getQueryTemplate() cannot find corresponding application by UUID: {}", applicationId);
-            throw new IllegalArgumentException("Cannot find application by input UUID: " + applicationId);
+            logger.error("getQueryTemplate() cannot find corresponding application by UUID: {}", UUID.fromString(applicationId));
+            throw new IllegalArgumentException("Cannot find application by input UUID: " + UUID.fromString(applicationId));
         }
 
         return Optional.ofNullable(mergeTemplate(user.orElse(null), application.orElse(null)));
