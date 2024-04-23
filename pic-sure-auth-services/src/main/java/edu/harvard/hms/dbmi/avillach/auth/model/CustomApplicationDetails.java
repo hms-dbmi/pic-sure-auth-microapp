@@ -7,12 +7,10 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 import java.util.List;
 
-public class CustomApplicationDetails implements UserDetails {
+public class CustomApplicationDetails extends Application implements UserDetails {
 
     public CustomApplicationDetails(Application authenticatedApplication) {
-        if (authenticatedApplication == null) {
-            throw new IllegalArgumentException("Application cannot be null");
-        }
+        super(authenticatedApplication);
     }
 
     @Override
@@ -27,26 +25,26 @@ public class CustomApplicationDetails implements UserDetails {
 
     @Override
     public String getUsername() {
-        return "";
+        return super.getName();
     }
 
     @Override
     public boolean isAccountNonExpired() {
-        return false;
+        return true;
     }
 
     @Override
     public boolean isAccountNonLocked() {
-        return false;
+        return true;
     }
 
     @Override
     public boolean isCredentialsNonExpired() {
-        return false;
+        return true;
     }
 
     @Override
     public boolean isEnabled() {
-        return false;
+        return true;
     }
 }

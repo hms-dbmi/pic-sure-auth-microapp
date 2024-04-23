@@ -31,6 +31,16 @@ public class Application extends BaseEntity implements Principal {
             orphanRemoval = true)
     private Set<Privilege> privileges;
 
+    public Application(Application authenticatedApplication) {
+        this.uuid = authenticatedApplication.getUuid();
+        this.name = authenticatedApplication.getName();
+        this.description = authenticatedApplication.getDescription();
+        this.token = authenticatedApplication.getToken();
+        this.url = authenticatedApplication.getUrl();
+        this.enable = authenticatedApplication.isEnable();
+        this.privileges = authenticatedApplication.getPrivileges();
+    }
+
     public String getName() {
         return name;
     }
