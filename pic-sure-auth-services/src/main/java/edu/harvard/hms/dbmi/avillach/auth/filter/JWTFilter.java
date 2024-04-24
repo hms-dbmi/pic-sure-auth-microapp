@@ -5,7 +5,6 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.exceptions.NotAuthorizedException;
 import edu.harvard.hms.dbmi.avillach.auth.model.CustomApplicationDetails;
 import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
-import edu.harvard.hms.dbmi.avillach.auth.repository.ApplicationRepository;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.ApplicationService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.TOSService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.UserService;
@@ -163,6 +162,7 @@ public class JWTFilter extends OncePerRequestFilter {
         CustomApplicationDetails applicationDetails = new CustomApplicationDetails(authenticatedApplication);
         UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(applicationDetails, null, applicationDetails.getAuthorities());
         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+        logger.info("Created authenticationToken object {} for application: {}", authentication, authenticatedApplication.getName());
         SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 
