@@ -6,12 +6,13 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
 
-public class CustomUserDetails extends User implements UserDetails {
+public class CustomUserDetails implements UserDetails {
 
+    private final User user;
     private final Collection<? extends GrantedAuthority> authorities;
 
     public CustomUserDetails(User user) {
-        super(user);
+        this.user = user;
         this.authorities = user.getRoles().stream()
                 .map(role -> (GrantedAuthority) role::getName)
                 .toList();
@@ -29,7 +30,7 @@ public class CustomUserDetails extends User implements UserDetails {
 
     @Override
     public String getUsername() {
-        return super.getEmail();
+        return this.user.getEmail();
     }
 
     @Override

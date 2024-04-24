@@ -7,10 +7,12 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 import java.util.List;
 
-public class CustomApplicationDetails extends Application implements UserDetails {
+public class CustomApplicationDetails implements UserDetails {
+
+    private final Application application;
 
     public CustomApplicationDetails(Application authenticatedApplication) {
-        super(authenticatedApplication);
+        this.application = authenticatedApplication;
     }
 
     @Override
@@ -25,7 +27,7 @@ public class CustomApplicationDetails extends Application implements UserDetails
 
     @Override
     public String getUsername() {
-        return super.getName();
+        return this.application.getName();
     }
 
     @Override
