@@ -162,7 +162,7 @@ public class JWTFilter extends OncePerRequestFilter {
     private void setSecurityContextForApplication(HttpServletRequest request, Application authenticatedApplication) {
         logger.info("Setting security context for application: {}", authenticatedApplication.getName());
         CustomApplicationDetails applicationDetails = new CustomApplicationDetails(authenticatedApplication);
-        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(applicationDetails, null, null);
+        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(applicationDetails, null, applicationDetails.getAuthorities());
         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
         SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
         securityContext.setAuthentication(authentication);
