@@ -22,7 +22,7 @@ public class CustomApplicationDetails implements UserDetails {
 
     @Override
     public String getPassword() {
-        return "";
+        return null;
     }
 
     @Override
@@ -48,5 +48,9 @@ public class CustomApplicationDetails implements UserDetails {
     @Override
     public boolean isEnabled() {
         return true;
+    }
+
+    public Application getApplication() {
+        return application;
     }
 }
