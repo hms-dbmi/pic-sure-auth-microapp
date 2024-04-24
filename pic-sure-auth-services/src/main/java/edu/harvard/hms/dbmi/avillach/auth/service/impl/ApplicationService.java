@@ -36,8 +36,23 @@ public class ApplicationService {
      * @param applicationId the ID of the entity to retrieve
      * @return a ResponseEntity representing the result of the operation
      */
+    @Transactional
     public Optional<Application> getApplicationByID(String applicationId) {
-        return this.applicationRepo.findById(UUID.fromString(applicationId));
+        Optional<Application> byId = this.applicationRepo.findById(UUID.fromString(applicationId));
+
+        if (byId.isEmpty()) {
+            return Optional.empty();
+        }
+
+        Application application = byId.get();
+
+        // This is a workaround to avoid lazy loading exception
+        // If the application doesn't load the privileges, it will throw an exception
+        // when tryin to access the privileges elsewhere.
+        // The @Transactional is also added to the method to avoid this issue.
+        application.getPrivileges().size();
+
+        return Optional.of(application);
     }
 
     public List<Application> getAllApplications() {
