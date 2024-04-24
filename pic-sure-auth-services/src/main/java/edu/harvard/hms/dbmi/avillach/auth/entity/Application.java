@@ -1,11 +1,7 @@
 package edu.harvard.hms.dbmi.avillach.auth.entity;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.OneToMany;
+import jakarta.persistence.*;
 
 import java.security.Principal;
 import java.util.Set;
@@ -25,10 +21,8 @@ public class Application extends BaseEntity implements Principal {
     private String url;
     private boolean enable = true;
 
-    @OneToMany(mappedBy = "application",
-            fetch = FetchType.EAGER,
-            cascade = CascadeType.ALL,
-            orphanRemoval = true)
+    @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    @JoinColumn(name = "application_id", referencedColumnName = "uuid")
     private Set<Privilege> privileges;
 
     public Application(Application authenticatedApplication) {
