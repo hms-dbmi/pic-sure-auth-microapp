@@ -25,7 +25,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.annotation.Order;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
@@ -164,9 +163,7 @@ public class JWTFilter extends OncePerRequestFilter {
         CustomApplicationDetails applicationDetails = new CustomApplicationDetails(authenticatedApplication);
         UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(applicationDetails, null, applicationDetails.getAuthorities());
         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-        SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
-        securityContext.setAuthentication(authentication);
-        SecurityContextHolder.setContext(securityContext);
+        SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 
     /**
@@ -224,9 +221,7 @@ public class JWTFilter extends OncePerRequestFilter {
         logger.info("User with email {} has roles {}.", authenticatedUser.getUser().getEmail(), userRoles != null ? userRoles.stream().map(Role::getName).toList() : null);
         UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(authenticatedUser, null, authenticatedUser.getAuthorities());
         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-        SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
-        securityContext.setAuthentication(authentication);
-        SecurityContextHolder.setContext(securityContext);
+        SecurityContextHolder.getContext().setAuthentication(authentication);
 
     }
 
