@@ -312,29 +312,29 @@ public class UserService implements UserDetailsService {
         SecurityContext securityContext = SecurityContextHolder.getContext();
         logger.info("Security context: {}", securityContext);
 
-        Optional<User> user = Optional.ofNullable((User) securityContext.getAuthentication().getPrincipal());
-        if (user.isEmpty() || user.get().getUuid() == null) {
+        Optional<CustomUserDetails> customUserDetails = Optional.ofNullable((CustomUserDetails) securityContext.getAuthentication().getPrincipal());
+        if (customUserDetails.isEmpty() || customUserDetails.get().getUser() == null) {
             logger.error("Security context didn't have a user stored.");
             return PICSUREResponse.applicationError("Inner application error, please contact admin.");
         }
 
-        user = this.userRepository.findById(user.get().getUuid());
-        if (user.isEmpty()) {
+        User user = customUserDetails.get().getUser();
+        if (user == null) {
             logger.error("When retrieving current user, it returned null");
             return PICSUREResponse.applicationError("Inner application error, please contact admin.");
         }
 
-        logger.info("getCurrentUser() user found: {}", user.get().getEmail());
+        logger.info("getCurrentUser() user found: {}", user.getEmail());
         User.UserForDisplay userForDisplay = new User.UserForDisplay()
-                .setEmail(user.get().getEmail())
-                .setPrivileges(user.get().getPrivilegeNameSet())
-                .setUuid(user.get().getUuid().toString())
-                .setAcceptedTOS(this.tosService.hasUserAcceptedLatest(user.get().getSubject()));
+                .setEmail(user.getEmail())
+                .setPrivileges(user.getPrivilegeNameSet())
+                .setUuid(user.getUuid().toString())
+                .setAcceptedTOS(this.tosService.hasUserAcceptedLatest(user.getSubject()));
 
         // currently, the queryScopes are simple combination of queryScope string together as a set.
         // We are expecting the queryScope string as plain string. If it is a JSON, we could change the
         // code to use JsonUtils.mergeTemplateMap(Map, Map)
-        Set<Privilege> privileges = user.get().getTotalPrivilege();
+        Set<Privilege> privileges = user.getTotalPrivilege();
         if (privileges != null && !privileges.isEmpty()) {
             Set<String> scopes = new TreeSet<>();
             privileges.stream().filter(privilege -> privilege.getQueryScope() != null).forEach(privilege -> {
@@ -349,12 +349,12 @@ public class UserService implements UserDetailsService {
             userForDisplay.setQueryScopes(scopes);
         }
 
-        if (user.get().getToken() != null && !user.get().getToken().isEmpty()) {
-            userForDisplay.setToken(user.get().getToken());
+        if (user.getToken() != null && !user.getToken().isEmpty()) {
+            userForDisplay.setToken(user.getToken());
         } else {
-            user.get().setToken(generateUserLongTermToken(authorizationHeader));
-            this.userRepository.save(user.get());
-            userForDisplay.setToken(user.get().getToken());
+            user.setToken(generateUserLongTermToken(authorizationHeader));
+            this.userRepository.save(user);
+            userForDisplay.setToken(user.getToken());
         }
 
         return PICSUREResponse.success(userForDisplay);

@@ -107,7 +107,7 @@ public class User extends BaseEntity implements Serializable, Principal {
 			return null;
 
 		Set<Privilege> privileges = new HashSet<>();
-		roles.stream().forEach(r -> privileges.addAll(r.getPrivileges()));
+		roles.forEach(r -> privileges.addAll(r.getPrivileges()));
 		return privileges;
 	}
 
@@ -121,9 +121,7 @@ public class User extends BaseEntity implements Serializable, Principal {
 			return null;
 
 		Set<AccessRule> accessRules = new HashSet<>();
-		roles.stream().
-				forEach(r -> r.getPrivileges().stream().
-						forEach(p -> accessRules.addAll(p.getAccessRules())));
+		roles.forEach(r -> r.getPrivileges().forEach(p -> accessRules.addAll(p.getAccessRules())));
 		return accessRules;
 	}
 
