@@ -9,14 +9,16 @@ import edu.harvard.hms.dbmi.avillach.auth.utils.JWTUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 
 @Service
-public class ApplicationService {
+public class ApplicationService implements UserDetailsService {
 
     private final static Logger logger = LoggerFactory.getLogger(ApplicationService.class);
     private final ApplicationRepository applicationRepo;
@@ -138,5 +140,9 @@ public class ApplicationService {
                 AuthNaming.PSAMA_APPLICATION_TOKEN_PREFIX + "|" + application.getUuid().toString(), 365L * 1000 * 60 * 60 * 24);
     }
 
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        return null;
+    }
 }
 

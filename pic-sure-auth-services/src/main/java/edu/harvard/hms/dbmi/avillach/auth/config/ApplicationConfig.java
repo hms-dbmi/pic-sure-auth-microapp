@@ -1,6 +1,6 @@
 package edu.harvard.hms.dbmi.avillach.auth.config;
 
-import edu.harvard.hms.dbmi.avillach.auth.service.impl.UserService;
+import edu.harvard.hms.dbmi.avillach.auth.service.impl.CustomUserDetailService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,11 +12,11 @@ import org.springframework.security.config.annotation.authentication.configurati
 @Configuration
 public class ApplicationConfig {
 
-    private final UserService userService;
+    private final CustomUserDetailService customUserDetailService;
 
     @Autowired
-    public ApplicationConfig(UserService userService) {
-        this.userService = userService;
+    public ApplicationConfig(CustomUserDetailService customUserDetailService) {
+        this.customUserDetailService = customUserDetailService;
     }
 
     @Bean
@@ -27,7 +27,7 @@ public class ApplicationConfig {
     @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(userService);
+        provider.setUserDetailsService(customUserDetailService);
         return provider;
     }
 }

@@ -29,8 +29,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,7 +38,7 @@ import java.time.ZonedDateTime;
 import java.util.*;
 
 @Service
-public class UserService implements UserDetailsService {
+public class UserService {
 
     private final Logger logger = LoggerFactory.getLogger(UserService.class.getName());
 
@@ -503,13 +501,7 @@ public class UserService implements UserDetailsService {
         this.userRepository.save(currentUser);
     }
 
-    @Override
-    public CustomUserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = this.userRepository.findBySubject(username);
-        if (user == null) {
-            throw new UsernameNotFoundException("User not found with email: " + username);
-        }
-
-        return new CustomUserDetails(user);
+    public User findBySubject(String username) {
+        return this.userRepository.findBySubject(username);
     }
 }

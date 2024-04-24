@@ -6,6 +6,7 @@ import edu.harvard.hms.dbmi.avillach.auth.exceptions.NotAuthorizedException;
 import edu.harvard.hms.dbmi.avillach.auth.model.CustomApplicationDetails;
 import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.ApplicationService;
+import edu.harvard.hms.dbmi.avillach.auth.service.impl.CustomUserDetailService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.TOSService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.UserService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming;
@@ -30,7 +31,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Optional;
 import java.util.Set;
 
 
@@ -52,22 +52,20 @@ public class JWTFilter extends OncePerRequestFilter {
 
     private final static Logger logger = LoggerFactory.getLogger(JWTFilter.class);
 
-    private final ApplicationService applicationService;
     private final TOSService tosService;
 
     private final String userClaimId;
 
     private final JWTUtil jwtUtil;
-    private final UserService userService;
+    private final CustomUserDetailService customUserDetailService;
 
     @Autowired
-    public JWTFilter(ApplicationService applicationService, TOSService tosService,
-                     @Value("${application.user.id.claim}") String userClaimId, JWTUtil jwtUtil, UserService userService) {
+    public JWTFilter(TOSService tosService,
+                     @Value("${application.user.id.claim}") String userClaimId, JWTUtil jwtUtil, CustomUserDetailService customUserDetailService) {
         this.tosService = tosService;
         this.userClaimId = userClaimId;
         this.jwtUtil = jwtUtil;
-        this.userService = userService;
-        this.applicationService = applicationService;
+        this.customUserDetailService = customUserDetailService;
     }
 
     /**
@@ -130,14 +128,14 @@ public class JWTFilter extends OncePerRequestFilter {
                 logger.info("Application ID: {}", applicationId);
 
                 // Authenticate as Application
-                Optional<Application> authenticatedApplication = applicationService.getApplicationByID(applicationId);
-                if (authenticatedApplication.isEmpty()) {
+                CustomApplicationDetails customApplicationDetails = (CustomApplicationDetails) this.customUserDetailService.loadUserByUsername("application:" + applicationId);
+                if (customApplicationDetails.getApplication() == null) {
                     logger.error("Cannot find an application by userId: {}", applicationId);
                     response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Your token doesn't contain valid identical information, please contact admin.");
                     return;
                 }
 
-                Application application = authenticatedApplication.get();
+                Application application = customApplicationDetails.getApplication();
 
                 if (!application.getToken().equals(token)) {
                     logger.error("filter() incoming application token - {} - is not the same as record, might because the token has been refreshed. Subject: {}", token, userId);
@@ -146,7 +144,7 @@ public class JWTFilter extends OncePerRequestFilter {
 
                 // This is the application token that is being used to authenticate the user by other applications
                 // Set the security context for the application
-                setSecurityContextForApplication(request, application);
+                setSecurityContextForApplication(request, customApplicationDetails);
             } else {
                 logger.debug("UserID: {} is not a long term token and not a PSAMA application token.", userId);
                 // Authenticate as User
@@ -157,12 +155,11 @@ public class JWTFilter extends OncePerRequestFilter {
         }
     }
 
-    private void setSecurityContextForApplication(HttpServletRequest request, Application authenticatedApplication) {
-        logger.info("Setting security context for application: {}", authenticatedApplication.getName());
-        CustomApplicationDetails applicationDetails = new CustomApplicationDetails(authenticatedApplication);
-        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(applicationDetails, null, applicationDetails.getAuthorities());
+    private void setSecurityContextForApplication(HttpServletRequest request, CustomApplicationDetails authenticatedApplication) {
+        logger.info("Setting security context for application: {}", authenticatedApplication.getApplication().getName());
+        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(authenticatedApplication, null, authenticatedApplication.getAuthorities());
         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-        logger.info("Created authenticationToken object {} for application: {}", authentication, authenticatedApplication.getName());
+        logger.info("Created authenticationToken object {} for application: {}", authentication, authenticatedApplication.getApplication().getName());
         SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 
@@ -179,7 +176,7 @@ public class JWTFilter extends OncePerRequestFilter {
     private void setSecurityContextForUser(HttpServletRequest request, HttpServletResponse response, String realClaimsSubject) {
         logger.info("Setting security context for user: {}", realClaimsSubject);
 
-        CustomUserDetails authenticatedUser = userService.loadUserByUsername(realClaimsSubject);
+        CustomUserDetails authenticatedUser = (CustomUserDetails) this.customUserDetailService.loadUserByUsername(realClaimsSubject);
 
         if (authenticatedUser == null) {
             logger.error("Cannot validate user claims, based on information stored in the JWT token.");
