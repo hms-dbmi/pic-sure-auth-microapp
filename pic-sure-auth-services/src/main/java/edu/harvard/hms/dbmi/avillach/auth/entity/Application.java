@@ -21,21 +21,9 @@ public class Application extends BaseEntity implements Principal {
     private String url;
     private boolean enable = true;
 
-    @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "application_id", referencedColumnName = "uuid")
     private Set<Privilege> privileges;
-
-    public Application() {}
-
-    public Application(Application application) {
-        this.uuid = application.getUuid();
-        this.name = application.getName();
-        this.description = application.getDescription();
-        this.token = application.getToken();
-        this.url = application.getUrl();
-        this.enable = application.isEnable();
-        this.privileges = application.getPrivileges();
-    }
 
     public String getName() {
         return name;
