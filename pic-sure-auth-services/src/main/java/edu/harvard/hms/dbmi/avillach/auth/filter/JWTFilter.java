@@ -27,7 +27,6 @@ import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -35,7 +34,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 
 
 /**
@@ -159,13 +157,12 @@ public class JWTFilter extends OncePerRequestFilter {
 
             filterChain.doFilter(request, response);
         }
-
     }
 
     private void setSecurityContextForApplication(HttpServletRequest request, Application authenticatedApplication) {
         logger.info("Setting security context for application: {}", authenticatedApplication.getName());
         CustomApplicationDetails applicationDetails = new CustomApplicationDetails(authenticatedApplication);
-        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(applicationDetails, null, applicationDetails.getAuthorities());
+        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(applicationDetails, null, null);
         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
         SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
         securityContext.setAuthentication(authentication);
@@ -192,17 +189,17 @@ public class JWTFilter extends OncePerRequestFilter {
             throw new IllegalArgumentException("Cannot validate user claims, based on information stored in the JWT token.");
         }
 
-        logger.info("User with email: {} is found.", authenticatedUser.getEmail());
+        logger.info("User with email: {} is found.", authenticatedUser.getUser().getEmail());
 
-        if (!authenticatedUser.isActive()) {
-            logger.warn("User with ID: {} is deactivated.", authenticatedUser.getUuid());
+        if (!authenticatedUser.getUser().isActive()) {
+            logger.warn("User with ID: {} is deactivated.", authenticatedUser.getUser().getUuid());
             throw new NotAuthorizedException("User is deactivated");
         }
 
-        logger.info("User with ID: {} is active.", authenticatedUser.getUuid());
+        logger.info("User with ID: {} is active.", authenticatedUser.getUser().getUuid());
         logger.info("Checking if user has accepted the latest terms of service.");
-        if (!tosService.hasUserAcceptedLatest(authenticatedUser.getSubject())) {
-            logger.info("User with ID: {} has not accepted the latest terms of service.", authenticatedUser.getUuid());
+        if (!tosService.hasUserAcceptedLatest(authenticatedUser.getUser().getSubject())) {
+            logger.info("User with ID: {} has not accepted the latest terms of service.", authenticatedUser.getUser().getUuid());
             //If user has not accepted terms of service and is attempted to get information other than the terms of service, don't authenticate
             try {
                 response.sendError(HttpServletResponse.SC_FORBIDDEN, "User must accept terms of service");
@@ -212,7 +209,7 @@ public class JWTFilter extends OncePerRequestFilter {
         }
 
         // Get the user's roles
-        Set<Role> userRoles = authenticatedUser.getRoles();
+        Set<Role> userRoles = authenticatedUser.getUser().getRoles();
 
         // Check if the user has any roles and privileges associated with them
         if (userRoles == null || userRoles.isEmpty() || userRoles.stream().noneMatch(role -> role.getPrivileges() != null && !role.getPrivileges().isEmpty())) {
@@ -224,7 +221,7 @@ public class JWTFilter extends OncePerRequestFilter {
             }
         }
 
-        logger.info("User with email {} has roles {}.", authenticatedUser.getEmail(), userRoles != null ? userRoles.stream().map(Role::getName).toList() : null);
+        logger.info("User with email {} has roles {}.", authenticatedUser.getUser().getEmail(), userRoles != null ? userRoles.stream().map(Role::getName).toList() : null);
         UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(authenticatedUser, null, authenticatedUser.getAuthorities());
         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
         SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
