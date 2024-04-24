@@ -367,25 +367,20 @@ public class UserService implements UserDetailsService {
         }
 
         SecurityContext securityContext = SecurityContextHolder.getContext();
-        Optional<User> user = Optional.ofNullable((User) securityContext.getAuthentication().getPrincipal());
-        if (user.isEmpty() || user.get().getUuid() == null) {
+        Optional<CustomUserDetails> customUserDetails = Optional.ofNullable((CustomUserDetails) securityContext.getAuthentication().getPrincipal());
+        if (customUserDetails.isEmpty() || customUserDetails.get().getUser() == null){
             logger.error("Security context didn't have a user stored.");
             return Optional.empty();
         }
 
-        user = this.userRepository.findById(user.get().getUuid());
-        if (user.isEmpty()) {
-            logger.error("When retrieving current user, it returned null");
-            return Optional.empty();
-        }
-
+        User user = customUserDetails.get().getUser();
         Optional<Application> application = this.applicationRepository.findById(UUID.fromString(applicationId));
         if (application.isEmpty()) {
             logger.error("getQueryTemplate() cannot find corresponding application by UUID: {}", UUID.fromString(applicationId));
             throw new IllegalArgumentException("Cannot find application by input UUID: " + UUID.fromString(applicationId));
         }
 
-        return Optional.ofNullable(mergeTemplate(user.orElse(null), application.orElse(null)));
+        return Optional.ofNullable(mergeTemplate(user, application.orElse(null)));
     }
 
     public ResponseEntity<?> getDefaultQueryTemplate() {
