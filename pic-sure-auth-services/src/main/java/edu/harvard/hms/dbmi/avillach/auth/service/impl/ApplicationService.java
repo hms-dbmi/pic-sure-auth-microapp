@@ -38,21 +38,7 @@ public class ApplicationService {
      */
     @Transactional
     public Optional<Application> getApplicationByID(String applicationId) {
-        Optional<Application> byId = this.applicationRepo.findById(UUID.fromString(applicationId));
-
-        if (byId.isEmpty()) {
-            return Optional.empty();
-        }
-
-        Application application = byId.get();
-
-        // This is a workaround to avoid lazy loading exception
-        // If the application doesn't load the privileges, it will throw an exception
-        // when tryin to access the privileges elsewhere.
-        // The @Transactional is also added to the method to avoid this issue.
-        application.getPrivileges().size();
-
-        return Optional.of(application);
+        return this.applicationRepo.findById(UUID.fromString(applicationId));
     }
 
     public List<Application> getAllApplications() {
