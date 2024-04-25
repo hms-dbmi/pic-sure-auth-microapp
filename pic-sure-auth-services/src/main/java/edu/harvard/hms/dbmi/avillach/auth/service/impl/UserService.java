@@ -260,6 +260,7 @@ public class UserService {
     @Transactional
     public ResponseEntity<?> updateUser(List<User> users) {
         SecurityContext securityContext = SecurityContextHolder.getContext();
+        logger.info("Security context: {}", securityContext);
         CustomUserDetails customUserDetails = (CustomUserDetails) securityContext.getAuthentication().getPrincipal();
         if (customUserDetails == null || customUserDetails.getUser() == null && customUserDetails.getUser().getUuid() == null) {
             logger.error("Security context didn't have a user stored.");
