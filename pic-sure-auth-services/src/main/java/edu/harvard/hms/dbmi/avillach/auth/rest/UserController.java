@@ -61,7 +61,7 @@ public class UserController {
     @PostMapping(produces = "application/json")
     public ResponseEntity<?> addUser(
             @Parameter(required = true, description = "A list of user in JSON format")
-            List<User> users) {
+            @RequestBody List<User> users) {
         return this.userService.addUsers(users);
 
     }
