@@ -45,6 +45,7 @@ pipeline {
         }
         stage('deploy') {
             steps {
+                echo env.PROXY_OPTS
                 sh "docker stop psama || true"
                 sh "docker rm psama || true"
                 sh """docker run --name=psama --restart always \
