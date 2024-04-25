@@ -24,10 +24,10 @@ pipeline {
             }
         }
         stage('deploy') {
-            # TODO - deploy it?
+            // TODO - deploy it?
         }
         stage('test') {
-            # TODO - test it?
+            // TODO - test it?
         }
     }
 }
