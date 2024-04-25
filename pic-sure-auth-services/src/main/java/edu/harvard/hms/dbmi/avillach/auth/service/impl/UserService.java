@@ -435,23 +435,17 @@ public class UserService {
     @Transactional
     public ResponseEntity<?> refreshUserToken(HttpHeaders httpHeaders) {
         SecurityContext securityContext = SecurityContextHolder.getContext();
-        Optional<User> user = Optional.ofNullable((User) securityContext.getAuthentication().getPrincipal());
-        if (user.isEmpty() || user.get().getUuid() == null) {
+        CustomUserDetails customUserDetails = (CustomUserDetails) securityContext.getAuthentication().getPrincipal();
+        if (customUserDetails == null || customUserDetails.getUser() == null || customUserDetails.getUser().getUuid() == null) {
             logger.error("Security context didn't have a user stored.");
             return PICSUREResponse.applicationError("Inner application error, please contact admin.");
         }
 
-        user = this.userRepository.findById(user.get().getUuid());
-        if (user.isEmpty()) {
-            logger.error("When retrieving current user, it returned null");
-            return PICSUREResponse.applicationError("Inner application error, please contact admin.");
-        }
-
+        User user = customUserDetails.getUser();
         String authorizationHeader = httpHeaders.getFirst("Authorization");
         String longTermToken = generateUserLongTermToken(authorizationHeader);
-        user.get().setToken(longTermToken);
-
-        this.userRepository.save(user.get());
+        user.setToken(longTermToken);
+        this.userRepository.save(user);
 
         return PICSUREResponse.success(Map.of("userLongTermToken", longTermToken));
     }
