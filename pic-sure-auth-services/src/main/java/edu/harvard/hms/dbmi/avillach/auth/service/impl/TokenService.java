@@ -4,6 +4,7 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.Application;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.exceptions.NotAuthorizedException;
+import edu.harvard.hms.dbmi.avillach.auth.model.CustomApplicationDetails;
 import edu.harvard.hms.dbmi.avillach.auth.model.TokenInspection;
 import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.repository.UserRepository;
@@ -102,14 +103,12 @@ public class TokenService {
 
         Application application;
         try {
-            application = (Application) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            CustomApplicationDetails customApplicationDetails = (CustomApplicationDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            application = customApplicationDetails.getApplication();
         } catch (ClassCastException ex) {
             SecurityContext securityContext = SecurityContextHolder.getContext();
             String principalName = securityContext.getAuthentication().getName();
-            logger.error(principalName
-                    + " - " + principalName +
-                    " - is trying to use token introspection endpoint" +
-                    ", but it is not an application");
+            logger.error("{} - {} - is trying to use token introspection endpoint, but it is not an application", principalName, principalName);
             throw new IllegalAccessException("The application token does not associate with an application but "
                     + principalName);
         }
@@ -139,9 +138,9 @@ public class TokenService {
         }
 
         user = this.userRepository.findBySubject(subject);
-        logger.info("_inspectToken() user with subject - " + subject + " - exists in database");
+        logger.info("_inspectToken() user with subject - {} - exists in database", subject);
         if (user == null) {
-            logger.error("_inspectToken() could not find user with subject " + subject);
+            logger.error("_inspectToken() could not find user with subject {}", subject);
             tokenInspection.setMessage("user doesn't exist");
             return tokenInspection;
         }
