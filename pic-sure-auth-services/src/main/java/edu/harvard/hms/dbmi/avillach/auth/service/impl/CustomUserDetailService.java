@@ -29,7 +29,7 @@ public class CustomUserDetailService implements UserDetailsService {
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         if (username.startsWith("application:")) {
             String applicationName = username.substring(12);
-            Optional<Application> applicationByID = applicationService.getApplicationByID(applicationName);
+            Optional<Application> applicationByID = applicationService.getApplicationByIdWithPrivileges(applicationName);
             if (applicationByID.isEmpty()) {
                 throw new UsernameNotFoundException("Application not found");
             }

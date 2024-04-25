@@ -6,6 +6,7 @@ import edu.harvard.hms.dbmi.avillach.auth.repository.ApplicationRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.PrivilegeRepository;
 import edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming;
 import edu.harvard.hms.dbmi.avillach.auth.utils.JWTUtil;
+import org.hibernate.Hibernate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +42,24 @@ public class ApplicationService implements UserDetailsService {
     @Transactional
     public Optional<Application> getApplicationByID(String applicationId) {
         return this.applicationRepo.findById(UUID.fromString(applicationId));
+    }
+
+    /**
+     * Retrieves an entity by its ID with its privileges. This method is used to avoid lazy loading exception.
+     * @param applicationName
+     * @return
+     */
+    @Transactional
+    public Optional<Application> getApplicationByIdWithPrivileges(String applicationName) {
+        Optional<Application> byId = this.applicationRepo.findById(UUID.fromString(applicationName));
+
+        if (byId.isEmpty()) {
+            return Optional.empty();
+        }
+
+        Application application = byId.get();
+        Hibernate.initialize(application.getPrivileges());
+        return Optional.of(application);
     }
 
     public List<Application> getAllApplications() {
