@@ -55,7 +55,7 @@ pipeline {
                       --env-file /usr/local/docker-config/psama/.env \
                       $EMAIL_TEMPLATE_VOLUME \
                       $TRUSTSTORE_VOLUME \
-                      -e JAVA_OPTS="$PSAMA_OPTS ${env.PROXY_OPTS} $TRUSTSTORE_JAVA_OPTS" \
+                      -e JAVA_OPTS="$PSAMA_OPTS $PROXY_OPTS $TRUSTSTORE_JAVA_OPTS" \
                       -d ${params.DOCKER_REGISTRY}/${params.REPOSITORY_NAME}:${IMAGE_TAG}"""
             }
         }
