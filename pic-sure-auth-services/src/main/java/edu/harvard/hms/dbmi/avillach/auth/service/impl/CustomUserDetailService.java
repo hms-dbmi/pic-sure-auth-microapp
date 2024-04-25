@@ -4,6 +4,7 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.Application;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.model.CustomApplicationDetails;
 import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
+import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -33,6 +34,8 @@ public class CustomUserDetailService implements UserDetailsService {
                 throw new UsernameNotFoundException("Application not found");
             }
 
+            // Initialize the privileges of the application proxy object to avoid lazy loading exception
+            Hibernate.initialize(applicationByID.get().getPrivileges());
             return new CustomApplicationDetails(applicationByID.get());
         } else {
             User user = this.userService.findBySubject(username);
