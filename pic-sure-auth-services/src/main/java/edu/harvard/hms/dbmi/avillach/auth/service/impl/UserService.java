@@ -58,9 +58,15 @@ public class UserService {
     private final JWTUtil jwtUtil;
 
     @Autowired
-    public UserService(BasicMailService basicMailService, TOSService tosService, UserRepository userRepository, ConnectionRepository connectionRepository, ApplicationRepository applicationRepository, RoleService roleService,
+    public UserService(BasicMailService basicMailService, TOSService tosService,
+                       UserRepository userRepository,
+                       ConnectionRepository connectionRepository,
+                       ApplicationRepository applicationRepository,
+                       RoleService roleService,
                        @Value("${application.token.expiration.time}") long tokenExpirationTime,
-                       @Value("${application.default.uuid}") String applicationUUID, @Value("${application.long.term.token.expiration.time}") long longTermTokenExpirationTime, JWTUtil jwtUtil) {
+                       @Value("${application.default.uuid}") String applicationUUID,
+                       @Value("${application.long.term.token.expiration.time}") long longTermTokenExpirationTime,
+                       JWTUtil jwtUtil) {
         this.basicMailService = basicMailService;
         this.tosService = tosService;
         this.userRepository = userRepository;
@@ -240,12 +246,12 @@ public class UserService {
         for (User user : users) {
             if (user.getRoles() != null) {
                 Set<Role> roles = new HashSet<>();
-                user.getRoles().forEach(t -> this.roleService.addObjectToSet(roles, t)); // TODO: We need to fix the exception that is thrown here
+                user.getRoles().forEach(t -> this.roleService.addObjectToSet(roles, t));
                 user.setRoles(roles);
             }
 
             if (user.getConnection() != null) {
-                Optional<Connection> connection = this.connectionRepository.findById(UUID.fromString(user.getConnection().getId()));
+                Optional<Connection> connection = this.connectionRepository.findById(user.getConnection().getId());
                 user.setConnection(connection.orElse(null));
             }
         }
