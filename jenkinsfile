@@ -12,6 +12,9 @@ pipeline {
         GIT_COMMIT_SHORT = sh(script: 'echo ${GIT_COMMIT} | cut -c1-7', returnStdout: true).trim()
         IMAGE_TAG = "${GIT_BRANCH_SHORT}_${GIT_COMMIT_SHORT}"
         LATEST_TAG = "latest"
+        EMAIL_TEMPLATE_VOLUME="-v $DOCKER_CONFIG_DIR/wildfly/emailTemplates:/opt/jboss/wildfly/standalone/configuration/emailTemplates "
+        TRUSTSTORE_VOLUME="-v $DOCKER_CONFIG_DIR/wildfly/application.truststore:/opt/jboss/wildfly/standalone/configuration/application.truststore"
+        PSAMA_OPTS="-Xms2g -Xmx4g -XX:MetaspaceSize=96M -XX:MaxMetaspaceSize=256m -Djava.net.preferIPv4Stack=true $PROXY_OPTS"
     }
 
     stages {
@@ -27,7 +30,7 @@ pipeline {
                 sh """docker run --name=psama --restart always \
                       --network=picsure \
                       --env-file /usr/local/docker-config/psama/.env \
-                      $EMAIL_TEMPLATE_VOUME \
+                      $EMAIL_TEMPLATE_VOLUME \
                       $TRUSTSTORE_VOLUME \
                       -e JAVA_OPTS="$PSAMA_OPTS $TRUSTSTORE_JAVA_OPTS" \
                       -d ${params.DOCKER_REGISTRY}/${params.REPOSITORY_NAME}:${IMAGE_TAG}"""
