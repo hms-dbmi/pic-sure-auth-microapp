@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     parameters {
-        string(name: 'DOCKER_REGISTRY', description: 'Docker registry URL (e.g., ECR URL)', defaultValue: '')
-        string(name: 'REPOSITORY_NAME', description: 'Docker repository name', defaultValue: 'hms-dbmi/pic-sure-auth-microapp')
+        string(name: 'DOCKER_REGISTRY', description: 'Docker registry URL (e.g., ECR URL)', defaultValue: 'hms-dbmi')
+        string(name: 'REPOSITORY_NAME', description: 'Docker repository name', defaultValue: 'pic-sure-auth-microapp')
     }
 
     environment {
