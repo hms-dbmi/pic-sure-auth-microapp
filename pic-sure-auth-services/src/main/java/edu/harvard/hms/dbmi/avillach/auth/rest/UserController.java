@@ -69,7 +69,8 @@ public class UserController {
     @Operation(description = "Update a list of users, will only update the fields listed, requires ADMIN role")
     @RolesAllowed({ADMIN})
     @PutMapping(produces = "application/json")
-    public ResponseEntity<?> updateUser(List<User> users) {
+    public ResponseEntity<?> updateUser(
+            @RequestBody List<User> users) {
         return this.userService.updateUser(users);
     }
 
