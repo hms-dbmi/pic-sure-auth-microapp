@@ -25,10 +25,9 @@ pipeline {
                 script {
                     // Attempt to load proxy settings from an external script
                     if (fileExists('/usr/local/docker-config/setProxy.sh')) {
-                        env.PROXY_OPTS = sh(script: '. /usr/local/docker-config/setProxy.sh && echo "-Dhttp.proxyHost=$proxyServer -Dhttp.proxyPort=$proxyPort -Dhttps.proxyHost=$proxyServer -Dhttps.proxyPort=$proxyPort -Dhttp.nonProxyHosts=\'$noProxy\'"', returnStdout: true).trim()
+                        env.PROXY_OPTS = sh(script: '. /usr/local/docker-config/setProxy.sh; echo "-Dhttp.proxyHost=\$proxyServer -Dhttp.proxyPort=\$proxyPort -Dhttps.proxyHost=\$proxyServer -Dhttps.proxyPort=\$proxyPort -Dhttp.nonProxyHosts=\'\$noProxy\'"', returnStdout: true).trim()
                     }
                     
-                    // Check if PROXY_OPTS is null or empty and reset it if necessary
                     if (env.PROXY_OPTS == null || env.PROXY_OPTS.isEmpty()) {
                         env.PROXY_OPTS = ""
                         echo "Proxy options are unset or empty, defaulting to no proxy settings."
