@@ -43,7 +43,6 @@ public class JWTUtil {
     }
 
     private String getDecodedClientSecret() {
-        logger.info("Client secret {}", clientSecret);
         if (clientSecretIsBase64) {
             return new String(Base64.decodeBase64(clientSecret));
         }
