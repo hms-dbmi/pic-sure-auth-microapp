@@ -196,18 +196,18 @@ public class UserService {
     @Transactional
     public ResponseEntity<?> addUsers(List<User> users) {
         SecurityContext securityContext = SecurityContextHolder.getContext();
-        User currentUser = (User) securityContext.getAuthentication().getPrincipal();
-        if (currentUser == null || currentUser.getUuid() == null) {
+        CustomUserDetails customUserDetails = (CustomUserDetails) securityContext.getAuthentication().getPrincipal();
+        if (customUserDetails == null || customUserDetails.getUser() == null && customUserDetails.getUser().getUuid() == null) {
             logger.error("Security context didn't have a user stored.");
             return PICSUREResponse.applicationError("Inner application error, please contact admin.");
         }
 
+        User currentUser = customUserDetails.getUser();
         checkAssociation(users);
         for (User user : users) {
-            logger.debug("Adding User " + user);
-            if (!allowUpdateSuperAdminRole(currentUser, user, null)) { // TODO: The allowUpdateSuperAdminRole is a private method
-                logger.error("updateUser() user - " + currentUser.getUuid() + " - with roles [" + currentUser.getRoleString() + "] - is not allowed to grant "
-                        + AuthNaming.AuthRoleNaming.SUPER_ADMIN + " role when adding a user.");
+            logger.debug("Adding User {}", user);
+            if (!allowUpdateSuperAdminRole(currentUser, user, null)) {
+                logger.error("updateUser() user - {} - with roles [{}] - is not allowed to grant " + AuthNaming.AuthRoleNaming.SUPER_ADMIN + " role when adding a user.", currentUser.getUuid(), currentUser.getRoleString());
                 throw new IllegalArgumentException("Not allowed to add a user with a " + AuthNaming.AuthRoleNaming.SUPER_ADMIN + " privilege associated.");
             }
 
@@ -254,12 +254,13 @@ public class UserService {
     @Transactional
     public ResponseEntity<?> updateUser(List<User> users) {
         SecurityContext securityContext = SecurityContextHolder.getContext();
-        User currentUser = (User) securityContext.getAuthentication().getPrincipal();
-        if (currentUser == null || currentUser.getUuid() == null) {
+        CustomUserDetails customUserDetails = (CustomUserDetails) securityContext.getAuthentication().getPrincipal();
+        if (customUserDetails == null || customUserDetails.getUser() == null && customUserDetails.getUser().getUuid() == null) {
             logger.error("Security context didn't have a user stored.");
             return PICSUREResponse.applicationError("Inner application error, please contact admin.");
         }
 
+        User currentUser = customUserDetails.getUser();
         checkAssociation(users);
         boolean allowUpdate = true;
         for (User user : users) {
