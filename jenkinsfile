@@ -23,11 +23,5 @@ pipeline {
                 }
             }
         }
-        stage('deploy') {
-            // TODO - deploy it?
-        }
-        stage('test') {
-            // TODO - test it?
-        }
     }
 }
