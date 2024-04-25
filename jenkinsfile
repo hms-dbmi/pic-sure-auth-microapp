@@ -46,7 +46,7 @@ pipeline {
         stage('deploy') {
             steps {
                 script {
-                    env.PROXY_OPTS = env.PROXY_OPTS ?: ''
+                    env.PROXY_OPTS = env.PROXY_OPTS == null ?: ''
                 }
                 sh "docker stop psama || true"
                 sh "docker rm psama || true"
