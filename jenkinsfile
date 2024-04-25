@@ -16,7 +16,6 @@ pipeline {
         TRUSTSTORE_VOLUME="-v $DOCKER_CONFIG_DIR/wildfly/application.truststore:/opt/jboss/wildfly/standalone/configuration/application.truststore"
         PSAMA_OPTS="-Xms2g -Xmx4g -XX:MetaspaceSize=96M -XX:MaxMetaspaceSize=256m -Djava.net.preferIPv4Stack=true"
         TRUSTSTORE_JAVA_OPTS="-Djavax.net.ssl.trustStore=/opt/jboss/wildfly/standalone/configuration/application.truststore -Djavax.net.ssl.trustStorePassword=password"
-        PROXY_OPTS=""
     }
 
     stages {
@@ -26,17 +25,11 @@ pipeline {
                 sh "docker tag ${params.DOCKER_REGISTRY}/${params.REPOSITORY_NAME}:${IMAGE_TAG} ${params.DOCKER_REGISTRY}/${params.REPOSITORY_NAME}:${LATEST_TAG}"
             }
         }
-        stage('setProxy') {
-            steps {
-                sh """
-                    if [ -f "/usr/local/docker-config/setProxy.sh" ]; then
-                       . /usr/local/docker-config/setProxy.sh
-                    fi
-                """
-            }
-        }
         stage('deploy') {
             steps {
+                script {
+                    env.PROXY_OPTS = env.PROXY_OPTS == null ?: ''
+                }
                 sh "docker stop psama || true"
                 sh "docker rm psama || true"
                 sh """docker run --name=psama --restart always \
@@ -44,7 +37,7 @@ pipeline {
                       --env-file /usr/local/docker-config/psama/.env \
                       $EMAIL_TEMPLATE_VOLUME \
                       $TRUSTSTORE_VOLUME \
-                      -e JAVA_OPTS="$PSAMA_OPTS $PROXY_OPTS $TRUSTSTORE_JAVA_OPTS" \
+                      -e JAVA_OPTS="$PSAMA_OPTS $TRUSTSTORE_JAVA_OPTS" \
                       -d ${params.DOCKER_REGISTRY}/${params.REPOSITORY_NAME}:${IMAGE_TAG}"""
             }
         }
