@@ -7,7 +7,7 @@ pipeline {
     }
 
     environment {
-        DOCKER_BUILD_ARGS = "--build-arg http_proxy=$http_proxy --build-arg https_proxy=$http_proxy --build-arg no_proxy=\"$no_proxy\" --build-arg HTTP_PROXY=$http_proxy --build-arg HTTPS_PROXY=$http_proxy --build-arg NO_PROXY=\"$no_proxy\""
+        DOCKER_BUILD_ARGS = "-f ./pic-sure-auth-services/Dockerfile --build-arg http_proxy=$http_proxy --build-arg https_proxy=$http_proxy --build-arg no_proxy=\"$no_proxy\" --build-arg HTTP_PROXY=$http_proxy --build-arg HTTPS_PROXY=$http_proxy --build-arg NO_PROXY=\"$no_proxy\""
         GIT_BRANCH_SHORT = sh(script: 'echo ${GIT_BRANCH} | cut -d "/" -f 2', returnStdout: true).trim()
         GIT_COMMIT_SHORT = sh(script: 'echo ${GIT_COMMIT} | cut -c1-7', returnStdout: true).trim()
         IMAGE_TAG = "${GIT_BRANCH_SHORT}_${GIT_COMMIT_SHORT}"
