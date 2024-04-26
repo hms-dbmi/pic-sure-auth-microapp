@@ -57,7 +57,7 @@ public class ApplicationController {
 
     @Operation(description = "POST a list of Applications, requires SUPER_ADMIN role")
     @RolesAllowed({SUPER_ADMIN})
-    @PostMapping(value = "/", consumes = "application/json", produces = "application/json")
+    @PostMapping(consumes = "application/json", produces = "application/json")
     public ResponseEntity<?> addApplication(
             @Parameter(required = true, description = "A list of AccessRule in JSON format")
             @RequestBody List<Application> applications) {
