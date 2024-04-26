@@ -110,8 +110,7 @@ public class OauthUserMatchingService {
 						u.setAuth0metadata(userInfoString);
 						u.setMatched(true);
 						u.setSubject(userId);
-						userService.updateUser(Arrays.asList(u));
-						return u;
+						return userService.save(u);
 					}
 				}
 			}

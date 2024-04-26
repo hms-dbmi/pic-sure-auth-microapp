@@ -219,6 +219,7 @@ public class UserService {
 
             if (user.getEmail() == null) {
                 try {
+                    logger.info("Parsing metadata for email address");
                     HashMap<String, String> metadata = new HashMap<String, String>(new ObjectMapper().readValue(user.getGeneralMetadata(), Map.class));
                     List<String> emailKeys = metadata.keySet().stream().filter((key) -> key.toLowerCase().contains("email")).toList();
                     if (!emailKeys.isEmpty()) {
@@ -230,7 +231,8 @@ public class UserService {
             }
         }
 
-        ResponseEntity<?> updateResponse = PICSUREResponse.success(addUser(users));
+        users = addUser(users);
+        ResponseEntity<?> updateResponse = PICSUREResponse.success(users);
         sendUserUpdateEmailsFromResponse(updateResponse);
         return updateResponse;
     }
@@ -271,7 +273,6 @@ public class UserService {
         checkAssociation(users);
         boolean allowUpdate = true;
         for (User user : users) {
-
             Optional<User> originalUser = this.userRepository.findById(user.getUuid());
             if (!allowUpdateSuperAdminRole(currentUser, user, originalUser.orElse(null))) {
                 allowUpdate = false;
@@ -505,5 +506,9 @@ public class UserService {
 
     public User findBySubject(String username) {
         return this.userRepository.findBySubject(username);
+    }
+
+    public User save(User user) {
+        return this.userRepository.save(user);
     }
 }
