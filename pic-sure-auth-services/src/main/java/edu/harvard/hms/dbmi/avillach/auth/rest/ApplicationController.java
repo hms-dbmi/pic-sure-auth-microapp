@@ -60,7 +60,7 @@ public class ApplicationController {
     @PostMapping(value = "/", consumes = "application/json", produces = "application/json")
     public ResponseEntity<?> addApplication(
             @Parameter(required = true, description = "A list of AccessRule in JSON format")
-            List<Application> applications) {
+            @RequestBody List<Application> applications) {
         applications = applicationService.addNewApplications(applications);
         return PICSUREResponse.success(applications);
     }
