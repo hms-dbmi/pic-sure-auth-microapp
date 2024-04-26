@@ -70,7 +70,7 @@ public class ApplicationController {
     @PutMapping(consumes = "application/json", produces = "application/json")
     public ResponseEntity<?> updateApplication(
             @Parameter(required = true, description = "A list of AccessRule with fields to be updated in JSON format")
-            List<Application> applications) {
+            @RequestBody List<Application> applications) {
         applications = applicationService.updateApplications(applications);
         return PICSUREResponse.success(applications);
     }
