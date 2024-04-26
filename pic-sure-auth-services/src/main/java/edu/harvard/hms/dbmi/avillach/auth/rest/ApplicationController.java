@@ -67,7 +67,7 @@ public class ApplicationController {
 
     @Operation(description = "Update a list of Applications, will only update the fields listed, requires SUPER_ADMIN role")
     @RolesAllowed({SUPER_ADMIN})
-    @PutMapping(value = "/", consumes = "application/json", produces = "application/json")
+    @PutMapping(consumes = "application/json", produces = "application/json")
     public ResponseEntity<?> updateApplication(
             @Parameter(required = true, description = "A list of AccessRule with fields to be updated in JSON format")
             List<Application> applications) {
