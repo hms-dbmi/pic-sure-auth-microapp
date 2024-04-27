@@ -96,6 +96,7 @@ public class ApplicationService implements UserDetailsService {
         return this.applicationRepo.findAll();
     }
 
+    @Transactional
     public List<Application> updateApplications(List<Application> applications) {
         checkAssociation(applications);
         return this.applicationRepo.saveAll(applications);
