@@ -138,11 +138,7 @@ public class ApplicationService implements UserDetailsService {
                     }
                 });
 
-                // Instead of clearing the privileges and adding the new ones, we should just update the privileges
-                // this is for the benefit of hibernate as well. Hibernate is tracking the original privileges object
-                // and if we clear it and add new ones, hibernate will think that the privileges object has been changed
-                application.getPrivileges().clear();
-                application.getPrivileges().addAll(privileges);
+                application.setPrivileges(privileges);
             }
         }
     }
