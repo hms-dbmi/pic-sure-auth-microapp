@@ -30,11 +30,9 @@ public class JWTUtil {
 
     private static final long defaultTTLMillis = 1000L * 60 * 60 * 24 * 7;
 
-    @Value("${application.client.secret}")
-    private String clientSecret;
+    private final String clientSecret;
 
-    @Value("${application.client.secret.base64}")
-    private boolean clientSecretIsBase64;
+    private final boolean clientSecretIsBase64;
 
     public JWTUtil(@Value("${application.client.secret}") String clientSecret,
                     @Value("${application.client.secret.base64}") boolean clientSecretIsBase64) {
