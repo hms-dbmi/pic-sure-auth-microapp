@@ -57,7 +57,7 @@ public class RoleController {
     @PostMapping(produces = "application/json")
     public ResponseEntity<?> addRole(
             @Parameter(required = true, description = "A list of Roles in JSON format")
-            List<Role> roles) {
+            @RequestBody List<Role> roles) {
         List<Role> savedRoles = this.roleService.addRoles(roles);
         return PICSUREResponse.success("All roles are added.", savedRoles);
     }
@@ -67,7 +67,7 @@ public class RoleController {
     @PutMapping(produces = "application/json")
     public ResponseEntity<?> updateRole(
             @Parameter(required = true, description = "A list of Roles with fields to be updated in JSON format")
-            List<Role> roles) {
+            @RequestBody List<Role> roles) {
         List<Role> updatedRoles = this.roleService.updateRoles(roles);
         if (updatedRoles.isEmpty()) {
             return PICSUREResponse.protocolError("No Role(s) has been updated.");
