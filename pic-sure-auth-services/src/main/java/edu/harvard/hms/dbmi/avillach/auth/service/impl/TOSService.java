@@ -25,8 +25,8 @@ public class TOSService {
 
     private final static Logger logger = LoggerFactory.getLogger(TOSService.class);
 
-    @Value("${application.tos.enabled}")
-    private boolean isToSEnabled;
+
+    private final boolean isToSEnabled;
 
     private final TermsOfServiceRepository termsOfServiceRepo;
 
@@ -34,9 +34,11 @@ public class TOSService {
 
 
     @Autowired
-    public TOSService(TermsOfServiceRepository termsOfServiceRepo, UserRepository userRepo) {
+    public TOSService(TermsOfServiceRepository termsOfServiceRepo, UserRepository userRepo,
+                      @Value("${application.tos.enabled}") boolean isToSEnabled) {
         this.termsOfServiceRepo = termsOfServiceRepo;
         this.userRepo = userRepo;
+        this.isToSEnabled = isToSEnabled;
     }
 
 
