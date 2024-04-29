@@ -64,7 +64,7 @@ public class TermsOfServiceController {
     }
 
     @Operation(description = "GET if current user has acceptted his TOS or not")
-    @GetMapping(path = "/", produces = "text/plain")
+    @GetMapping(produces = "text/plain")
     public ResponseEntity<?> hasUserAcceptedTOS(){
         SecurityContext context = SecurityContextHolder.getContext();
         String userSubject = context.getAuthentication().getName();

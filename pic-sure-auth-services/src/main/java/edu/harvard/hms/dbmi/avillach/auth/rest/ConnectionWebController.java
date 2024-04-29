@@ -49,7 +49,7 @@ public class ConnectionWebController { // TODO: This isn't a service class, it's
     }
 
     @Operation(description = "GET a list of existing Connection, requires SUPER_ADMIN or ADMIN role")
-    @GetMapping(path = "/", produces = "application/json")
+    @GetMapping(produces = "application/json")
     @Secured({SUPER_ADMIN, ADMIN})
     public ResponseEntity<?> getAllConnections() {
         List<Connection> allConnections = connectionWebService.getAllConnections();
@@ -61,7 +61,7 @@ public class ConnectionWebController { // TODO: This isn't a service class, it's
     @PostMapping(produces = "application/json", consumes = "application/json")
     public ResponseEntity<?> addConnection(
             @Parameter(required = true, description = "A list of Connections in JSON format")
-            List<Connection> connections) {
+            @RequestBody List<Connection> connections) {
         try {
             connections = connectionWebService.addConnection(connections);
         } catch (IllegalArgumentException e) {
@@ -76,7 +76,7 @@ public class ConnectionWebController { // TODO: This isn't a service class, it's
     @PutMapping(produces = "application/json", consumes = "application/json")
     public ResponseEntity<?> updateConnection(
             @Parameter(required = true, description = "A list of Connection with fields to be updated in JSON format")
-            List<Connection> connections) {
+            @RequestBody List<Connection> connections) {
         List<Connection> responseEntity = connectionWebService.updateConnections(connections);
         return ResponseEntity.ok(responseEntity);
     }

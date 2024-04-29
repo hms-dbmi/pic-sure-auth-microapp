@@ -61,10 +61,10 @@ public class AccessRuleController {
 
     @Operation(description = "POST a list of AccessRules, requires SUPER_ADMIN role")
     @RolesAllowed(SUPER_ADMIN)
-    @PostMapping(path = "/", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> addAccessRule(
             @Parameter(required = true, description = "A list of AccessRule in JSON format")
-            List<AccessRule> accessRules) {
+            @RequestBody List<AccessRule> accessRules) {
         accessRules = this.accessRuleService.addAccessRule(accessRules);
 
         if (accessRules.isEmpty()) {
@@ -76,10 +76,10 @@ public class AccessRuleController {
 
     @Operation(description = "Update a list of AccessRules, will only update the fields listed, requires SUPER_ADMIN role")
     @RolesAllowed(SUPER_ADMIN)
-    @PutMapping(path = "/", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @PutMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> updateAccessRule(
             @Parameter(required = true, description = "A list of AccessRule with fields to be updated in JSON format")
-            List<AccessRule> accessRules) {
+            @RequestBody List<AccessRule> accessRules) {
         accessRules = this.accessRuleService.updateAccessRules(accessRules);
         return PICSUREResponse.success(accessRules);
     }

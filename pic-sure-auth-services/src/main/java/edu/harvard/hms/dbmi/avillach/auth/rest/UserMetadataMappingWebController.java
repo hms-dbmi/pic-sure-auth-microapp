@@ -42,7 +42,7 @@ public class UserMetadataMappingWebController {
 
     @Operation(description = "GET a list of existing UserMetadataMappings, requires ADMIN or SUPER_ADMIN role")
     @RolesAllowed({ADMIN, SUPER_ADMIN})
-    @GetMapping(path = "/", produces = "application/json")
+    @GetMapping(produces = "application/json")
     public ResponseEntity<?> getAllMappings() {
         List<UserMetadataMapping> allMappings = mappingService.getAllMappings();
         return PICSUREResponse.success(allMappings);
@@ -50,10 +50,10 @@ public class UserMetadataMappingWebController {
 
     @Operation(description = "POST a list of UserMetadataMappings, requires SUPER_ADMIN role")
     @RolesAllowed({SUPER_ADMIN})
-    @PostMapping(path = "/", consumes = "application/json", produces = "application/json")
+    @PostMapping(consumes = "application/json", produces = "application/json")
     public ResponseEntity<?> addMapping(
             @Parameter(required = true, description = "A list of UserMetadataMapping in JSON format")
-            List<UserMetadataMapping> mappings) {
+            @RequestBody List<UserMetadataMapping> mappings) {
 
         try {
             List<UserMetadataMapping> userMetadataMappings = mappingService.addMappings(mappings);
@@ -65,10 +65,10 @@ public class UserMetadataMappingWebController {
 
     @Operation(description = "Update a list of UserMetadataMappings, will only update the fields listed, requires SUPER_ADMIN role")
     @RolesAllowed({SUPER_ADMIN})
-    @PutMapping(path = "/", consumes = "application/json", produces = "application/json")
+    @PutMapping(consumes = "application/json", produces = "application/json")
     public ResponseEntity<?> updateMapping(
             @Parameter(required = true, description = "A list of UserMetadataMapping with fields to be updated in JSON format")
-            List<UserMetadataMapping> mappings) {
+            @RequestBody List<UserMetadataMapping> mappings) {
         List<UserMetadataMapping> userMetadataMappings = this.mappingService.updateUserMetadataMappings(mappings);
 
         if (userMetadataMappings == null || userMetadataMappings.isEmpty()) {

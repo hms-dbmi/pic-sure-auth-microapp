@@ -57,20 +57,20 @@ public class PrivilegeController {
 
     @Operation(description = "POST a list of privileges, requires SUPER_ADMIN role")
     @RolesAllowed({SUPER_ADMIN})
-    @PostMapping(path = "/", consumes = "application/json", produces = "application/json")
+    @PostMapping(consumes = "application/json", produces = "application/json")
     public ResponseEntity<?> addPrivilege(
             @Parameter(required = true, description = "A list of privileges in JSON format")
-            List<Privilege> privileges){
+            @RequestBody List<Privilege> privileges){
         privileges = this.privilegeService.addPrivileges(privileges);
         return PICSUREResponse.success(privileges);
     }
 
     @Operation(description = "Update a list of privileges, will only update the fields listed, requires SUPER_ADMIN role")
     @RolesAllowed({SUPER_ADMIN})
-    @PutMapping(path = "/", consumes = "application/json", produces = "application/json")
+    @PutMapping(consumes = "application/json", produces = "application/json")
     public ResponseEntity<?> updatePrivilege(
             @Parameter(required = true, description = "A list of privilege with fields to be updated in JSON format")
-            List<Privilege> privileges){
+            @RequestBody List<Privilege> privileges){
          privileges = this.privilegeService.updatePrivileges(privileges);
             return ResponseEntity.ok(privileges);
     }
