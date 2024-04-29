@@ -74,8 +74,6 @@ public class RestClientUtil {
 
         try {
             return objectMapper.readValue(response.getBody(), objectMapper.getTypeFactory().constructType(expectedElementType));
-        } catch (JsonMappingException | JsonParseException e) {
-            throw new RuntimeException(e);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
