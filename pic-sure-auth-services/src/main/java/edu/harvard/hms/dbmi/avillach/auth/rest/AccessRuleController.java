@@ -26,7 +26,8 @@ import static edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming.AuthRoleNaming
  * Path: /accessRule
  */
 @Tag(name = "Access Rule Management")
-@Controller("/accessRule")
+@Controller
+@RequestMapping(value = "/accessRule")
 public class AccessRuleController {
 
     private final AccessRuleService accessRuleService;
