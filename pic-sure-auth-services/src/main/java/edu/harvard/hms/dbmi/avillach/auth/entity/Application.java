@@ -136,17 +136,4 @@ public class Application extends BaseEntity implements Principal {
     		return uuid.toString() + " ___ " + name + " ___ " + description + " ___ " + enable + " ___ " + url + " ___ " + (privileges==null?"NO PRIVILEGES DEFINED" : privileges.stream().map(Privilege::toString).collect(Collectors.joining(",")));
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        if (!super.equals(o)) return false;
-        Application that = (Application) o;
-        return isEnable() == that.isEnable() && Objects.equals(getName(), that.getName()) && Objects.equals(getDescription(), that.getDescription()) && Objects.equals(getToken(), that.getToken()) && Objects.equals(getUrl(), that.getUrl()) && Objects.equals(getPrivileges(), that.getPrivileges());
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(super.hashCode(), getName(), getDescription(), getToken(), getUrl(), isEnable(), getPrivileges());
-    }
 }
