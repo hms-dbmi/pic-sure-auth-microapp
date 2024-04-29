@@ -24,7 +24,7 @@ import static edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming.AuthRoleNaming
 @Tag(name = "Connection Management")
 @Controller
 @RequestMapping("/connection")
-public class ConnectionWebController { // TODO: This isn't a service class, it's a controller. We should refactor this so it doesn't extend BaseEntityService
+public class ConnectionWebController {
 
 
     private final ConnectionWebService connectionWebService;
