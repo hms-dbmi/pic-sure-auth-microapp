@@ -14,38 +14,46 @@ import edu.harvard.hms.dbmi.avillach.auth.service.impl.UserMetadataMappingServic
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.UserService;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.mockito.invocation.InvocationOnMock;
+import org.mockito.junit.MockitoJUnitRunner;
 import org.mockito.stubbing.Answer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static junit.framework.TestCase.assertNotNull;
 import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.mock;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 public class Auth0MatchingServiceTest {
 
-    @Mock
-    UserRepository userRepo = mock(UserRepository.class);
+    private static final Logger log = LoggerFactory.getLogger(Auth0MatchingServiceTest.class);
 
     @Mock
-    UserMetadataMappingService mappingService = mock(UserMetadataMappingService.class);
+    UserRepository userRepo;
 
     @Mock
-    UserService userService = mock(UserService.class);
+    UserMetadataMappingService mappingService;
+
+    @Mock
+    UserService userService;
+
+    @Mock
+    ConnectionRepository connectionRepo;
 
     @InjectMocks
-    OauthUserMatchingService cut = new OauthUserMatchingService(userRepo, userService, mappingService, mock(ConnectionRepository.class));
+    OauthUserMatchingService cut;
 
     User persistedUser;
     ObjectMapper mapper = new ObjectMapper();
@@ -55,17 +63,21 @@ public class Auth0MatchingServiceTest {
         MockitoAnnotations.initMocks(this);
         //Instead of calling the database
         doAnswer(invocation -> (listUnmatchedByConnectionIdMock(invocation.getArgument(0)))).
-                when(userRepo).findByConnectionAndMatched(any(), any());
+                when(userRepo).findByConnectionAndMatched(any(Connection.class), anyBoolean());
         doAnswer(invocation -> (getAllMappingsForConnectionMock(invocation.getArgument(0)))).
-                when(mappingService).getAllMappingsForConnection((Connection) any());
+                when(mappingService).getAllMappingsForConnection(any(Connection.class));
+
+        doAnswer(invocation -> {
+            String connectionId = invocation.getArgument(0);
+            log.info("Mocking connection with id: {}", connectionId);
+            return mockConnection(connectionId);
+        }).when(connectionRepo).findById(anyString());
+
         //So we can check that the user is persisted
-        doAnswer(new Answer<Void>() {
-            public Void answer(InvocationOnMock invocation) {
-                List<User> userList = invocation.getArgument(0);
-                persistedUser = userList.get(0);
-                return null;
-            }
-        }).when(userService).updateUser(any(List.class));
+        doAnswer(invocation -> {
+            persistedUser = invocation.getArgument(0);
+            return null;
+        }).when(userService).save(any(User.class));
     }
 
     @Test
@@ -79,6 +91,7 @@ public class Auth0MatchingServiceTest {
 
             //Test when everything works fine
             User result = cut.matchTokenToUser(userInfo);
+            log.info("Result: " + result);
             assertNotNull(result);
             assertNotNull(result.getAuth0metadata());
             assertNotNull(result.getSubject());
@@ -147,7 +160,7 @@ public class Auth0MatchingServiceTest {
         }
     }
 
-    private List<User> listUnmatchedByConnectionIdMock(String connectionId) {
+    private List<User> listUnmatchedByConnectionIdMock(Connection connectionId) {
         List<User> allMappings = List.of(
                 new User().setConnection(new Connection().setId("ldap-connector")).setGeneralMetadata("{ \"email\": \"foo@childrens.harvard.edu\", \"fullName\" : \"Bruce Banner\"}"),
                 new User().setConnection(new Connection().setId("ldap-connector")).setGeneralMetadata("{ \"email\": \"foobar@childrens.harvard.edu\", \"fullName\" : \"Scott Lang\"}"),
@@ -158,11 +171,12 @@ public class Auth0MatchingServiceTest {
                 new User().setConnection(new Connection().setId("no-mapping-connection")).setGeneralMetadata("{ \"email\": \"foo@bar.com\", \"fullName\" : \"Luke Cage\"}")
         );
         return allMappings.stream().filter((User user) -> {
-            return user.getConnection().getId().equalsIgnoreCase(connectionId);
+            return user.getConnection().getId().equalsIgnoreCase(connectionId.getId());
         }).collect(Collectors.toList());
     }
 
-    private List<UserMetadataMapping> getAllMappingsForConnectionMock(String connectionId) {
+    private List<UserMetadataMapping> getAllMappingsForConnectionMock(Connection connection) {
+        log.info("Mocking mappings for connection with id: " + connection.getId());
         List<UserMetadataMapping> allMappings = List.of(
                 new UserMetadataMapping().setConnection(new Connection().setId("ldap-connector")).setGeneralMetadataJsonPath("$.email").setAuth0MetadataJsonPath("$.email"),
                 new UserMetadataMapping().setConnection(new Connection().setId("nih-gov-prod")).setGeneralMetadataJsonPath("$.nih-userid").setAuth0MetadataJsonPath("$.identities[0].user_id"),
@@ -173,7 +187,7 @@ public class Auth0MatchingServiceTest {
 
         );
         return allMappings.stream().filter((UserMetadataMapping mapping) -> {
-            return mapping.getConnection().getId().equalsIgnoreCase(connectionId);
+            return mapping.getConnection().getId().equalsIgnoreCase(connection.getId());
         }).collect(Collectors.toList());
     }
 
@@ -191,6 +205,11 @@ public class Auth0MatchingServiceTest {
                 new TypeReference<Map<String, Object>>() {
                 });
         return mapper.valueToTree(jsonMap);
+    }
+
+    public Optional<Connection> mockConnection(String id) {
+        log.info("Mocking connection with id: " + id);
+        return Optional.of(new Connection().setId(id));
     }
 
 }

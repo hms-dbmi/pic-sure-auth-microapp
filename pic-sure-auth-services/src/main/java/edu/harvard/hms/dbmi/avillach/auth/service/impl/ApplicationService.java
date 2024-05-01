@@ -27,7 +27,7 @@ public class ApplicationService implements UserDetailsService {
     private final JWTUtil jwtUtil;
 
     @Autowired
-    ApplicationService(ApplicationRepository applicationRepo, PrivilegeRepository privilegeRepo, JWTUtil jwtUtil) {
+    public ApplicationService(ApplicationRepository applicationRepo, PrivilegeRepository privilegeRepo, JWTUtil jwtUtil) {
         this.applicationRepo = applicationRepo;
         this.privilegeRepo = privilegeRepo;
         this.jwtUtil = jwtUtil;

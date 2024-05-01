@@ -1,9 +1,7 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.impl;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,10 +63,15 @@ public class OauthUserMatchingService {
 			Object parsedInfo = conf.jsonProvider().parse(userInfoString);
 			//Return lists or null so that we don't have to worry about whether it's a single object or an array, or catch errors
 			List<String> connections = JsonPath.using(conf).parse(parsedInfo).read("$.identities[0].connection");
-			String connectionId = connections.get(0);
+			String connectionId = connections.getFirst();
 			Optional<Connection> connection = connectionRepo.findById(connectionId);
+			if (connection.isEmpty()) {
+				//We don't have a connection for this user
+				logger.warn("Unable to find connection with id {}", connectionId);
+				return null;
+			}
 
-			List<UserMetadataMapping> mappings = mappingService.getAllMappingsForConnection(connection.orElse(null));
+			List<UserMetadataMapping> mappings = mappingService.getAllMappingsForConnection(connection.get());
 
 			if (mappings == null || mappings.isEmpty()) {
 				//We don't have any mappings for this connection yet
@@ -110,7 +113,8 @@ public class OauthUserMatchingService {
 						u.setAuth0metadata(userInfoString);
 						u.setMatched(true);
 						u.setSubject(userId);
-						return userService.save(u);
+						userService.save(u);
+						return u;
 					}
 				}
 			}
