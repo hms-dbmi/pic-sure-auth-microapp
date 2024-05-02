@@ -45,7 +45,7 @@ public class UserController {
             @Parameter(required = true, description = "The UUID of the user to fetch information about")
             @PathVariable("userId") String userId) {
         User userById = this.userService.getUserById(userId);
-        return ResponseEntity.ok(userById);
+        return PICSUREResponse.success(userById);
     }
 
     @Operation(description = "GET a list of existing users, requires ADMIN or SUPER_ADMIN roles")
@@ -53,7 +53,7 @@ public class UserController {
     @GetMapping(produces = "application/json")
     public ResponseEntity<?> getUserAll() {
         List<User> entityAll = this.userService.getAllUsers();
-        return ResponseEntity.ok(entityAll);
+        return PICSUREResponse.success(entityAll);
     }
 
     @Operation(description = "POST a list of users, requires ADMIN role")
@@ -109,7 +109,13 @@ public class UserController {
     @Operation(description = "Retrieve the queryTemplate of default application")
     @GetMapping(path = "/me/queryTemplate", produces = "application/json")
     public ResponseEntity<?> getQueryTemplate() {
-        return this.userService.getDefaultQueryTemplate();
+        Map<String, String> defaultQueryTemplate = userService.getDefaultQueryTemplate();
+
+        if (defaultQueryTemplate == null) {
+            return PICSUREResponse.applicationError("Inner application error, please contact admin.");
+        }
+
+        return PICSUREResponse.success(defaultQueryTemplate);
     }
 
     /**

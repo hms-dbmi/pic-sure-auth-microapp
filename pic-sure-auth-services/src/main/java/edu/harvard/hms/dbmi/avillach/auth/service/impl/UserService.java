@@ -390,15 +390,15 @@ public class UserService {
         return Optional.ofNullable(mergeTemplate(user, application.orElse(null)));
     }
 
-    public ResponseEntity<?> getDefaultQueryTemplate() {
+    public Map<String, String> getDefaultQueryTemplate() {
         Optional<String> mergedTemplate = getQueryTemplate(this.applicationUUID);
 
         if (mergedTemplate.isEmpty()) {
             logger.error("getDefaultQueryTemplate() cannot find corresponding application by UUID: {}", this.applicationUUID);
-            return PICSUREResponse.applicationError("Inner application error, please contact admin.");
+            return null;
         }
 
-        return PICSUREResponse.success(Map.of("queryTemplate", mergedTemplate.orElse(null)));
+        return Map.of("queryTemplate", mergedTemplate.orElse(null));
     }
 
     private String mergeTemplate(User user, Application application) {
