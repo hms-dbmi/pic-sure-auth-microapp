@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.*;
+import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
@@ -33,6 +34,23 @@ public class RestClientUtil {
             HttpEntity<String> entity = new HttpEntity<>("parameters", headers);
             // Pass custom configuration to the RestTemplate
             return restTemplate.exchange(uri, HttpMethod.GET, entity, String.class);
+        } catch (HttpClientErrorException ex) {
+            logger.error("HttpClientErrorException: " + ex.getMessage());
+            throw ex;
+        }
+    }
+
+    // Implement: The ability to set the timeout on the rest template for a given request.
+    public static ResponseEntity<String> retrieveGetResponseWithRequestConfiguration(String uri, HttpHeaders headers, ClientHttpRequestFactory requestFactory) {
+        logger.info("HttpClientUtilSpring retrieveGetResponse()");
+        logger.info("uri: {}", uri);
+        RestTemplate localRestTemplate = new RestTemplate(requestFactory);
+
+        try {
+            logger.debug("HttpClientUtilSpring retrieveGetResponse()");
+            HttpEntity<String> entity = new HttpEntity<>("parameters", headers);
+            // Pass custom configuration to the RestTemplate
+            return localRestTemplate.exchange(uri, HttpMethod.GET, entity, String.class);
         } catch (HttpClientErrorException ex) {
             logger.error("HttpClientErrorException: " + ex.getMessage());
             throw ex;

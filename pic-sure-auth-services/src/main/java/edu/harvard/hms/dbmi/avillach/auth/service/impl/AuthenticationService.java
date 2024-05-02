@@ -21,6 +21,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.ClientHttpRequestFactory;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 
 /**
@@ -81,7 +83,6 @@ public class AuthenticationService {
         String userId = userIdNode.asText();
 
         logger.info("Successfully retrieved userId, {}, from the provided code and redirectURI", userId);
-
         String connectionId;
         try {
             connectionId = userInfo.get("identities").get(0).get("connection").asText();
@@ -108,34 +109,30 @@ public class AuthenticationService {
             }
         }
 
-        HashMap<String, Object> claims = new HashMap<String, Object>();
+        HashMap<String, Object> claims = new HashMap<>();
         claims.put("sub", userId);
         claims.put("name", user.getName());
         claims.put("email", user.getEmail());
         HashMap<String, String> responseMap = userService.getUserProfileResponse(claims);
 
-        logger.info("LOGIN SUCCESS ___ " + user.getEmail() + ":" + user.getUuid().toString() + " ___ Authorization will expire at  ___ " + responseMap.get("expirationDate") + "___");
-
+        logger.info("LOGIN SUCCESS ___ {}:{} ___ Authorization will expire at  ___ {}___", user.getEmail(), user.getUuid().toString(), responseMap.get("expirationDate"));
         return PICSUREResponse.success(responseMap);
     }
 
     private JsonNode retrieveUserInfo(String accessToken) throws IOException {
-        // TODO: Remove this after debugging
-        logger.info("accessToken: {}", accessToken);
-        logger.info("auth0host: {}", this.auth0host);
         String auth0UserInfoURI = this.auth0host + "/userinfo";
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("Authorization", "Bearer " + accessToken);
 
         JsonNode auth0Response = null;
-//        RequestConfig requestConfig = createRequestConfigWithCustomTimeout(); // TODO: How can we do this with the Spring rest client?
 
         for (int i = 1; i <= AUTH_RETRY_LIMIT && auth0Response == null; i++) {
             try {
-                ResponseEntity<String> response = RestClientUtil.retrieveGetResponse(
+                ResponseEntity<String> response = RestClientUtil.retrieveGetResponseWithRequestConfiguration(
                         auth0UserInfoURI,
-                        headers
+                        headers,
+                        createRequestConfigWithCustomTimeout(2000)
                 );
 
                 auth0Response = objectMapper.readTree(response.getBody());
@@ -150,13 +147,11 @@ public class AuthenticationService {
         }
         return auth0Response;
     }
-// TODO : This method is not used. we need to investigate if it is needed or not
-//    private RequestConfig createRequestConfigWithCustomTimeout() {
-//        int timeoutMs = 2000; // 2 seconds, default is 3 seconds
-//        return RequestConfig.custom()
-//                .setConnectionRequestTimeout(timeoutMs)
-//                .setConnectTimeout(timeoutMs)
-//                .setSocketTimeout(timeoutMs)
-//                .build();
-//    }
+
+    public ClientHttpRequestFactory createRequestConfigWithCustomTimeout(int timeoutMs) {
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(timeoutMs);
+        requestFactory.setReadTimeout(timeoutMs);
+        return requestFactory;
+    }
 }
