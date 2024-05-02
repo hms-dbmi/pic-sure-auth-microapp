@@ -1,7 +1,0 @@
-POST http://localhost:8090/auth/authentication
-Content-Type: application/json
-
-# JSON Encode request parameters
-{
-  "test": "test"
-}
