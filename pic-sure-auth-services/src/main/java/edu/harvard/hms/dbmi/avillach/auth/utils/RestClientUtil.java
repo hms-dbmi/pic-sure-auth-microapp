@@ -1,6 +1,5 @@
 package edu.harvard.hms.dbmi.avillach.auth.utils;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.*;
@@ -8,7 +7,6 @@ import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
-import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
@@ -18,41 +16,30 @@ import java.util.function.Predicate;
 
 public class RestClientUtil {
 
-    private static final ObjectMapper objectMapper = new ObjectMapper();
     private static final Logger logger = LoggerFactory.getLogger(RestClientUtil.class);
     private static final RestTemplate restTemplate = new RestTemplate();
 
-    public static boolean is2xx(ResponseEntity<?> response) {
-        return response.getStatusCode().is2xxSuccessful();
-    }
-
     public static ResponseEntity<String> retrieveGetResponse(String uri, HttpHeaders headers) {
-        logger.info("HttpClientUtilSpring retrieveGetResponse()");
-        logger.info("uri: {}", uri);
         try {
-            logger.debug("HttpClientUtilSpring retrieveGetResponse()");
             HttpEntity<String> entity = new HttpEntity<>("parameters", headers);
             // Pass custom configuration to the RestTemplate
             return restTemplate.exchange(uri, HttpMethod.GET, entity, String.class);
         } catch (HttpClientErrorException ex) {
-            logger.error("HttpClientErrorException: " + ex.getMessage());
+            logger.error("HttpClientErrorException: {}", ex.getMessage());
             throw ex;
         }
     }
 
     // Implement: The ability to set the timeout on the rest template for a given request.
     public static ResponseEntity<String> retrieveGetResponseWithRequestConfiguration(String uri, HttpHeaders headers, ClientHttpRequestFactory requestFactory) {
-        logger.info("HttpClientUtilSpring retrieveGetResponse()");
-        logger.info("uri: {}", uri);
         RestTemplate localRestTemplate = new RestTemplate(requestFactory);
 
         try {
-            logger.debug("HttpClientUtilSpring retrieveGetResponse()");
             HttpEntity<String> entity = new HttpEntity<>("parameters", headers);
             // Pass custom configuration to the RestTemplate
             return localRestTemplate.exchange(uri, HttpMethod.GET, entity, String.class);
         } catch (HttpClientErrorException ex) {
-            logger.error("HttpClientErrorException: " + ex.getMessage());
+            logger.error("HttpClientErrorException: {}", ex.getMessage());
             throw ex;
         }
     }
@@ -82,16 +69,6 @@ public class RestClientUtil {
         } catch (HttpClientErrorException ex) {
             logger.error("HttpClientErrorException: {}", ex.getMessage());
             throw ex;
-        }
-    }
-
-    public static <T> T readObjectFromResponse(ResponseEntity<String> response, Class<T> expectedElementType) {
-        logger.debug("HttpClientUtilSpring readObjectFromResponse()");
-
-        try {
-            return objectMapper.readValue(response.getBody(), objectMapper.getTypeFactory().constructType(expectedElementType));
-        } catch (IOException e) {
-            throw new RuntimeException(e);
         }
     }
 
