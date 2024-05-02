@@ -41,7 +41,11 @@ public class RoleController {
     public ResponseEntity<?> getRoleById(
             @Parameter(description = "The UUID of the Role to fetch information about")
             @PathVariable("roleId") String roleId) {
-        return this.roleService.getRoleById(roleId);
+        Optional<Role> optionalRole = this.roleService.getRoleById(roleId);
+        if (optionalRole.isEmpty()) {
+            return PICSUREResponse.protocolError("Role is not found by given role ID: " + roleId);
+        }
+        return PICSUREResponse.success(optionalRole.get());
     }
 
     @Operation(description = "GET a list of existing Roles, requires ADMIN or SUPER_ADMIN role")

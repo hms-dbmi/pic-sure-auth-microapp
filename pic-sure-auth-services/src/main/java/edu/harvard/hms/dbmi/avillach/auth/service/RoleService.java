@@ -3,11 +3,9 @@ package edu.harvard.hms.dbmi.avillach.auth.service;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.enums.SecurityRoles;
-import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.repository.PrivilegeRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.RoleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -32,12 +30,8 @@ public class RoleService {
         this.privilegeRepo = privilegeRepo;
     }
 
-    public ResponseEntity<?> getRoleById(String roleId) {
-        Optional<Role> optionalRole = roleRepository.findById(UUID.fromString(roleId));
-        if (optionalRole.isEmpty()) {
-            return PICSUREResponse.protocolError("Role is not found by given role ID: " + roleId);
-        }
-        return PICSUREResponse.success(optionalRole.get());
+    public Optional<Role> getRoleById(String roleId) {
+        return roleRepository.findById(UUID.fromString(roleId));
     }
 
     public List<Role> getAllRoles() {
