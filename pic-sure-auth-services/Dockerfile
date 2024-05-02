@@ -1,5 +1,9 @@
 FROM maven:3.9.6-amazoncorretto-21 as build
 
+COPY ./pom.xml /app/pom.xml
+
+RUN mvn -f /app/pom.xml dependency:go-offline
+
 # Copy the source code into the container
 COPY ./ /app
 
