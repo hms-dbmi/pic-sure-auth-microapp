@@ -6,6 +6,7 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.*;
 import edu.harvard.hms.dbmi.avillach.auth.exceptions.NotAuthorizedException;
 import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.repository.*;
+import edu.harvard.hms.dbmi.avillach.auth.service.IFENCEAuthenticationService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.RestClientUtil;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
@@ -21,8 +22,25 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 
+/**
+ * <p>
+ * This class provides authentication functionality. This implements an authenticationService interface
+ * in the future to support different modes of FENCE authentication.
+ * The main purpose of this class is returns a token that includes information of the roles of users.
+ * </p>
+ *
+ * <h4>Reason for Versioning</h4>
+ * <p>
+ *     This is the original FENCE code. A branch was created and has since diverged from the master branch implementation.
+ *     In order to preserve the original code and backward compatibility, this code is being versioned. A common interface
+ *     will be created to allow for the two implementations to be used interchangeably.
+ *     The original code is being versioned as V1. We will configure the authentication service to use the correct version
+ *     based on the configuration.
+ * </p>
+ */
+
 @Service
-public class FENCEAuthenticationService {
+public class FENCEAuthenticationService implements IFENCEAuthenticationService {
 
     private final Logger logger = LoggerFactory.getLogger(FENCEAuthenticationService.class);
 
@@ -153,7 +171,12 @@ public class FENCEAuthenticationService {
         return resp;
     }
 
-    // Get access_token from FENCE, based on the provided `code`
+    @Override
+    public ResponseEntity<?> getFENCEProfile(String callback_url, Map<String, String> authRequest) {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    @Override
     public ResponseEntity<?> getFENCEProfile(Map<String, String> authRequest) {
         logger.debug("getFENCEProfile() starting...");
         String fence_code = authRequest.get("code");
