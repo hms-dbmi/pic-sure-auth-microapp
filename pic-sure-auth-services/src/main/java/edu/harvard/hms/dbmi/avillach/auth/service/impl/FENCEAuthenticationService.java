@@ -81,12 +81,12 @@ public class FENCEAuthenticationService implements IFENCEAuthenticationService {
                                       AccessRuleRepository accessRuleRepo, ApplicationRepository applicationRepo,
                                       PrivilegeRepository privilegeRepo, UserService userService,
                                       @Value("${application.idp.provider}") String idpProviderUri,
-                                      @Value("${application.fence.client.id") String fenceClientId,
-                                      @Value("${application.fence.client.secret}") String fenceClientSecret,
-                                      @Value("${application.fence.redirect.url}") String fenceRedirectUrl,
-                                      @Value("${application.fence.consent.group.concept.path}") String fenceConsentGroupConceptPath,
-                                      @Value("${application.fence.harmonized.concept.path}") String fenceHarmonizedConceptPath,
-                                      @Value("${application.fence.standard.access.rules}") String fenceStandardAccessRules,
+                                      @Value("${fence.client.id") String fenceClientId,
+                                      @Value("${fence.client.secret}") String fenceClientSecret,
+                                      @Value("${fence.redirect.url}") String fenceRedirectUrl,
+                                      @Value("${fence.consent.group.concept.path}") String fenceConsentGroupConceptPath,
+                                      @Value("${fence.harmonized.consent.group.concept.path}") String fenceHarmonizedConceptPath,
+                                      @Value("${fence.standard.access.rules}") String fenceStandardAccessRules,
                                       @Value("${application.template.path}") String templatePath) {
         this.userRepo = userRepo;
         this.roleRepo = roleRepo;
