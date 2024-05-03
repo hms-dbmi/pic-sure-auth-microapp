@@ -6,7 +6,6 @@ import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.repository.ConnectionRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.UserMetadataMappingRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -59,9 +58,8 @@ public class UserMetadataMappingService {
         return userMetadataMappingRepo.findAll();
     }
 
-    public ResponseEntity<?> getAllMappingsForConnection(String connectionId) {
-        Connection connection = this.connectionRepo.findById(connectionId).orElseThrow(() -> new IllegalArgumentException("Connection not found"));
-        return PICSUREResponse.success(getAllMappingsForConnection(connection));
+    public Connection getAllMappingsForConnection(String connectionId) {
+        return this.connectionRepo.findById(connectionId).orElseThrow(() -> new IllegalArgumentException("Connection not found"));
     }
 
     public List<UserMetadataMapping> updateUserMetadataMappings(List<UserMetadataMapping> mappings) {

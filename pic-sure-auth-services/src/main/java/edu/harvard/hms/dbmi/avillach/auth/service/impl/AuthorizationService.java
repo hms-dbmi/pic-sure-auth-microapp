@@ -422,7 +422,6 @@ public class AuthorizationService {
         }
 
 
-        // TODO: Look into this more
         // AccessRule type IS_EMPTY is very special, needs to be checked in front of any others
         // in type IS_EMPTY, it doens't matter if the value is null or anything
         if (accessRuleType == AccessRule.TypeNaming.IS_EMPTY
@@ -476,7 +475,6 @@ public class AuthorizationService {
          *  12 = "\demographics\AGE\"
          */
 
-        // TODO: Clean this up. We can use java 21 pattern matching to make this more readable
         if (requestBodyValue instanceof String){
             return decisionMaker(accessRule, (String)requestBodyValue);
         } else if (requestBodyValue instanceof Collection) {
@@ -641,7 +639,6 @@ public class AuthorizationService {
         logger.debug(requestBodyValue);
         logger.debug(value);
 
-        // TODO: Clean this up. We can use java 21 pattern matching to make this more readable
 	    switch (accessRule.getType()){
             case AccessRule.TypeNaming.NOT_CONTAINS:
                 if (!requestBodyValue.contains(value))

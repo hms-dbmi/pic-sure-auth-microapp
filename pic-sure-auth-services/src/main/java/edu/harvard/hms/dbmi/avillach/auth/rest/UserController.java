@@ -62,8 +62,17 @@ public class UserController {
     public ResponseEntity<?> addUser(
             @Parameter(required = true, description = "A list of user in JSON format")
             @RequestBody List<User> users) {
-        return this.userService.addUsers(users);
+        List<User> addedUsers = this.userService.addUsers(users);
+        if (addedUsers == null) {
+            return PICSUREResponse.applicationError("Inner application error, please contact admin.");
+        }
 
+        String message = this.userService.sendUserUpdateEmailsFromResponse(addedUsers);
+        if (message != null) {
+            return PICSUREResponse.success(message, addedUsers);
+        }
+
+        return PICSUREResponse.success(addedUsers);
     }
 
     @Operation(description = "Update a list of users, will only update the fields listed, requires ADMIN role")
@@ -71,7 +80,17 @@ public class UserController {
     @PutMapping(produces = "application/json")
     public ResponseEntity<?> updateUser(
             @RequestBody List<User> users) {
-        return this.userService.updateUser(users);
+        List<User> updatedUsers = this.userService.updateUser(users);
+        if (updatedUsers == null) {
+            return PICSUREResponse.applicationError("Inner application error, please contact admin.");
+        }
+
+        String message = this.userService.sendUserUpdateEmailsFromResponse(updatedUsers);
+        if (message != null) {
+            return PICSUREResponse.success(message, updatedUsers);
+        }
+
+        return PICSUREResponse.success(updatedUsers);
     }
 
     /**
@@ -87,7 +106,13 @@ public class UserController {
             @Parameter(description = "Attribute that represents if a long term token will attach to the response")
             @RequestParam(name = "hasToken", required = false) Boolean hasToken) {
         logger.info("getCurrentUser() authorizationHeader: {}, hasToken {}", authorizationHeader, hasToken);
-        return this.userService.getCurrentUser(authorizationHeader, hasToken);
+        User.UserForDisplay currentUser = this.userService.getCurrentUser(authorizationHeader, hasToken);
+
+        if (currentUser == null) {
+            return PICSUREResponse.applicationError("Inner application error, please contact admin.");
+        }
+
+        return PICSUREResponse.success(currentUser);
     }
 
     @Operation(description = "Retrieve the queryTemplate of certain application by given application Id for the currentUser ")
@@ -131,13 +156,12 @@ public class UserController {
     @GetMapping(path = "/me/refresh_long_term_token", produces = "application/json")
     public ResponseEntity<?> refreshUserToken(
             @RequestHeader HttpHeaders httpHeaders) {
-        return this.userService.refreshUserToken(httpHeaders);
+        Map<String, String> stringStringMap = this.userService.refreshUserToken(httpHeaders);
+        if (stringStringMap != null) {
+            return PICSUREResponse.success(stringStringMap);
+        }
+
+        return PICSUREResponse.applicationError("Inner application error, please contact admin.");
     }
-
-
-
-
-
-
 
 }

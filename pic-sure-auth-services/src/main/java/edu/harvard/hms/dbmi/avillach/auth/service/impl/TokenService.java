@@ -17,7 +17,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -40,7 +39,7 @@ public class TokenService {
 
     private final long tokenExpirationTime;
 
-    private static final long defaultTokenExpirationTime = 1000L * 60 * 60; // 1 hour TODO: Move to a global configuration or enum?
+    private static final long defaultTokenExpirationTime = 1000L * 60 * 60; // 1 hour
     private final JWTUtil jwtUtil;
 
     @Autowired
@@ -52,7 +51,7 @@ public class TokenService {
         this.jwtUtil = jwtUtil;
     }
 
-    public ResponseEntity<?> inspectToken(Map<String, Object> inputMap) {
+    public Map<String, Object> inspectToken(Map<String, Object> inputMap) {
         logger.info("TokenInspect starting...");
         TokenInspection tokenInspection;
         try {
@@ -65,7 +64,7 @@ public class TokenService {
         }
 
         logger.info("Finished token introspection.");
-        return PICSUREResponse.success(tokenInspection.getResponseMap());
+        return tokenInspection.getResponseMap();
     }
 
     private TokenInspection _inspectToken(Map<String, Object> inputMap) throws IllegalAccessException {
@@ -209,7 +208,7 @@ public class TokenService {
         return tokenInspection;
     }
 
-    public ResponseEntity<?> refreshToken(String authorizationHeader) {
+    public Map<String, String> refreshToken(String authorizationHeader) {
         logger.debug("RefreshToken starting...");
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -225,7 +224,7 @@ public class TokenService {
 
         if (user.getUuid() == null) {
             logger.error("refreshToken() Stored user doesn't have a uuid.");
-            return PICSUREResponse.applicationError("Inner application error, please contact admin.");
+            return Map.of("error", "Inner application error, please contact admin.");
         }
 
         Optional<User> loadUser = this.userRepository.findById(user.getUuid());
@@ -251,7 +250,7 @@ public class TokenService {
             jws = this.jwtUtil.parseToken(token);
 
         } catch (NotAuthorizedException ex) {
-            return PICSUREResponse.protocolError("Cannot parse original token");
+            return Map.of("error", "Cannot parse original token");
         }
 
         Claims claims = jws.getPayload();
@@ -260,7 +259,7 @@ public class TokenService {
         // just in case something has changed in middle
         if (StringUtils.isNotBlank(subject) && !subject.equals(claims.getSubject())) {
             logger.error("refreshToken() user subject is not the same as the subject of the input token");
-            return PICSUREResponse.applicationError("Inner application error, try again or contact admin.");
+            return Map.of("error", "Inner application error, try again or contact admin.");
         }
 
         Date expirationDate = new Date(Calendar.getInstance().getTimeInMillis() + this.tokenExpirationTime);
@@ -272,10 +271,10 @@ public class TokenService {
                 this.tokenExpirationTime);
 
         logger.debug("Finished RefreshToken and new token has been generated.");
-        return PICSUREResponse.success(Map.of(
+        return Map.of(
                 "token", refreshedToken,
                 "expirationDate", ZonedDateTime.ofInstant(expirationDate.toInstant(), ZoneOffset.UTC).toString()
-        ));
+        );
     }
 
 

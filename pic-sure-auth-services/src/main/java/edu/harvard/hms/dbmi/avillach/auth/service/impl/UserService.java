@@ -8,7 +8,6 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
-import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.repository.ApplicationRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.ConnectionRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.UserRepository;
@@ -26,7 +25,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -200,12 +198,12 @@ public class UserService {
     }
 
     @Transactional
-    public ResponseEntity<?> addUsers(List<User> users) {
+    public List<User> addUsers(List<User> users) {
         SecurityContext securityContext = SecurityContextHolder.getContext();
         CustomUserDetails customUserDetails = (CustomUserDetails) securityContext.getAuthentication().getPrincipal();
         if (customUserDetails == null || customUserDetails.getUser() == null && customUserDetails.getUser().getUuid() == null) {
             logger.error("Security context didn't have a user stored.");
-            return PICSUREResponse.applicationError("Inner application error, please contact admin.");
+            return null;
         }
 
         User currentUser = customUserDetails.getUser();
@@ -232,9 +230,7 @@ public class UserService {
         }
 
         users = addUser(users);
-        ResponseEntity<?> updateResponse = PICSUREResponse.success(users);
-        sendUserUpdateEmailsFromResponse(updateResponse);
-        return updateResponse;
+        return users;
     }
 
     /**
@@ -260,13 +256,13 @@ public class UserService {
     }
 
     @Transactional
-    public ResponseEntity<?> updateUser(List<User> users) {
+    public List<User> updateUser(List<User> users) {
         SecurityContext securityContext = SecurityContextHolder.getContext();
         logger.info("Security context: {}", securityContext.getAuthentication().getPrincipal());
         CustomUserDetails customUserDetails = (CustomUserDetails) securityContext.getAuthentication().getPrincipal();
         if (customUserDetails == null || customUserDetails.getUser() == null && customUserDetails.getUser().getUuid() == null) {
             logger.error("Security context didn't have a user stored.");
-            return PICSUREResponse.applicationError("Inner application error, please contact admin.");
+            return null;
         }
 
         User currentUser = customUserDetails.getUser();
@@ -282,53 +278,47 @@ public class UserService {
 
         if (allowUpdate) {
             users = this.userRepository.saveAll(users);
-            ResponseEntity<?> updateResponse = PICSUREResponse.success(users);
-            sendUserUpdateEmailsFromResponse(updateResponse);
-            return updateResponse;
+            return users;
         } else {
             logger.error("updateUser() user - {} - with roles [{}] - is not allowed to grant or remove " + AuthNaming.AuthRoleNaming.SUPER_ADMIN + " privilege.", currentUser.getUuid(), currentUser.getRoleString());
             throw new IllegalArgumentException("Not allowed to update a user with changes associated to " + AuthNaming.AuthRoleNaming.SUPER_ADMIN + " privilege.");
         }
     }
 
-    private void sendUserUpdateEmailsFromResponse(ResponseEntity<?> updateResponse) {
+    public String sendUserUpdateEmailsFromResponse(List<User> addedUsers) {
         logger.debug("Sending email");
         try {
-            Object entity = updateResponse.getBody(); // TODO: Determine how to replicate this given the new approach
-            if (entity instanceof HashMap okResponse) {
-                List<User> addedUsers = (List<User>) okResponse.get("content");
-                String message = okResponse.get("message") != null ? okResponse.get("message").toString() : "";
                 for (User user : addedUsers) {
                     try {
                         basicMailService.sendUsersAccessEmail(user);
                     } catch (MessagingException e) {
                         logger.error("Failed to send email! {}", e.getLocalizedMessage());
                         logger.debug("Exception Trace: ", e);
-                        okResponse.put("message", message + "  WARN - could not send email to user " + user.getEmail() + " see logs for more info");
+                       return "  WARN - could not send email to user " + user.getEmail() + " see logs for more info";
                     }
                 }
-            }
         } catch (Exception e) {
             logger.error("Failed to send email - unhandled exception: ", e);
         }
         logger.debug("finished email sending method");
+        return null;
     }
 
     @Transactional
-    public ResponseEntity<?> getCurrentUser(String authorizationHeader, Boolean hasToken) {
+    public User.UserForDisplay getCurrentUser(String authorizationHeader, Boolean hasToken) {
         SecurityContext securityContext = SecurityContextHolder.getContext();
         logger.info("Security context: {}", securityContext);
 
         Optional<CustomUserDetails> customUserDetails = Optional.ofNullable((CustomUserDetails) securityContext.getAuthentication().getPrincipal());
         if (customUserDetails.isEmpty() || customUserDetails.get().getUser() == null) {
             logger.error("Security context didn't have a user stored.");
-            return PICSUREResponse.applicationError("Inner application error, please contact admin.");
+            return null;
         }
 
         User user = customUserDetails.get().getUser();
         if (user == null) {
             logger.error("When retrieving current user, it returned null");
-            return PICSUREResponse.applicationError("Inner application error, please contact admin.");
+            return null;
         }
 
         logger.info("getCurrentUser() user found: {}", user.getEmail());
@@ -364,7 +354,7 @@ public class UserService {
             userForDisplay.setToken(user.getToken());
         }
 
-        return PICSUREResponse.success(userForDisplay);
+        return userForDisplay;
     }
 
     public Optional<String> getQueryTemplate(String applicationId) {
@@ -442,12 +432,12 @@ public class UserService {
     }
 
     @Transactional
-    public ResponseEntity<?> refreshUserToken(HttpHeaders httpHeaders) {
+    public Map<String, String> refreshUserToken(HttpHeaders httpHeaders) {
         SecurityContext securityContext = SecurityContextHolder.getContext();
         CustomUserDetails customUserDetails = (CustomUserDetails) securityContext.getAuthentication().getPrincipal();
         if (customUserDetails == null || customUserDetails.getUser() == null || customUserDetails.getUser().getUuid() == null) {
             logger.error("Security context didn't have a user stored.");
-            return PICSUREResponse.applicationError("Inner application error, please contact admin.");
+            return null;
         }
 
         User user = customUserDetails.getUser();
@@ -456,7 +446,7 @@ public class UserService {
         user.setToken(longTermToken);
         this.userRepository.save(user);
 
-        return PICSUREResponse.success(Map.of("userLongTermToken", longTermToken));
+        return Map.of("userLongTermToken", longTermToken);
     }
 
     /**

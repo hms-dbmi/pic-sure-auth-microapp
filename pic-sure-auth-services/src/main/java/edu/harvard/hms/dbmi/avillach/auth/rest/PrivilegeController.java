@@ -71,7 +71,7 @@ public class PrivilegeController {
     public ResponseEntity<?> updatePrivilege(
             @Parameter(required = true, description = "A list of privilege with fields to be updated in JSON format")
             @RequestBody List<Privilege> privileges){
-         privileges = this.privilegeService.updatePrivileges(privileges);
+            privileges = this.privilegeService.updatePrivileges(privileges);
             return ResponseEntity.ok(privileges);
     }
 

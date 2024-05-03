@@ -1,5 +1,6 @@
 package edu.harvard.hms.dbmi.avillach.auth.rest;
 
+import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.AuthorizationService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.TokenService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -39,13 +40,20 @@ public class TokenController {
             @Parameter(required = true, description = "A JSON object that at least" +
                     " include a user the token for validation")
             @RequestBody Map<String, Object> inputMap) {
-        return this.tokenService.inspectToken(inputMap);
+        Map<String, Object> stringObjectMap = this.tokenService.inspectToken(inputMap);
+        return PICSUREResponse.success(stringObjectMap);
     }
 
     @Operation(description = "To refresh current user's token if the user is an active user")
     @GetMapping(path = "/refresh", produces = "application/json")
     public ResponseEntity<?> refreshToken(@RequestHeader("Authorization") String authorizationHeader) {
-        return this.tokenService.refreshToken(authorizationHeader);
+        Map<String, String> stringStringMap = this.tokenService.refreshToken(authorizationHeader);
+
+        if (stringStringMap.containsKey("error")) {
+            return PICSUREResponse.protocolError(stringStringMap.get("error"));
+        }
+
+        return PICSUREResponse.success(stringStringMap);
     }
 
 }

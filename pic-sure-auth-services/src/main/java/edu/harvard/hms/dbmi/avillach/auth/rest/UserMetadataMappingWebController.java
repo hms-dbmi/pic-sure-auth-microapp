@@ -1,5 +1,6 @@
 package edu.harvard.hms.dbmi.avillach.auth.rest;
 
+import edu.harvard.hms.dbmi.avillach.auth.entity.Connection;
 import edu.harvard.hms.dbmi.avillach.auth.entity.UserMetadataMapping;
 import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.UserMetadataMappingService;
@@ -37,7 +38,8 @@ public class UserMetadataMappingWebController {
     @RolesAllowed({ADMIN, SUPER_ADMIN})
     @GetMapping(path = "{connectionId}", produces = "application/json")
     public ResponseEntity<?> getMappingsForConnection(@PathVariable("connectionId") String connection) {
-        return this.mappingService.getAllMappingsForConnection(connection);
+        Connection allMappingsForConnection = this.mappingService.getAllMappingsForConnection(connection);
+        return PICSUREResponse.success(allMappingsForConnection);
     }
 
     @Operation(description = "GET a list of existing UserMetadataMappings, requires ADMIN or SUPER_ADMIN role")
