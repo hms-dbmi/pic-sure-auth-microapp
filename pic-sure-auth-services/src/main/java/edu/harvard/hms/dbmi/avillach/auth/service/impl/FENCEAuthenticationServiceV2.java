@@ -14,7 +14,10 @@ import jakarta.annotation.PostConstruct;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
 import java.io.File;
@@ -23,6 +26,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+@Service
 public class FENCEAuthenticationServiceV2 implements IFENCEAuthenticationService {
 
     private final Logger logger = LoggerFactory.getLogger(FENCEAuthenticationService.class);
@@ -53,6 +57,16 @@ public class FENCEAuthenticationServiceV2 implements IFENCEAuthenticationService
     private static final String parentAccessionField = "\\\\_Parent Study Accession with Subject ID\\\\";
     private static final String topmedAccessionField = "\\\\_Topmed Study Accession with Subject ID\\\\";
     public static final String fence_open_access_role_name = "FENCE_ROLE_OPEN_ACCESS";
+
+    @Value("${fence.harmonized.consent.group.concept.path}")
+    private static String fence_harmonized_consent_group_concept_path;
+
+    @Value("${fence.parent.consent.group.concept.path}")
+    private static String fence_parent_consent_group_concept_path;
+
+    @Value("${fence.topmed.consent.group.concept.path}")
+    private static String fence_topmed_consent_group_concept_path;
+
     private final Set<String> openAccessIdpValues = Set.of("fence", "ras");
 
     private static final String[] underscoreFields = new String[] {
@@ -68,6 +82,7 @@ public class FENCEAuthenticationServiceV2 implements IFENCEAuthenticationService
             "\\\\_Consents\\\\"   ///old _Consents\Short Study... path no longer used, but still present in examples.
     };
 
+    @Autowired
     public FENCEAuthenticationServiceV2(UserService userService, RoleService roleService, ConnectionWebService connectionService, AccessRuleService accessruleService, UserService userRole, ApplicationService applicationService, PrivilegeService privilegeService, JWTUtil authUtil) {
         this.userService = userService;
         this.roleService = roleService;
@@ -80,59 +95,8 @@ public class FENCEAuthenticationServiceV2 implements IFENCEAuthenticationService
 
     @PostConstruct
     public void initializeFenceService() {
-        picSureApp = applicationService.getUniqueResultByColumn("name", "PICSURE");
-        fenceConnection = connectionService.getUniqueResultByColumn("label", "FENCE");
-    }
-
-    private JsonNode getFENCEUserProfile(String access_token) {
-        logger.debug("getFENCEUserProfile() starting");
-        List<Header> headers = new ArrayList<>();
-        headers.add(new BasicHeader("Authorization", "Bearer " + access_token));
-
-        logger.debug("getFENCEUserProfile() getting user profile from uri:"+JAXRSConfiguration.idp_provider_uri+"/user/user");
-        JsonNode fence_user_profile_response = HttpClientUtil.simpleGet(
-                JAXRSConfiguration.idp_provider_uri+"/user/user",
-                JAXRSConfiguration.client,
-                JAXRSConfiguration.objectMapper,
-                headers.toArray(new Header[headers.size()])
-        );
-
-        logger.debug("getFENCEUserProfile() finished, returning user profile"+fence_user_profile_response.asText());
-        return fence_user_profile_response;
-    }
-
-    private JsonNode getFENCEAccessToken(String callback_url, String fence_code) {
-        logger.debug("getFENCEAccessToken() starting, using FENCE code");
-
-        List<Header> headers = new ArrayList<>();
-        Base64.Encoder encoder = Base64.getEncoder();
-        String fence_auth_header = JAXRSConfiguration.fence_client_id+":"+JAXRSConfiguration.fence_client_secret;
-        headers.add(new BasicHeader("Authorization",
-                "Basic " + encoder.encodeToString(fence_auth_header.getBytes())));
-        headers.add(new BasicHeader("Content-type", "application/x-www-form-urlencoded; charset=UTF-8"));
-
-        // Build the request body, as JSON
-        String query_string =
-                "grant_type=authorization_code"
-                        + "&code=" + fence_code
-                        + "&redirect_uri=" + callback_url;
-
-        String fence_token_url = JAXRSConfiguration.idp_provider_uri+"/user/oauth2/token";
-
-        JsonNode resp = null;
-        try {
-            resp = HttpClientUtil.simplePost(
-                    fence_token_url,
-                    new StringEntity(query_string),
-                    JAXRSConfiguration.client,
-                    JAXRSConfiguration.objectMapper,
-                    headers.toArray(new Header[headers.size()])
-            );
-        } catch (Exception ex) {
-            logger.error("getFENCEAccessToken() failed to call FENCE token service, "+ex.getMessage());
-        }
-        logger.debug("getFENCEAccessToken() finished: "+resp.asText());
-        return resp;
+        picSureApp = applicationService.getApplicationByName("PICSURE");
+        fenceConnection = connectionService.getConnectionByLabel("FENCE");
     }
 
     @Override
@@ -224,6 +188,61 @@ public class FENCEAuthenticationServiceV2 implements IFENCEAuthenticationService
         logger.debug("getFENCEToken() finished");
         return PICSUREResponse.success(responseMap);
     }
+
+    private JsonNode getFENCEUserProfile(String access_token) {
+        logger.debug("getFENCEUserProfile() starting");
+
+        // TODO: Move this to use RestTemplateUtil
+        List<Headers> headers = new ArrayList<>();
+        headers.add(new BasicHeader("Authorization", "Bearer " + access_token));
+
+        logger.debug("getFENCEUserProfile() getting user profile from uri:"+JAXRSConfiguration.idp_provider_uri+"/user/user");
+        JsonNode fence_user_profile_response = HttpClientUtil.simpleGet(
+                JAXRSConfiguration.idp_provider_uri+"/user/user",
+                JAXRSConfiguration.client,
+                JAXRSConfiguration.objectMapper,
+                headers.toArray(new Header[headers.size()])
+        );
+
+        logger.debug("getFENCEUserProfile() finished, returning user profile"+fence_user_profile_response.asText());
+        return fence_user_profile_response;
+    }
+
+    private JsonNode getFENCEAccessToken(String callback_url, String fence_code) {
+        logger.debug("getFENCEAccessToken() starting, using FENCE code");
+
+        List<Header> headers = new ArrayList<>();
+        Base64.Encoder encoder = Base64.getEncoder();
+        String fence_auth_header = JAXRSConfiguration.fence_client_id+":"+JAXRSConfiguration.fence_client_secret;
+        headers.add(new BasicHeader("Authorization",
+                "Basic " + encoder.encodeToString(fence_auth_header.getBytes())));
+        headers.add(new BasicHeader("Content-type", "application/x-www-form-urlencoded; charset=UTF-8"));
+
+        // Build the request body, as JSON
+        String query_string =
+                "grant_type=authorization_code"
+                        + "&code=" + fence_code
+                        + "&redirect_uri=" + callback_url;
+
+        String fence_token_url = JAXRSConfiguration.idp_provider_uri+"/user/oauth2/token";
+
+        JsonNode resp = null;
+        try {
+            resp = HttpClientUtil.simplePost(
+                    fence_token_url,
+                    new StringEntity(query_string),
+                    JAXRSConfiguration.client,
+                    JAXRSConfiguration.objectMapper,
+                    headers.toArray(new Header[headers.size()])
+            );
+        } catch (Exception ex) {
+            logger.error("getFENCEAccessToken() failed to call FENCE token service, "+ex.getMessage());
+        }
+        logger.debug("getFENCEAccessToken() finished: "+resp.asText());
+        return resp;
+    }
+
+
 
     private void createAndUpsertRole(String access_role_name, User current_user) {
         logger.debug("createAndUpsertRole() starting...");
