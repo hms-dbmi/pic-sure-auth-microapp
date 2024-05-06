@@ -103,5 +103,13 @@ public class RoleService {
 
         roles.add(t);
     }
+
+    public Role getRoleByName(String fenceOpenAccessRoleName) {
+        return this.roleRepository.findByName(fenceOpenAccessRoleName);
+    }
+
+    public Role save(Role r) {
+        return this.roleRepository.save(r);
+    }
 }
 
