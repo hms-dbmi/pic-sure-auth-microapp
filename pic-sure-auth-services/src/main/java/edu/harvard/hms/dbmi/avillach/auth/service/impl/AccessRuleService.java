@@ -56,4 +56,12 @@ public class AccessRuleService {
         this.accessRuleRepo.deleteById(UUID.fromString(accessRuleId));
         return this.accessRuleRepo.findAll();
     }
+
+    public AccessRule save(AccessRule accessRule) {
+        return this.accessRuleRepo.save(accessRule);
+    }
+
+    public AccessRule getAccessRuleByName(String arName) {
+        return this.accessRuleRepo.findByName(arName);
+    }
 }
