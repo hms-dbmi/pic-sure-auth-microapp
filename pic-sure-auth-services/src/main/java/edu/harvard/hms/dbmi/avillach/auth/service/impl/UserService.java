@@ -114,6 +114,12 @@ public class UserService {
         Date expirationDate = new Date(Calendar.getInstance().getTimeInMillis() + this.tokenExpirationTime);
         responseMap.put("expirationDate", ZonedDateTime.ofInstant(expirationDate.toInstant(), ZoneOffset.UTC).toString());
 
+        // This is required for open access, but optional otherwise
+        if (claims.get("uuid") != null) {
+            logger.debug("getUserProfileResponse() uuid field is set");
+            responseMap.put("uuid", claims.get("uuid").toString());
+        }
+
         logger.info("getUserProfileResponse() finished");
         return responseMap;
     }
@@ -500,5 +506,31 @@ public class UserService {
 
     public User save(User user) {
         return this.userRepository.save(user);
+    }
+
+    public User findOrCreate(User newUser) {
+        logger.info("findOrCreate(), trying to find user: {subject: {}}, and found a user with uuid: {}, subject: {}", newUser.getSubject(), newUser.getUuid(), newUser.getSubject());
+        // check if the user exist by subject
+        User user = findBySubject(newUser.getSubject());
+        if (user != null) {
+            return user;
+        }
+
+        // check if the user exist by email and connection
+        user = userRepository.findByEmailAndConnectionId(newUser.getEmail(), newUser.getConnection().getId());
+        if (user != null) {
+            if (StringUtils.isEmpty(user.getSubject())) {
+                user.setSubject(newUser.getSubject());
+                user.setGeneralMetadata(newUser.getGeneralMetadata());
+            }
+
+            return user;
+        }
+
+        user = save(newUser);
+        logger.info("createUser created user, uuid: {}, subject: {}, role: {}, privilege: {}",
+                user.getUuid(), newUser.getSubject(), user.getRoleString(), user.getPrivilegeString());
+        // create a new user
+        return user;
     }
 }
