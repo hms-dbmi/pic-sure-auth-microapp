@@ -63,4 +63,12 @@ public class PrivilegeService {
     public Privilege getPrivilegeById(String privilegeId) {
         return this.privilegeRepository.findById(UUID.fromString(privilegeId)).orElse(null);
     }
+
+    public Privilege findByName(String privilegeName) {
+        return this.privilegeRepository.findByName(privilegeName);
+    }
+
+    public Privilege save(Privilege privilege) {
+        return this.privilegeRepository.save(privilege);
+    }
 }
