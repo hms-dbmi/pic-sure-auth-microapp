@@ -129,5 +129,10 @@
       "name": "fence.topmed.consent.group.concept.path",
       "type": "java.lang.String",
       "description": "Description for fence.topmed.consent.group.concept.path."
+    },
+    {
+      "name": "fence.allowed.query.types",
+      "type": "java.lang.String",
+      "description": "Description for fence.allowed.query.types."
     }
   ] }
