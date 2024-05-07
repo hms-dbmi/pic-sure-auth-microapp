@@ -11,6 +11,7 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.rest.TokenController;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -37,9 +38,20 @@ import java.util.stream.Collectors;
  */
 @Service
 public class AuthorizationService {
-	private final Logger logger = LoggerFactory.getLogger(AuthorizationService.class);
 
-	/**
+    private final Logger logger = LoggerFactory.getLogger(AuthorizationService.class);
+
+    private AccessRuleService accessRuleService;
+
+    public AuthorizationService() {
+    }
+
+    @Autowired
+    public AuthorizationService(AccessRuleService accessRuleService) {
+        this.accessRuleService = accessRuleService;
+    }
+
+    /**
 	 * Checking based on AccessRule in Privilege
      * <br><br>
      * Thoughts on design:
@@ -67,20 +79,29 @@ public class AuthorizationService {
 	 * @see Privilege
 	 * @see AccessRule
 	 */
-	public boolean isAuthorized(Application application , Object requestBody, User user){
-
-	    // (application.getPrivileges().isEmpty() && !user.getPrivilegeNameSetByApplication(application).isEmpty())
+	public boolean isAuthorized(Application application, Object requestBody, User user){
 
         String applicationName = application.getName();
+
+        String resourceId = null;
+        String targetService = null;
+
 		//in some cases, we don't go through the evaluation
 		if (requestBody == null) {
-			logger.info("ACCESS_LOG ___ " + user.getUuid().toString() + "," + user.getEmail() + "," + user.getName() + 
-					" ___ has been granted access to application ___ " + applicationName + " ___ NO REQUEST BODY FORWARDED BY APPLICATION");        
+            logger.info("ACCESS_LOG ___ {},{},{} ___ has been granted access to application ___ {} ___ NO REQUEST BODY FORWARDED BY APPLICATION", user.getUuid().toString(), user.getEmail(), user.getName(), applicationName);
 			return true;
 		}
 
-		// start to process the jsonpath checking
+        try {
+            Map requestBodyMap = (Map) requestBody;
+            Map queryMap = (Map) requestBodyMap.get("query");
+            resourceId = (String) queryMap.get("resourceUUID");
+            targetService = (String) requestBodyMap.get("Target Service");
+        } catch (RuntimeException e) {
+            logger.info("Error parsing resource and target service from requestBody", e);
+        }
 
+		// start to process the jsonpath checking
 		String formattedQuery = null;
 		try {
 			formattedQuery = (String) ((Map)requestBody).get("formattedQuery");
@@ -91,35 +112,29 @@ public class AuthorizationService {
 			}
 			
 		} catch (ClassCastException | JsonProcessingException e1) {
-			// TODO Auto-generated catch block
 			e1.printStackTrace();
-			logger.info("ACCESS_LOG ___ " + user.getUuid().toString() + "," + user.getEmail() + "," + user.getName() + 
-					" ___ has been denied access to execute query ___ " + requestBody + " ___ in application ___ " + applicationName
-                    + " ___ UNABLE TO PARSE REQUEST");
+            logger.info("ACCESS_LOG ___ {},{},{} ___ has been denied access to execute query ___ {} ___ in application ___ {} ___ UNABLE TO PARSE REQUEST", user.getUuid().toString(), user.getEmail(), user.getName(), requestBody, applicationName);
 			return false;
 		}
 
-		Set<Privilege> privileges = user.getPrivilegesByApplication(application);
-
-		// If the user doesn't have any privileges associated to the application,
+//		Set<Privilege> privileges = user.getPrivilegesByApplication(application);
+        // If the user doesn't have any privileges associated to the application,
         // it will return false. The logic is if there are any privileges associated with the application,
         // a user needs to have at least one privilege under the same application,
         // or be denied.
         // The check if the application has privileges or not should be outside this function.
         // Here we assume that the application has at least one privilege
-		if (privileges == null || privileges.isEmpty()) {
-		    logger.info("ACCESS_LOG ___ " + user.getUuid().toString() + "," + user.getEmail() + "," + user.getName() +
-                    " ___ has been denied access to execute query ___ " + formattedQuery + " ___ in application ___ " + applicationName
-                    + " __ USER HAS NO PRIVILEGES ASSOCIATED TO THE APPLICATION, BUT APPLICATION HAS PRIVILEGES");
-            return false;
-        }
 
-        Set<AccessRule> accessRules = preProcessAccessRules(privileges);
-
+        // TODO: Investigate if this is causing a known bug. If no user privileges are associated with the application,
+        // the user somehow gets all privileges associated with the application.
+//		if (privileges == null || privileges.isEmpty()) {
+//            logger.info("ACCESS_LOG ___ {},{},{} ___ has been denied access to execute query ___ {} ___ in application ___ {} __ USER HAS NO PRIVILEGES ASSOCIATED TO THE APPLICATION, BUT APPLICATION HAS PRIVILEGES", user.getUuid().toString(), user.getEmail(), user.getName(), formattedQuery, applicationName);
+//            return false;
+//        }
+        Set<AccessRule> accessRules = accessRuleService.getAccessRulesForUserAndApp(user, application);
+//        Set<AccessRule> accessRules = preProcessAccessRules(privileges);
 		if (accessRules == null || accessRules.isEmpty()) {
-			logger.info("ACCESS_LOG ___ " + user.getUuid().toString() + "," + user.getEmail() + "," + user.getName() + 
-					" ___ has been granted access to execute query ___ " + formattedQuery + " ___ in application ___ " + applicationName
-                    + " ___ NO ACCESS RULES EVALUATED");
+            logger.info("ACCESS_LOG ___ {},{},{} ___ has been granted access to execute query ___ {} ___ in application ___ {} ___ NO ACCESS RULES EVALUATED", user.getUuid().toString(), user.getEmail(), user.getName(), formattedQuery, applicationName);
 			return true;        	
 		}
 
@@ -148,161 +163,17 @@ public class AuthorizationService {
                 passRuleName = passByRule.getMergedName();
         }
 
-		logger.info("ACCESS_LOG ___ " + user.getUuid().toString() + "," + user.getEmail() + "," + user.getName() + 
-				" ___ has been " + (result?"granted":"denied") + " access to execute query ___ " + formattedQuery + 
-				" ___ in application ___ " + applicationName + " ___ " +
-                (result?"passed by " + passRuleName:"failed by rules: ["
-                        + failedRules.stream()
-                        .map(ar->(ar.getMergedName().isEmpty()?ar.getName():ar.getMergedName()))
-                        .collect(Collectors.joining(", ")) + "]"
-                ));
+        logger.info("ACCESS_LOG ___ {},{},{} ___ has been {} access to execute query ___ {} ___ in application ___ {} ___ {}", user.getUuid().toString(), user.getEmail(), user.getName(), result ? "granted" : "denied", formattedQuery, applicationName, result ? "passed by " + passRuleName : "failed by rules: ["
+                + failedRules.stream()
+                .map(ar -> (ar.getMergedName().isEmpty() ? ar.getName() : ar.getMergedName()))
+                .collect(Collectors.joining(", ")) + "]");
 
 		return result;
 	}
 
-    /**
-     * This class is for preparing for a set of accessRule that used by the further checking
-     *
-     * Currently it contains a merge function
-     *
-     * @param privileges
-     * @return
-     */
-	private Set<AccessRule> preProcessAccessRules(Set<Privilege> privileges){
-
-        Set<AccessRule> accessRules = new HashSet<>();
-        for (Privilege privilege : privileges) {
-            accessRules.addAll(privilege.getAccessRules());
-        }
-
-        // now we use the function preProcess by sorted string keys
-        // if needed, we could implement another function to sort by other key or combination of keys
-        return preProcessARBySortedKeys(accessRules);
-    }
-
-    /**
-     * This function is doing the merge by gathering all String keys together
-     * and sorted to be the key in the map
-     *
-     * @param accessRules
-     * @return
-     */
-    protected Set<AccessRule> preProcessARBySortedKeys(Set<AccessRule> accessRules){
-        // key is a combination of uuid of gates and rule
-        // value is a list of the same key accessrule,
-        // later will be merged to be new AccessRule for evaluation
-        Map<String, Set<AccessRule>> accessRuleMap  = new HashMap<>();
-
-        for (AccessRule accessRule : accessRules) {
-
-            // 1st generate the key by grabbing all related string and put them together in order
-            // we use a treeSet here to put orderly combine Strings together
-            Set<String> keys = new TreeSet<>();
-
-            // the current accessRule rule
-            keys.add(accessRule.getRule());
-
-            // the accessRule type
-            keys.add(accessRule.getType().toString());
-
-            // all gates' UUID as strings
-            if (accessRule.getGates() != null) {
-                for (AccessRule gate : accessRule.getGates()){
-                    keys.add(gate.getUuid().toString());
-                }
-            }
-
-            // all sub accessRule rules
-            if (accessRule.getSubAccessRule() != null){
-                for (AccessRule subAccessRule : accessRule.getSubAccessRule()){
-                    keys.add(subAccessRule.getRule());
-                }
-            }
-            Boolean checkMapKeyOnly = accessRule.getCheckMapKeyOnly(),
-                    checkMapNode = accessRule.getCheckMapNode(),
-                    evaluateOnlyByGates = accessRule.getEvaluateOnlyByGates(),
-                    gateAnyRelation = accessRule.getGateAnyRelation();
-
-            keys.add(checkMapKeyOnly==null?"null":Boolean.toString(checkMapKeyOnly));
-            keys.add(checkMapNode==null?"null":Boolean.toString(checkMapNode));
-            keys.add(evaluateOnlyByGates==null?"null":Boolean.toString(evaluateOnlyByGates));
-            keys.add(gateAnyRelation==null?"null":Boolean.toString(gateAnyRelation));
-
-            // then we combine them together as one string for the key
-            String key = keys.stream().collect(Collectors.joining());
-
-            // put it into the accessRuleMap
-            if (accessRuleMap.containsKey(key)){
-                accessRuleMap.get(key).add(accessRule);
-            } else {
-                Set<AccessRule> accessRuleSet = new HashSet<>();
-                accessRuleSet.add(accessRule);
-                accessRuleMap.put(key, accessRuleSet);
-            }
-        }
 
 
-        return mergeSameKeyAccessRules(accessRuleMap.values());
-    }
 
-    /**
-     * merge accessRules in the same collection into one accessRule
-     * <br>
-     * The accessRules in the same collection means they shared the same
-     * standard and can be merged together
-     *
-     * @param accessRuleMap
-     * @return
-     */
-    private Set<AccessRule> mergeSameKeyAccessRules(Collection<Set<AccessRule>> accessRuleMap){
-        Set<AccessRule> accessRules = new HashSet<>();
-
-        for (Set<AccessRule> accessRulesSet : accessRuleMap) {
-            // merge one set of accessRule into one accessRule
-            AccessRule accessRule = null;
-            for (AccessRule innerAccessRule : accessRulesSet){
-                accessRule = mergeAccessRules(accessRule, innerAccessRule);
-            }
-
-            // if the new merged accessRule exists, add it into the final result set
-            if (accessRule != null)
-                accessRules.add(accessRule);
-        }
-
-        return accessRules;
-    }
-
-    /**
-     * Notice: we don't need to worry about if any accessRule value is null
-     * since the mergedValues is a Set, it allows adding null value,
-     * and later on when doing evaluation, this null value will be handled
-     *
-     * @param baseAccessRule the base accessRule and this will be returned
-     * @param accessRuleToBeMerged the one that waits to be merged into base accessRule
-     * @return
-     */
-    private AccessRule mergeAccessRules(AccessRule baseAccessRule, AccessRule accessRuleToBeMerged){
-        if (baseAccessRule == null) {
-            accessRuleToBeMerged.getMergedValues().add(accessRuleToBeMerged.getValue());
-            return accessRuleToBeMerged;
-        }
-
-        if (baseAccessRule.getSubAccessRule()!= null && accessRuleToBeMerged.getSubAccessRule() != null){
-            baseAccessRule.getSubAccessRule().addAll(accessRuleToBeMerged.getSubAccessRule());
-        } else if (baseAccessRule.getSubAccessRule() == null && accessRuleToBeMerged.getSubAccessRule() != null){
-            baseAccessRule.setSubAccessRule(accessRuleToBeMerged.getSubAccessRule());
-        }
-
-        baseAccessRule.getMergedValues().add(accessRuleToBeMerged.getValue());
-        if (baseAccessRule.getMergedName().startsWith("Merged|")){
-            baseAccessRule.setMergedName(baseAccessRule.getMergedName() +"|"+ accessRuleToBeMerged.getName());
-        } else {
-            baseAccessRule.setMergedName("Merged|" + baseAccessRule.getName() + "|"+ accessRuleToBeMerged.getName());
-        }
-
-
-        return baseAccessRule;
-    }
 
     /**
      * inside one accessRule, it might contain a set of gates and a set of subAccessRule.
@@ -316,7 +187,7 @@ public class AuthorizationService {
      * @param accessRule
      * @return
      */
-	protected boolean evaluateAccessRule(Object parsedRequestBody, AccessRule accessRule) {
+	public boolean evaluateAccessRule(Object parsedRequestBody, AccessRule accessRule) {
 	    logger.debug("evaluateAccessRule() starting with:");
 	    logger.debug(parsedRequestBody.toString());
 	    logger.debug("evaluateAccessRule()  access rule:"+accessRule.getName());
