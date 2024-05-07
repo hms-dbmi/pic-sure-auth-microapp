@@ -24,6 +24,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -397,12 +399,13 @@ public class UserService {
         return Map.of("queryTemplate", mergedTemplate.orElse(null));
     }
 
-    private String mergeTemplate(User user, Application application) {
+    @Cacheable(value = "mergedTemplateCache", key = "#user.getEmail()")
+    public String mergeTemplate(User user, Application application) {
         String resultJSON;
         Map mergedTemplateMap = null;
         for (Privilege privilege : user.getPrivilegesByApplication(application)) {
             String template = privilege.getQueryTemplate();
-            logger.debug("mergeTemplate() processing template:" + template);
+            logger.debug("mergeTemplate() processing template:{}", template);
             if (template == null || template.trim().isEmpty()) {
                 continue;
             }
@@ -434,7 +437,11 @@ public class UserService {
         }
 
         return resultJSON;
+    }
 
+    @CacheEvict(value = "mergedTemplateCache", key = "#user.getEmail()")
+    public void evictFromCache(User user) {
+        logger.info("evictMergedTemplate() evicting cache for user: {}", user.getUuid());
     }
 
     @Transactional
@@ -562,4 +569,6 @@ public class UserService {
                 user.getUuid(), user.getSubject(), user.getRoleString(), user.getPrivilegeString());
         return user;
     }
+
+
 }

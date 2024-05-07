@@ -6,6 +6,7 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.repository.AccessRuleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -75,7 +76,13 @@ public class AccessRuleService {
                 .flatMap(privilege -> privilege.getAccessRules().stream())
                 .collect(Collectors.toSet());
 
+        // TODO: Determine if hibernate has an issue with this. It may wants use to create a new object so it is no longer tracking it.
         return preProcessARBySortedKeys(accessRules);
+    }
+
+    @CacheEvict(value = "mergedRulesCache", key = "#user.getEmail()")
+    public void evictFromCache(User user) {
+        // This method is used to clear the cache for a user when their privileges are updated
     }
 
     /**
@@ -197,7 +204,7 @@ public class AccessRuleService {
      *
      * @param baseAccessRule the base accessRule and this will be returned
      * @param accessRuleToBeMerged the one that waits to be merged into base accessRule
-     * @return
+     * @return the merged accessRule
      */
     private AccessRule mergeAccessRules(AccessRule baseAccessRule, AccessRule accessRuleToBeMerged){
         if (baseAccessRule == null) {
