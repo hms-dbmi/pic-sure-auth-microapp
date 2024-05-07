@@ -19,11 +19,13 @@ public class OpenAuthenticationService {
 
     private final UserService userService;
     private final RoleService roleRepository;
+    private final AccessRuleService accessRuleService;
 
     @Autowired
-    public OpenAuthenticationService(UserService userService, RoleService roleRepository) {
+    public OpenAuthenticationService(UserService userService, RoleService roleRepository, AccessRuleService accessRuleService) {
         this.userService = userService;
         this.roleRepository = roleRepository;
+        this.accessRuleService = accessRuleService;
     }
 
 
@@ -47,9 +49,8 @@ public class OpenAuthenticationService {
 
             //clear some cache entries if we register a new login
             // I don't see a clear need to caching here.
-            // TODO: Need to implement some form of caching
-//            AuthorizationService.clearCache(current_user);
-//            UserService.clearCache(current_user);
+            accessRuleService.evictFromCache(current_user);
+            userService.evictFromCache(current_user);
         }
 
         HashMap<String, Object> claims = new HashMap<>();
