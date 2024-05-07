@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.service.RoleService;
-import edu.harvard.hms.dbmi.avillach.auth.utils.JWTUtil;
 import edu.harvard.hms.dbmi.avillach.auth.utils.RestClientUtil;
 import jakarta.persistence.NoResultException;
 import org.apache.commons.lang3.StringUtils;
