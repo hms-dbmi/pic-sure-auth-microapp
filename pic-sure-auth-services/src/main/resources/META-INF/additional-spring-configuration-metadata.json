@@ -134,5 +134,20 @@
       "name": "fence.allowed.query.types",
       "type": "java.lang.String",
       "description": "Description for fence.allowed.query.types."
+    },
+    {
+      "name": "okta.client.id",
+      "type": "java.lang.String",
+      "description": "Description for okta.client.id."
+    },
+    {
+      "name": "okta.client.secret",
+      "type": "java.lang.String",
+      "description": "Description for okta.client.secret."
+    },
+    {
+      "name": "okta.connection.id",
+      "type": "java.lang.String",
+      "description": "Description for okta.connection.id."
     }
   ] }
