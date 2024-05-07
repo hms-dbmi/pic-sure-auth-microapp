@@ -533,4 +533,8 @@ public class UserService {
         // create a new user
         return user;
     }
+
+    public User findByEmailAndConnection(String email, String connectionId) {
+        return this.userRepository.findByEmailAndConnectionId(email, connectionId);
+    }
 }
