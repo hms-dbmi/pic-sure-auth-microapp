@@ -93,7 +93,7 @@ public class AccessRuleService {
      * @param privileges the privileges that need to be pre-processed
      * @return a set of accessRules that are pre-processed
      */
-    private Set<AccessRule> preProcessAccessRules(Set<Privilege> privileges){
+    private Set<AccessRule> preProcessAccessRules(Set<Privilege> privileges) {
 
         Set<AccessRule> accessRules = new HashSet<>();
         for (Privilege privilege : privileges) {
@@ -112,11 +112,11 @@ public class AccessRuleService {
      * @param accessRules
      * @return
      */
-    public Set<AccessRule> preProcessARBySortedKeys(Set<AccessRule> accessRules){
+    public Set<AccessRule> preProcessARBySortedKeys(Set<AccessRule> accessRules) {
         // key is a combination of uuid of gates and rule
         // value is a list of the same key accessrule,
         // later will be merged to be new AccessRule for evaluation
-        Map<String, Set<AccessRule>> accessRuleMap  = new HashMap<>();
+        Map<String, Set<AccessRule>> accessRuleMap = new HashMap<>();
 
         for (AccessRule accessRule : accessRules) {
 
@@ -132,14 +132,14 @@ public class AccessRuleService {
 
             // all gates' UUID as strings
             if (accessRule.getGates() != null) {
-                for (AccessRule gate : accessRule.getGates()){
+                for (AccessRule gate : accessRule.getGates()) {
                     keys.add(gate.getUuid().toString());
                 }
             }
 
             // all sub accessRule rules
-            if (accessRule.getSubAccessRule() != null){
-                for (AccessRule subAccessRule : accessRule.getSubAccessRule()){
+            if (accessRule.getSubAccessRule() != null) {
+                for (AccessRule subAccessRule : accessRule.getSubAccessRule()) {
                     keys.add(subAccessRule.getRule());
                 }
             }
@@ -148,16 +148,16 @@ public class AccessRuleService {
                     evaluateOnlyByGates = accessRule.getEvaluateOnlyByGates(),
                     gateAnyRelation = accessRule.getGateAnyRelation();
 
-            keys.add(checkMapKeyOnly==null?"null":Boolean.toString(checkMapKeyOnly));
-            keys.add(checkMapNode==null?"null":Boolean.toString(checkMapNode));
-            keys.add(evaluateOnlyByGates==null?"null":Boolean.toString(evaluateOnlyByGates));
-            keys.add(gateAnyRelation==null?"null":Boolean.toString(gateAnyRelation));
+            keys.add(checkMapKeyOnly == null ? "null" : Boolean.toString(checkMapKeyOnly));
+            keys.add(checkMapNode == null ? "null" : Boolean.toString(checkMapNode));
+            keys.add(evaluateOnlyByGates == null ? "null" : Boolean.toString(evaluateOnlyByGates));
+            keys.add(gateAnyRelation == null ? "null" : Boolean.toString(gateAnyRelation));
 
             // then we combine them together as one string for the key
             String key = String.join("", keys);
 
             // put it into the accessRuleMap
-            if (accessRuleMap.containsKey(key)){
+            if (accessRuleMap.containsKey(key)) {
                 accessRuleMap.get(key).add(accessRule);
             } else {
                 Set<AccessRule> accessRuleSet = new HashSet<>();
@@ -179,13 +179,13 @@ public class AccessRuleService {
      * @param accessRuleMap the map that contains all accessRules that need to be merged
      * @return the merged accessRules
      */
-    private Set<AccessRule> mergeSameKeyAccessRules(Collection<Set<AccessRule>> accessRuleMap){
+    private Set<AccessRule> mergeSameKeyAccessRules(Collection<Set<AccessRule>> accessRuleMap) {
         Set<AccessRule> accessRules = new HashSet<>();
 
         for (Set<AccessRule> accessRulesSet : accessRuleMap) {
             // merge one set of accessRule into one accessRule
             AccessRule accessRule = null;
-            for (AccessRule innerAccessRule : accessRulesSet){
+            for (AccessRule innerAccessRule : accessRulesSet) {
                 accessRule = mergeAccessRules(accessRule, innerAccessRule);
             }
 
@@ -202,27 +202,27 @@ public class AccessRuleService {
      * since the mergedValues is a Set, it allows adding null value,
      * and later on when doing evaluation, this null value will be handled
      *
-     * @param baseAccessRule the base accessRule and this will be returned
+     * @param baseAccessRule       the base accessRule and this will be returned
      * @param accessRuleToBeMerged the one that waits to be merged into base accessRule
      * @return the merged accessRule
      */
-    private AccessRule mergeAccessRules(AccessRule baseAccessRule, AccessRule accessRuleToBeMerged){
+    private AccessRule mergeAccessRules(AccessRule baseAccessRule, AccessRule accessRuleToBeMerged) {
         if (baseAccessRule == null) {
             accessRuleToBeMerged.getMergedValues().add(accessRuleToBeMerged.getValue());
             return accessRuleToBeMerged;
         }
 
-        if (baseAccessRule.getSubAccessRule()!= null && accessRuleToBeMerged.getSubAccessRule() != null){
+        if (baseAccessRule.getSubAccessRule() != null && accessRuleToBeMerged.getSubAccessRule() != null) {
             baseAccessRule.getSubAccessRule().addAll(accessRuleToBeMerged.getSubAccessRule());
-        } else if (baseAccessRule.getSubAccessRule() == null && accessRuleToBeMerged.getSubAccessRule() != null){
+        } else if (baseAccessRule.getSubAccessRule() == null && accessRuleToBeMerged.getSubAccessRule() != null) {
             baseAccessRule.setSubAccessRule(accessRuleToBeMerged.getSubAccessRule());
         }
 
         baseAccessRule.getMergedValues().add(accessRuleToBeMerged.getValue());
-        if (baseAccessRule.getMergedName().startsWith("Merged|")){
-            baseAccessRule.setMergedName(baseAccessRule.getMergedName() +"|"+ accessRuleToBeMerged.getName());
+        if (baseAccessRule.getMergedName().startsWith("Merged|")) {
+            baseAccessRule.setMergedName(baseAccessRule.getMergedName() + "|" + accessRuleToBeMerged.getName());
         } else {
-            baseAccessRule.setMergedName("Merged|" + baseAccessRule.getName() + "|"+ accessRuleToBeMerged.getName());
+            baseAccessRule.setMergedName("Merged|" + baseAccessRule.getName() + "|" + accessRuleToBeMerged.getName());
         }
 
 
