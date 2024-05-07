@@ -21,20 +21,19 @@ import java.util.stream.Collectors;
  * This class handles authorization activities in the project. It decides
  * if a user can send a request to certain applications based on
  * what endpoint they are trying to hit and the content of the request body (in HTTP POST method).
- *     <h3>Thoughts on design:</h3>
- *     The core technology used here is jsonpath.
- *     In the {@link TokenController#inspectToken(Map)} class, other registered applications
- *     can hit the tokenIntrospection endpoint with a token they want PSAMA to introspect along
- *     with the URL the token holder is trying to hit and what data this token holder is trying to send. After
- *     checking if the token is valid or not, the authorization check in this class will start.
- *     <br><br>
- *     <p>
- *     Whether users are allowed access or not depends on their privileges, which depends on
- *     the accessRules underneath. AuthorizationService class will eventually use jsonpath to check if
- *     certain places in the incoming JSON meet the requirement of the preset rules in accessRules to determine
- *     if the token holder is authorized or not.
- *     </p>
- *
+ * <h3>Thoughts on design:</h3>
+ * The core technology used here is jsonpath.
+ * In the {@link TokenController#inspectToken(Map)} class, other registered applications
+ * can hit the tokenIntrospection endpoint with a token they want PSAMA to introspect along
+ * with the URL the token holder is trying to hit and what data this token holder is trying to send. After
+ * checking if the token is valid or not, the authorization check in this class will start.
+ * <br><br>
+ * <p>
+ * Whether users are allowed access or not depends on their privileges, which depends on
+ * the accessRules underneath. AuthorizationService class will eventually use jsonpath to check if
+ * certain places in the incoming JSON meet the requirement of the preset rules in accessRules to determine
+ * if the token holder is authorized or not.
+ * </p>
  */
 @Service
 public class AuthorizationService {
@@ -52,7 +51,7 @@ public class AuthorizationService {
     }
 
     /**
-	 * Checking based on AccessRule in Privilege
+     * Checking based on AccessRule in Privilege
      * <br><br>
      * Thoughts on design:
      * <br>
@@ -71,26 +70,24 @@ public class AuthorizationService {
      * <br>
      * The accessRule and subAccessRules are an AND relationship.
      *
-	 *
-	 * @param application
-	 * @param requestBody
-	 * @return
-	 *
-	 * @see Privilege
-	 * @see AccessRule
-	 */
-	public boolean isAuthorized(Application application, Object requestBody, User user){
+     * @param application
+     * @param requestBody
+     * @return
+     * @see Privilege
+     * @see AccessRule
+     */
+    public boolean isAuthorized(Application application, Object requestBody, User user) {
 
         String applicationName = application.getName();
 
         String resourceId = null;
         String targetService = null;
 
-		//in some cases, we don't go through the evaluation
-		if (requestBody == null) {
+        //in some cases, we don't go through the evaluation
+        if (requestBody == null) {
             logger.info("ACCESS_LOG ___ {},{},{} ___ has been granted access to application ___ {} ___ NO REQUEST BODY FORWARDED BY APPLICATION", user.getUuid().toString(), user.getEmail(), user.getName(), applicationName);
-			return true;
-		}
+            return true;
+        }
 
         try {
             Map requestBodyMap = (Map) requestBody;
@@ -101,23 +98,22 @@ public class AuthorizationService {
             logger.info("Error parsing resource and target service from requestBody", e);
         }
 
-		// start to process the jsonpath checking
-		String formattedQuery = null;
-		try {
-			formattedQuery = (String) ((Map)requestBody).get("formattedQuery");
-			
-			if(formattedQuery == null) {
-				//fallback in case no formatted query info present
-				formattedQuery = new ObjectMapper().writeValueAsString(requestBody);
-			}
-			
-		} catch (ClassCastException | JsonProcessingException e1) {
-			e1.printStackTrace();
-            logger.info("ACCESS_LOG ___ {},{},{} ___ has been denied access to execute query ___ {} ___ in application ___ {} ___ UNABLE TO PARSE REQUEST", user.getUuid().toString(), user.getEmail(), user.getName(), requestBody, applicationName);
-			return false;
-		}
+        // start to process the jsonpath checking
+        String formattedQuery = null;
+        try {
+            formattedQuery = (String) ((Map) requestBody).get("formattedQuery");
 
-//		Set<Privilege> privileges = user.getPrivilegesByApplication(application);
+            if (formattedQuery == null) {
+                //fallback in case no formatted query info present
+                formattedQuery = new ObjectMapper().writeValueAsString(requestBody);
+            }
+
+        } catch (ClassCastException | JsonProcessingException e1) {
+            e1.printStackTrace();
+            logger.info("ACCESS_LOG ___ {},{},{} ___ has been denied access to execute query ___ {} ___ in application ___ {} ___ UNABLE TO PARSE REQUEST", user.getUuid().toString(), user.getEmail(), user.getName(), requestBody, applicationName);
+            return false;
+        }
+
         // If the user doesn't have any privileges associated to the application,
         // it will return false. The logic is if there are any privileges associated with the application,
         // a user needs to have at least one privilege under the same application,
@@ -127,39 +123,34 @@ public class AuthorizationService {
 
         // TODO: Investigate if this is causing a known bug. If no user privileges are associated with the application,
         // the user somehow gets all privileges associated with the application.
-//		if (privileges == null || privileges.isEmpty()) {
-//            logger.info("ACCESS_LOG ___ {},{},{} ___ has been denied access to execute query ___ {} ___ in application ___ {} __ USER HAS NO PRIVILEGES ASSOCIATED TO THE APPLICATION, BUT APPLICATION HAS PRIVILEGES", user.getUuid().toString(), user.getEmail(), user.getName(), formattedQuery, applicationName);
-//            return false;
-//        }
         Set<AccessRule> accessRules = accessRuleService.getAccessRulesForUserAndApp(user, application);
-//        Set<AccessRule> accessRules = preProcessAccessRules(privileges);
-		if (accessRules == null || accessRules.isEmpty()) {
+        if (accessRules == null || accessRules.isEmpty()) {
             logger.info("ACCESS_LOG ___ {},{},{} ___ has been granted access to execute query ___ {} ___ in application ___ {} ___ NO ACCESS RULES EVALUATED", user.getUuid().toString(), user.getEmail(), user.getName(), formattedQuery, applicationName);
-			return true;        	
-		}
+            return true;
+        }
 
-         // loop through all accessRules
-         // Current logic here is: among all accessRules, they are OR relationship
-		Set<AccessRule> failedRules = new HashSet<>();
-		AccessRule passByRule = null;
+        // loop through all accessRules
+        // Current logic here is: among all accessRules, they are OR relationship
+        Set<AccessRule> failedRules = new HashSet<>();
+        AccessRule passByRule = null;
         boolean result = false;
-		for (AccessRule accessRule : accessRules) {
+        for (AccessRule accessRule : accessRules) {
 
-			if (evaluateAccessRule(requestBody, accessRule)){
-				result = true;
-				passByRule = accessRule;
-				break;
-			} else {
-			    failedRules.add(accessRule);
+            if (evaluateAccessRule(requestBody, accessRule)) {
+                result = true;
+                passByRule = accessRule;
+                break;
+            } else {
+                failedRules.add(accessRule);
             }
-		}
+        }
 
-		String passRuleName = null;
+        String passRuleName = null;
 
-		if (passByRule != null){
-		    if (passByRule.getMergedName().isEmpty())
-		        passRuleName = passByRule.getName();
-             else
+        if (passByRule != null) {
+            if (passByRule.getMergedName().isEmpty())
+                passRuleName = passByRule.getName();
+            else
                 passRuleName = passByRule.getMergedName();
         }
 
@@ -168,11 +159,8 @@ public class AuthorizationService {
                 .map(ar -> (ar.getMergedName().isEmpty() ? ar.getName() : ar.getMergedName()))
                 .collect(Collectors.joining(", ")) + "]");
 
-		return result;
-	}
-
-
-
+        return result;
+    }
 
 
     /**
@@ -187,55 +175,55 @@ public class AuthorizationService {
      * @param accessRule
      * @return
      */
-	public boolean evaluateAccessRule(Object parsedRequestBody, AccessRule accessRule) {
-	    logger.debug("evaluateAccessRule() starting with:");
-	    logger.debug(parsedRequestBody.toString());
-	    logger.debug("evaluateAccessRule()  access rule:"+accessRule.getName());
+    public boolean evaluateAccessRule(Object parsedRequestBody, AccessRule accessRule) {
+        logger.debug("evaluateAccessRule() starting with:");
+        logger.debug(parsedRequestBody.toString());
+        logger.debug("evaluateAccessRule()  access rule:{}", accessRule.getName());
 
-		Set<AccessRule> gates = accessRule.getGates();
+        Set<AccessRule> gates = accessRule.getGates();
 
-		// if no gates in this accessRule, this flag will be set to true
+        // if no gates in this accessRule, this flag will be set to true
         // meaning the rules in this accessRule will be evaluated
-		boolean gatesPassed = true;
+        boolean gatesPassed = true;
 
-		// depends on the flag getGateAnyRelation is true or false,
+        // depends on the flag getGateAnyRelation is true or false,
         // the logic of checking if apply gate will be changed
         // the following cases are gate passed:
         // 1. if gates are null or empty
         // 2. if getGateAnyRelation is false, all gates passed
         // 3. if getGateAnyRelation is true, one of the gate passed
-		if (gates != null && !gates.isEmpty()) {
-		    if (accessRule.getGateAnyRelation() == null || !accessRule.getGateAnyRelation()) {
+        if (gates != null && !gates.isEmpty()) {
+            if (accessRule.getGateAnyRelation() == null || !accessRule.getGateAnyRelation()) {
 
-		        // All gates are AND relationship
+                // All gates are AND relationship
                 // means one fails all fail
-                for (AccessRule gate : gates){
-                    if (!evaluateAccessRule(parsedRequestBody, gate)){
-                        logger.error("evaluateAccessRule() gate "+gate.getName()+" failed ");
+                for (AccessRule gate : gates) {
+                    if (!evaluateAccessRule(parsedRequestBody, gate)) {
+                        logger.error("evaluateAccessRule() gate {} failed ", gate.getName());
                         gatesPassed = false;
                         break;
                     }
                 }
             } else {
 
-		        // All gates are OR relationship
+                // All gates are OR relationship
                 // means one passes all pass
-		        gatesPassed = false;
-                for (AccessRule gate : gates){
-                    if (evaluateAccessRule(parsedRequestBody, gate)){
-                        logger.debug("evaluateAccessRule() gate "+gate.getName()+" passed ");
+                gatesPassed = false;
+                for (AccessRule gate : gates) {
+                    if (evaluateAccessRule(parsedRequestBody, gate)) {
+                        logger.debug("evaluateAccessRule() gate {} passed ", gate.getName());
                         gatesPassed = true;
                         break;
                     }
                 }
             }
 
-		}
+        }
 
-		// the result is based on if gates passed or not
-		if (accessRule.getEvaluateOnlyByGates() != null && accessRule.getEvaluateOnlyByGates()){
+        // the result is based on if gates passed or not
+        if (accessRule.getEvaluateOnlyByGates() != null && accessRule.getEvaluateOnlyByGates()) {
             logger.debug("evaluateAccessRule() eval only by gates");
-		    return gatesPassed;
+            return gatesPassed;
         }
 
         if (gatesPassed) {
@@ -252,12 +240,12 @@ public class AuthorizationService {
             }
         } else {
             logger.debug("evaluateAccessRule() gates failed");
-		    // if gates not applied, this accessRule will consider deny
-		    return false;
+            // if gates not applied, this accessRule will consider deny
+            return false;
         }
 
         return true;
-	}
+    }
 
     /**
      * This function does two parts: extract the value from current node, then
@@ -270,8 +258,8 @@ public class AuthorizationService {
      * @param parsedRequestBody
      * @return
      */
-	private boolean extractAndCheckRule(AccessRule accessRule, Object parsedRequestBody){
-	    logger.debug("extractAndCheckRule() starting");
+    private boolean extractAndCheckRule(AccessRule accessRule, Object parsedRequestBody) {
+        logger.debug("extractAndCheckRule() starting");
         String rule = accessRule.getRule();
 
         if (rule == null || rule.isEmpty())
@@ -279,15 +267,15 @@ public class AuthorizationService {
 
         Object requestBodyValue;
         int accessRuleType = accessRule.getType();
-        
+
         try {
             requestBodyValue = JsonPath.parse(parsedRequestBody).read(rule);
-        } catch (PathNotFoundException ex){
-        	//if path doesn't exist; that's enough to match 'is empty' rule.  
-        	if(accessRuleType == AccessRule.TypeNaming.IS_EMPTY) {
-        		logger.debug("extractAndCheckRule() -> JsonPath.parse().read() PathNotFound;  passing IS_EMPTY rule");
-        		return true;
-        	}
+        } catch (PathNotFoundException ex) {
+            //if path doesn't exist; that's enough to match 'is empty' rule.
+            if (accessRuleType == AccessRule.TypeNaming.IS_EMPTY) {
+                logger.debug("extractAndCheckRule() -> JsonPath.parse().read() PathNotFound;  passing IS_EMPTY rule");
+                return true;
+            }
             logger.debug("extractAndCheckRule() -> JsonPath.parse().read() throws exception with parsedRequestBody - {} : {} - {}", parsedRequestBody, ex.getClass().getSimpleName(), ex.getMessage());
             return false;
         }
@@ -296,20 +284,14 @@ public class AuthorizationService {
         // AccessRule type IS_EMPTY is very special, needs to be checked in front of any others
         // in type IS_EMPTY, it doens't matter if the value is null or anything
         if (accessRuleType == AccessRule.TypeNaming.IS_EMPTY
-                || accessRuleType == AccessRule.TypeNaming.IS_NOT_EMPTY){
+                || accessRuleType == AccessRule.TypeNaming.IS_NOT_EMPTY) {
             if (requestBodyValue == null
-                    || (requestBodyValue instanceof String && ((String)requestBodyValue).isEmpty())
-                    || (requestBodyValue instanceof Collection && ((Collection)requestBodyValue).isEmpty())
-                    || (requestBodyValue instanceof Map && ((Map)requestBodyValue).isEmpty())){
-                if (accessRuleType == AccessRule.TypeNaming.IS_EMPTY)
-                    return true;
-                else
-                    return false;
+                    || (requestBodyValue instanceof String && ((String) requestBodyValue).isEmpty())
+                    || (requestBodyValue instanceof Collection && ((Collection) requestBodyValue).isEmpty())
+                    || (requestBodyValue instanceof Map && ((Map) requestBodyValue).isEmpty())) {
+                return accessRuleType == AccessRule.TypeNaming.IS_EMPTY;
             } else {
-                if (accessRuleType == AccessRule.TypeNaming.IS_NOT_EMPTY)
-                    return true;
-                else
-                    return false;
+                return accessRuleType == AccessRule.TypeNaming.IS_NOT_EMPTY;
             }
         }
 
@@ -317,10 +299,10 @@ public class AuthorizationService {
     }
 
 
-    private boolean evaluateNode(Object requestBodyValue, AccessRule accessRule){
-	    logger.debug("evaluateNode() starting...");
+    private boolean evaluateNode(Object requestBodyValue, AccessRule accessRule) {
+        logger.debug("evaluateNode() starting...");
 
-        /**
+        /*
          * NOTE: if the path(driven by attribute rule) eventually leads to String values, we can do check,
          * otherwise, only means the path is not driving to useful places, just return true.
          *
@@ -346,20 +328,20 @@ public class AuthorizationService {
          *  12 = "\demographics\AGE\"
          */
 
-        if (requestBodyValue instanceof String){
-            return decisionMaker(accessRule, (String)requestBodyValue);
+        if (requestBodyValue instanceof String) {
+            return decisionMaker(accessRule, (String) requestBodyValue);
         } else if (requestBodyValue instanceof Collection) {
-            switch (accessRule.getType()){
+            switch (accessRule.getType()) {
                 case (AccessRule.TypeNaming.ANY_EQUALS):
                 case (AccessRule.TypeNaming.ANY_CONTAINS):
-                case(AccessRule.TypeNaming.ANY_REG_MATCH):
-                    for (Object item : (Collection)requestBodyValue) {
-                        if (item instanceof String){
-                            if (decisionMaker(accessRule, (String)item)){
+                case (AccessRule.TypeNaming.ANY_REG_MATCH):
+                    for (Object item : (Collection) requestBodyValue) {
+                        if (item instanceof String) {
+                            if (decisionMaker(accessRule, (String) item)) {
                                 return true;
                             }
                         } else {
-                            if (evaluateNode(item, accessRule)){
+                            if (evaluateNode(item, accessRule)) {
                                 return true;
                             }
                         }
@@ -367,9 +349,9 @@ public class AuthorizationService {
                     // need to take care if the collection is empty
                     return false;
                 default:
-                    if (((Collection) requestBodyValue).isEmpty()){
+                    if (((Collection) requestBodyValue).isEmpty()) {
                         // need to take care if the collection is empty
-                        switch (accessRule.getType()){
+                        switch (accessRule.getType()) {
                             case (AccessRule.TypeNaming.ALL_EQUALS_IGNORE_CASE):
                             case (AccessRule.TypeNaming.ALL_EQUALS):
                             case (AccessRule.TypeNaming.ALL_CONTAINS):
@@ -377,6 +359,8 @@ public class AuthorizationService {
                                 // since collection is empty, nothing is complimented to the rule,
                                 // it should return false
                                 return false;
+                            case (AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY):
+                            case (AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY_IGNORE_CASE):
                             default:
                                 // since collection is empty, nothing will be denied by the rule,
                                 // so return true
@@ -384,13 +368,13 @@ public class AuthorizationService {
                         }
                     }
 
-                    for (Object item : (Collection)requestBodyValue){
+                    for (Object item : (Collection) requestBodyValue) {
                         if (item instanceof String) {
-                            if (decisionMaker(accessRule, (String)item) == false){
+                            if (!decisionMaker(accessRule, (String) item)) {
                                 return false;
                             }
                         } else {
-                            if (evaluateNode(item, accessRule) == false)
+                            if (!evaluateNode(item, accessRule))
                                 return false;
                         }
                     }
@@ -399,20 +383,20 @@ public class AuthorizationService {
             switch (accessRule.getType()) {
                 case (AccessRule.TypeNaming.ANY_EQUALS):
                 case (AccessRule.TypeNaming.ANY_CONTAINS):
-                case(AccessRule.TypeNaming.ANY_REG_MATCH):
-                    for (Map.Entry entry : ((Map<String, Object>) requestBodyValue).entrySet()){
+                case (AccessRule.TypeNaming.ANY_REG_MATCH):
+                    for (Map.Entry entry : ((Map<String, Object>) requestBodyValue).entrySet()) {
                         if (decisionMaker(accessRule, (String) entry.getKey()))
                             return true;
 
-                        if((accessRule.getCheckMapKeyOnly() == null || !accessRule.getCheckMapKeyOnly())
+                        if ((accessRule.getCheckMapKeyOnly() == null || !accessRule.getCheckMapKeyOnly())
                                 && evaluateNode(entry.getValue(), accessRule))
                             return true;
                     }
                     return false;
                 default:
-                    if (((Map) requestBodyValue).isEmpty()){
+                    if (((Map) requestBodyValue).isEmpty()) {
                         // need to take care if the collection is empty
-                        switch (accessRule.getType()){
+                        switch (accessRule.getType()) {
                             case (AccessRule.TypeNaming.ALL_EQUALS_IGNORE_CASE):
                             case (AccessRule.TypeNaming.ALL_EQUALS):
                             case (AccessRule.TypeNaming.ALL_CONTAINS):
@@ -420,18 +404,20 @@ public class AuthorizationService {
                                 // since collection is empty, nothing is complimented to the rule,
                                 // it should return false
                                 return false;
+                            case (AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY):
+                            case (AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY_IGNORE_CASE):
                             default:
                                 // since collection is empty, nothing will be denied by the rule,
                                 // so return true
                                 return true;
                         }
                     }
-                    for (Map.Entry entry : ((Map<String, Object>) requestBodyValue).entrySet()){
-                        if (decisionMaker(accessRule, (String) entry.getKey()) == false)
+                    for (Map.Entry entry : ((Map<String, Object>) requestBodyValue).entrySet()) {
+                        if (!decisionMaker(accessRule, (String) entry.getKey()))
                             return false;
 
-                        if( (accessRule.getCheckMapKeyOnly() == null || !accessRule.getCheckMapKeyOnly())
-                                && evaluateNode(entry.getValue(), accessRule) == false)
+                        if ((accessRule.getCheckMapKeyOnly() == null || !accessRule.getCheckMapKeyOnly())
+                                && !evaluateNode(entry.getValue(), accessRule))
                             return false;
                     }
 
@@ -457,18 +443,14 @@ public class AuthorizationService {
      * @param requestBodyValue
      * @return
      */
-    private boolean decisionMaker(AccessRule accessRule, String requestBodyValue){
+    private boolean decisionMaker(AccessRule accessRule, String requestBodyValue) {
 
         // it might be possible that sometimes there is value in the accessRule.getValue()
         // but the mergedValues doesn't have elements in it...
-        if (accessRule.getMergedValues().isEmpty()){
+        if (accessRule.getMergedValues().isEmpty()) {
             String value = accessRule.getValue();
-            if (value == null){
-                if (requestBodyValue == null) {
-                    return true;
-                } else {
-                    return false;
-                }
+            if (value == null) {
+                return requestBodyValue == null;
             }
             return _decisionMaker(accessRule, requestBodyValue, value);
         }
@@ -479,17 +461,16 @@ public class AuthorizationService {
         // if there is only one element in the merged value set
         // the operation equals to _decisionMaker(accessRule, requestBodyValue, value)
         boolean res = false;
-        for (String s : accessRule.getMergedValues()){
+        for (String s : accessRule.getMergedValues()) {
 
             // check the special case value is null
             // if value is null, the check will stop here and
             // not goes to _decisionMaker()
-            if (s == null){
+            if (s == null) {
                 if (requestBodyValue == null) {
                     res = true;
                     break;
                 } else {
-                    res = false;
                     continue;
                 }
             }
@@ -504,72 +485,31 @@ public class AuthorizationService {
         return res;
     }
 
-	private boolean _decisionMaker(AccessRule accessRule, String requestBodyValue, String value){
+    private boolean _decisionMaker(AccessRule accessRule, String requestBodyValue, String value) {
         logger.debug("_decisionMaker() starting");
-        logger.debug("_decisionMaker() access rule:"+accessRule.getName());
+        logger.debug("_decisionMaker() access rule:{}", accessRule.getName());
         logger.debug(requestBodyValue);
         logger.debug(value);
 
-	    switch (accessRule.getType()){
-            case AccessRule.TypeNaming.NOT_CONTAINS:
-                if (!requestBodyValue.contains(value))
-                    return true;
-                else
-                    return false;
-            case AccessRule.TypeNaming.NOT_CONTAINS_IGNORE_CASE:
-                if (!requestBodyValue.toLowerCase().contains(value.toLowerCase()))
-                    return true;
-                else
-                    return false;
-            case(AccessRule.TypeNaming.NOT_EQUALS):
-                if (!value.equals(requestBodyValue))
-                    return true;
-                else
-                    return false;
-            case(AccessRule.TypeNaming.ANY_EQUALS):
-            case(AccessRule.TypeNaming.ALL_EQUALS):
-                if (value.equals(requestBodyValue))
-                    return true;
-                else
-                    return false;
-            case(AccessRule.TypeNaming.ALL_CONTAINS):
-            case(AccessRule.TypeNaming.ANY_CONTAINS):
-                if (requestBodyValue.contains(value))
-                    return true;
-                else
-                    return false;
-            case(AccessRule.TypeNaming.ALL_CONTAINS_IGNORE_CASE):
-                if (requestBodyValue.toLowerCase().contains(value.toLowerCase()))
-                    return true;
-                else
-                    return false;
-            case(AccessRule.TypeNaming.NOT_EQUALS_IGNORE_CASE):
-                if (!value.equalsIgnoreCase(requestBodyValue))
-                    return true;
-                else
-                    return false;
-            case(AccessRule.TypeNaming.ALL_EQUALS_IGNORE_CASE):
-                if (value.equalsIgnoreCase(requestBodyValue))
-                    return true;
-                else
-                    return false;
-            case(AccessRule.TypeNaming.ALL_REG_MATCH):
-            case(AccessRule.TypeNaming.ANY_REG_MATCH):
-                if (requestBodyValue.matches(value))
-                    return true;
-                else
-                    return false;
-            case(AccessRule.TypeNaming.IS_EMPTY):
-//                if (requestBodyValue == null
-//                        || (requestBodyValue instanceof String && requestBodyValue.isEmpty())
-//                        || (requestBodyValue instanceof Collection))
-//                    return true;
-
-
-		default:
-			logger.warn("evaluateAccessRule() incoming accessRule type is out of scope. Just return true.");
-			return true;
-		}
-	}
+        return switch (accessRule.getType()) {
+            case AccessRule.TypeNaming.NOT_CONTAINS -> !requestBodyValue.contains(value);
+            case AccessRule.TypeNaming.NOT_CONTAINS_IGNORE_CASE -> !requestBodyValue.toLowerCase().contains(value.toLowerCase());
+            case (AccessRule.TypeNaming.NOT_EQUALS) -> !value.equals(requestBodyValue);
+            case (AccessRule.TypeNaming.ANY_EQUALS), (AccessRule.TypeNaming.ALL_EQUALS) ->
+                    value.equals(requestBodyValue);
+            case (AccessRule.TypeNaming.ALL_CONTAINS), (AccessRule.TypeNaming.ANY_CONTAINS),
+                 (AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY) -> requestBodyValue.contains(value);
+            case (AccessRule.TypeNaming.ALL_CONTAINS_IGNORE_CASE),
+                 (AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY_IGNORE_CASE) -> requestBodyValue.toLowerCase().contains(value.toLowerCase());
+            case (AccessRule.TypeNaming.NOT_EQUALS_IGNORE_CASE) -> !value.equalsIgnoreCase(requestBodyValue);
+            case (AccessRule.TypeNaming.ALL_EQUALS_IGNORE_CASE) -> value.equalsIgnoreCase(requestBodyValue);
+            case (AccessRule.TypeNaming.ALL_REG_MATCH), (AccessRule.TypeNaming.ANY_REG_MATCH) ->
+                    requestBodyValue.matches(value);
+            default -> {
+                logger.warn("evaluateAccessRule() incoming accessRule type is out of scope. Just return true.");
+                yield true;
+            }
+        };
+    }
 
 }
