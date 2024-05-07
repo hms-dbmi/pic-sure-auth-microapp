@@ -537,4 +537,29 @@ public class UserService {
     public User findByEmailAndConnection(String email, String connectionId) {
         return this.userRepository.findByEmailAndConnectionId(email, connectionId);
     }
+
+    public User findUserByUUID(String userUUID) {
+        return this.userRepository.findById(UUID.fromString(userUUID)).orElse(null);
+    }
+
+    public User createOpenAccessUser(Role openAccessRole) {
+        User user = new User();
+
+        // Save the user to get a UUID
+        user = save(user);
+        user.setSubject("open_access|" + user.getUuid().toString());
+        if (openAccessRole != null) {
+            user.setRoles(Set.of(openAccessRole));
+        } else {
+            logger.error("createOpenAccessUser() openAccessRole is null");
+            user.setRoles(new HashSet<>());
+        }
+
+        user.setEmail(user.getUuid() + "@open_access.com");
+        user = save(user);
+
+        logger.info("createOpenAccessUser() created user, uuid: {}, subject: {}, role: {}, privilege: {}",
+                user.getUuid(), user.getSubject(), user.getRoleString(), user.getPrivilegeString());
+        return user;
+    }
 }
