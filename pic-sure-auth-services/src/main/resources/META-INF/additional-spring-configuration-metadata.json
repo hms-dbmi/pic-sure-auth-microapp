@@ -116,11 +116,6 @@
       "description": "Description for application.default.uuid."
     },
     {
-      "name": "fence.version",
-      "type": "java.lang.String",
-      "description": "The version of the FENCE service to use. Currently, v1 and v2 are supported."
-    },
-    {
       "name": "fence.parent.consent.group.concept.path",
       "type": "java.lang.String",
       "description": "Description for fence.parent.consent.group.concept.path."
