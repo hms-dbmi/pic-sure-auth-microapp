@@ -176,8 +176,8 @@ public class AccessRuleService {
      * The accessRules in the same collection means they shared the same
      * standard and can be merged together
      *
-     * @param accessRuleMap
-     * @return
+     * @param accessRuleMap the map that contains all accessRules that need to be merged
+     * @return the merged accessRules
      */
     private Set<AccessRule> mergeSameKeyAccessRules(Collection<Set<AccessRule>> accessRuleMap){
         Set<AccessRule> accessRules = new HashSet<>();
