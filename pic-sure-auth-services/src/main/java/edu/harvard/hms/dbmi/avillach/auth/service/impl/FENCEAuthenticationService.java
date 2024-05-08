@@ -42,6 +42,8 @@ public class FENCEAuthenticationService {
 
     private final UserService userService;
 
+    private final RestClientUtil restClientUtil;
+
     private Application picSureApp;
     private Connection fenceConnection;
     private Map<String, String> fenceMapping;
@@ -61,7 +63,7 @@ public class FENCEAuthenticationService {
     @Autowired
     public FENCEAuthenticationService(UserRepository userRepo, RoleRepository roleRepo, ConnectionRepository connectionRepo,
                                       AccessRuleRepository accessRuleRepo, ApplicationRepository applicationRepo,
-                                      PrivilegeRepository privilegeRepo, UserService userService,
+                                      PrivilegeRepository privilegeRepo, UserService userService, RestClientUtil restClientUtil,
                                       @Value("${application.idp.provider}") String idpProviderUri,
                                       @Value("${application.fence.client.id") String fenceClientId,
                                       @Value("${application.fence.client.secret}") String fenceClientSecret,
@@ -77,6 +79,7 @@ public class FENCEAuthenticationService {
         this.applicationRepo = applicationRepo;
         this.privilegeRepo = privilegeRepo;
         this.userService = userService;
+        this.restClientUtil = restClientUtil;
         idp_provider_uri = idpProviderUri;
         fence_client_id = fenceClientId;
         fence_client_secret = fenceClientSecret;
@@ -103,7 +106,7 @@ public class FENCEAuthenticationService {
 
         JsonNode fence_user_profile_response = null;
         try {
-            ResponseEntity<String> response = RestClientUtil.retrieveGetResponse(
+            ResponseEntity<String> response = this.restClientUtil.retrieveGetResponse(
                     this.idp_provider_uri + "/user/user",
                     headers
             );
@@ -139,7 +142,7 @@ public class FENCEAuthenticationService {
 
         JsonNode resp = null;
         try {
-            ResponseEntity<String> response = RestClientUtil.retrievePostResponse(
+            ResponseEntity<String> response = this.restClientUtil.retrievePostResponse(
                     fence_token_url,
                     headers,
                     query_string
