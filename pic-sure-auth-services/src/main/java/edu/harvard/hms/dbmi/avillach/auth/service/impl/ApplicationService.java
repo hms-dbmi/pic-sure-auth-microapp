@@ -99,7 +99,7 @@ public class ApplicationService implements UserDetailsService {
         return this.applicationRepo.saveAll(applications);
     }
 
-    public String refreshApplicationToken(String applicationId) {
+    public String refreshApplicationToken(String applicationId) throws NullPointerException, IllegalArgumentException {
         Optional<Application> application = applicationRepo.findById(UUID.fromString(applicationId));
 
         if (application.isEmpty()) {
@@ -108,16 +108,13 @@ public class ApplicationService implements UserDetailsService {
         }
 
         String newApplicationToken = generateApplicationToken(application.orElse(null));
-        try {
-            application.get().setToken(
-                    newApplicationToken
-            );
-
-            this.applicationRepo.save(application.get());
-        } catch (Exception e) {
-            logger.error("", e);
+        if (newApplicationToken == null) {
+            logger.error("refreshApplicationToken() failed to generate new application token for applicationId: {}", applicationId);
+            throw new NullPointerException("Failed to generate new application token for applicationId: " + applicationId);
         }
 
+        application.get().setToken(newApplicationToken);
+        this.applicationRepo.save(application.get());
         return newApplicationToken;
     }
 
