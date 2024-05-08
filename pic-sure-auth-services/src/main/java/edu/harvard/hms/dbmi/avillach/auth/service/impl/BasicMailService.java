@@ -93,10 +93,8 @@ public class BasicMailService implements MailService {
 		if(deniedTemplate == null) {
 			logger.debug("No template for Access Denied email, not sending");
 		} else {
-			logger.info("Sending 'Access Denied' email to "
-				+ this.adminUsers
-				+ ". User: "
-				+ userInfo.get("email") != null ? userInfo.get("email").asText() : userInfo.get("user_id").asText());
+            userInfo.get("email");
+            logger.info(userInfo.get("email").asText());
 			ObjectMapper mapper = new ObjectMapper();
 			Map<String, Object> scope = mapper.convertValue(userInfo, Map.class);
 			scope.put("systemName", this.systemName);
