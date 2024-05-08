@@ -41,11 +41,12 @@ public class ApplicationService implements UserDetailsService {
      */
     @Transactional
     public Optional<Application> getApplicationByID(String applicationId) {
-        return this.applicationRepo.findById(UUID.fromString(applicationId));
+        return applicationRepo.findById(UUID.fromString(applicationId));
     }
 
     /**
      * Retrieves an entity by its ID with its privileges. This method is used to avoid lazy loading exception.
+     *
      * @param applicationName
      * @return
      */
@@ -71,13 +72,9 @@ public class ApplicationService implements UserDetailsService {
         checkAssociation(applications);
         List<Application> appEntities = this.applicationRepo.saveAll(applications);
         for (Application application : appEntities) {
-            try {
-                application.setToken(
-                        generateApplicationToken(application)
-                );
-            } catch (Exception e) {
-                logger.error("", e);
-            }
+            application.setToken(
+                    generateApplicationToken(application)
+            );
         }
 
         return this.applicationRepo.saveAll(appEntities);
