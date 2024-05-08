@@ -1,4 +1,4 @@
-package edu.harvard.hms.dbmi.avillach;
+package edu.harvard.hms.dbmi.avillach.auth.service.impl;
 
 import com.auth0.exception.Auth0Exception;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -9,17 +9,11 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.entity.UserMetadataMapping;
 import edu.harvard.hms.dbmi.avillach.auth.repository.ConnectionRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.UserRepository;
-import edu.harvard.hms.dbmi.avillach.auth.service.impl.OauthUserMatchingService;
-import edu.harvard.hms.dbmi.avillach.auth.service.impl.UserMetadataMappingService;
-import edu.harvard.hms.dbmi.avillach.auth.service.impl.UserService;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.mockito.junit.MockitoJUnitRunner;
-import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,7 +53,7 @@ public class Auth0MatchingServiceTest {
     ObjectMapper mapper = new ObjectMapper();
 
     @Before
-    public void setUp() throws Auth0Exception {
+    public void setUp() {
         MockitoAnnotations.initMocks(this);
         //Instead of calling the database
         doAnswer(invocation -> (listUnmatchedByConnectionIdMock(invocation.getArgument(0)))).
@@ -208,7 +202,7 @@ public class Auth0MatchingServiceTest {
     }
 
     public Optional<Connection> mockConnection(String id) {
-        log.info("Mocking connection with id: " + id);
+        log.info("Mocking connection with id: {}", id);
         return Optional.of(new Connection().setId(id));
     }
 
