@@ -155,7 +155,9 @@ public class JAXRSConfiguration extends Application {
 
         checkIDPProvider(ctx);
 
-        mailSession.getProperties().put("mail.smtp.ssl.trust", "smtp.gmail.com");
+        if (mailSession != null) {
+            mailSession.getProperties().put("mail.smtp.ssl.trust", "smtp.gmail.com");
+        }
 
         //Set info for the swagger.json
         BeanConfig beanConfig = new BeanConfig();
@@ -186,7 +188,7 @@ public class JAXRSConfiguration extends Application {
         } catch (NamingException | ClassCastException | NumberFormatException ex) {
             idp_provider = "default";
         }
-        logger.info("checkIDPProvider() idp provider is now :" + idp_provider);
+        logger.info("checkIDPProvider() idp provider is now :{}", idp_provider);
 
         if (idp_provider.equalsIgnoreCase("fence")) {
             try {
@@ -250,7 +252,7 @@ public class JAXRSConfiguration extends Application {
                 logger.error("checkIDPProvider() Invalid OKTA IDP Provider Setup. Mandatory fields are missing. " +
                         "Check configuration in standalone.xml");
             }
-          
+
         } else {
             logger.error("checkIDPProvider() Invalid IDP Provider Setup. Mandatory fields are missing. " +
                     "Check configuration in standalone.xml");
