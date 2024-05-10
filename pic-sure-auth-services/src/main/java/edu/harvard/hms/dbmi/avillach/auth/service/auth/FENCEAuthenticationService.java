@@ -7,6 +7,7 @@ import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_standa
 import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_topmed_consent_group_concept_path;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -70,6 +71,7 @@ public class FENCEAuthenticationService {
     
     //read the fence_mapping.json into this object to improve lookup speeds
     private static Map<String, Map> _projectMap;
+    private static Map<String, Map> fenceMappingByAuthZ;
     
     private static final String parentAccessionField = "\\\\_Parent Study Accession with Subject ID\\\\";
     private static final String topmedAccessionField = "\\\\_Topmed Study Accession with Subject ID\\\\";
@@ -149,7 +151,7 @@ public class FENCEAuthenticationService {
     }
 
     // Get access_token from FENCE, based on the provided `code`
-    public Response getFENCEProfile(String callback_url, Map<String, String> authRequest){
+    public Response getFENCEProfile(String callback_url, Map<String, String> authRequest) throws IOException {
         logger.debug("getFENCEProfile() starting...");
         String fence_code  = authRequest.get("code");
 
@@ -238,15 +240,12 @@ public class FENCEAuthenticationService {
         return PICSUREResponse.success(responseMap);
     }
 
-    private void createAndUpsertRole(String access_role_name, User current_user) {
+    private void createAndUpsertRole(String access_role_name, User current_user) throws IOException {
         logger.debug("createAndUpsertRole() starting...");
-        Map projectMetadata = getFENCEMapping().values().stream()
-                              .filter(map -> access_role_name.equals(
-                                      map.get("authZ").toString().replace("\\/", "/"))
-                              ).findFirst().orElse(null);
+        Map projectMetadata = getFenceMappingByAuthZ().get(access_role_name);
 
         if (projectMetadata == null) {
-            logger.error("getFENCEProfile() -> createAndUpsertRole could not find study in FENCE mapping SKIPPING: " + access_role_name);
+            logger.error("getFENCEProfile() -> createAndUpsertRole could not find study in FENCE mapping SKIPPING: {}", access_role_name);
             return;
         }
 
@@ -254,10 +253,10 @@ public class FENCEAuthenticationService {
         String consentCode = (String) projectMetadata.get("consent_group_code");
         String newRoleName = StringUtils.isNotBlank(consentCode) ? "FENCE_"+projectId+"_"+consentCode : "FENCE_"+projectId;
 
-        logger.info("getFENCEProfile() New PSAMA role name:"+newRoleName);
+        logger.info("getFENCEProfile() New PSAMA role name:{}", newRoleName);
 
         if (upsertRole(current_user, newRoleName, "FENCE role "+newRoleName)) {
-            logger.info("getFENCEProfile() Updated user role. Now it includes `"+newRoleName+"`");
+            logger.info("getFENCEProfile() Updated user role. Now it includes `{}`", newRoleName);
         } else {
             logger.error("getFENCEProfile() could not add roles to user's profile");
         }
@@ -385,7 +384,7 @@ public class FENCEAuthenticationService {
         // Look up the metadata by consent group.
        Map projectMetadata = getFENCEMappingforProjectAndConsent(project_name, consent_group);
         
-        if(projectMetadata == null || projectMetadata.size() == 0) {
+        if(projectMetadata == null || projectMetadata.isEmpty()) {
         	//no privileges means no access to this project.  just return existing set of privs.
         	logger.warn("No metadata available for project " + project_name + "." + consent_group);
         	return privs;
@@ -1126,7 +1125,7 @@ public class FENCEAuthenticationService {
 	private Map getFENCEMappingforProjectAndConsent(String projectId, String consent_group) {
 	
 		String consentVal = (consent_group != null && consent_group != "") ? projectId + "." + consent_group : projectId;
-		logger.info("getFENCEMappingforProjectAndConsent() looking up "+consentVal);
+        logger.info("getFENCEMappingforProjectAndConsent() looking up {}", consentVal);
 			 
 		Object projectMetadata = getFENCEMapping().get(consentVal);
 		if( projectMetadata instanceof Map) {
@@ -1140,12 +1139,7 @@ public class FENCEAuthenticationService {
 	public Map<String, Map> getFENCEMapping(){
 		if(_projectMap == null || _projectMap.isEmpty()) {
 			try {
-				Map fenceMapping = JAXRSConfiguration.objectMapper.readValue(
-						new File(String.join(File.separator,
-								new String[] {JAXRSConfiguration.templatePath ,"fence_mapping.json"}))
-						, Map.class);
-				List<Map> projects = (List<Map>) fenceMapping.get("bio_data_catalyst");
-				logger.debug("getFENCEMapping: found FENCE mapping with " + projects.size() + " entries");
+				List<Map> projects = loadBioDataCatalystFenceMappingData();
 				_projectMap = new HashMap<String, Map>(projects.size());
 				for(Map project : projects) {
 					String consentVal = (project.get("consent_group_code") != null && project.get("consent_group_code") != "") ?
@@ -1163,4 +1157,47 @@ public class FENCEAuthenticationService {
 		
 		return _projectMap;
 	}
+
+
+    /**
+     * This method is used to improve the performance for looking up the FENCE project metadata by the authZ value.
+     *
+     * @return Map<String, Map> - a map of FENCE project metadata by the authZ value
+     * @throws IOException - if there is an issue parsing or finding the fence_mapping.json file
+     */
+     private Map<String, Map> getFenceMappingByAuthZ() throws IOException {
+        if (fenceMappingByAuthZ == null || fenceMappingByAuthZ.isEmpty()) {
+            List<Map> projects = loadBioDataCatalystFenceMappingData();
+            fenceMappingByAuthZ = new HashMap<>(projects.size());
+            if (projects.size() == 1 && projects.get(0).isEmpty()) {
+                logger.error("getFENCEMapping: FENCE mapping data is empty");
+                throw new IOException("FENCE mapping data is empty");
+            }
+
+            for (Map project : projects) {
+                fenceMappingByAuthZ.put(project.get("authZ").toString().replace("\\/", "/"), project);
+            }
+        }
+
+        return fenceMappingByAuthZ;
+    }
+
+    private List<Map> loadBioDataCatalystFenceMappingData() {
+        	Map fenceMapping = null;
+            List<Map> projects = null;
+        	try {
+        		fenceMapping = JAXRSConfiguration.objectMapper.readValue(
+        				new File(String.join(File.separator,
+        						new String[] {JAXRSConfiguration.templatePath ,"fence_mapping.json"}))
+        				, Map.class);
+
+                projects = (List<Map>) fenceMapping.get("bio_data_catalyst");
+                logger.debug("getFENCEMapping: found FENCE mapping with {} entries", projects.size());
+        	} catch (Exception e) {
+                logger.error("loadFenceMappingData: Non-fatal error parsing fence_mapping.json: {}", JAXRSConfiguration.templatePath, e);
+        		return Collections.singletonList(new HashMap());
+        	}
+        	return projects;
+    }
+
 }

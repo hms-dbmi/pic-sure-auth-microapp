@@ -17,6 +17,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
+import java.io.IOException;
 import java.util.Map;
 
 /**
@@ -39,7 +40,7 @@ public class AuthService {
     @ApiOperation(value = "The authentication endpoint for retrieving a valid user token")
     @POST
     @Path("/authentication")
-    public Response authentication(@Context UriInfo uriInfo, @ApiParam(required = true, value = "A json object that includes all Oauth authentication needs, for example, access_token and redirectURI") Map<String, String> authRequest) {
+    public Response authentication(@Context UriInfo uriInfo, @ApiParam(required = true, value = "A json object that includes all Oauth authentication needs, for example, access_token and redirectURI") Map<String, String> authRequest) throws IOException {
         logger.debug("authentication() starting...");
         if (JAXRSConfiguration.idp_provider.equalsIgnoreCase("fence")) {
             logger.debug("authentication() FENCE authentication");
