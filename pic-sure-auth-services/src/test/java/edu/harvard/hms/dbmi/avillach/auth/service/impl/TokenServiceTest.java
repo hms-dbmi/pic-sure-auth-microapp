@@ -118,7 +118,7 @@ public class TokenServiceTest {
         );
         inputMap.put("token", token);
 
-        configureUserSecurityContext();
+        configureUserSecurityContext(user);
         Map<String, Object> tokenInspection = tokenService.inspectToken(inputMap);
         assertNotNull(tokenInspection.get("message"));
     }
@@ -209,7 +209,7 @@ public class TokenServiceTest {
     }
 
     @Test
-    public void testLongTermInspectToken_withUserTokenNotMatching() {
+    public void testLongTermInspectToken_withUserTokenCompromised() {
         Application application = createTestApplication();
         configureApplicationSecurityContext(application);
 
@@ -228,6 +228,15 @@ public class TokenServiceTest {
                 testTokenExpiration
         );
 
+        String userToken = jwtUtil.createJwtToken(
+                "whatever1", // Different id
+                "edu.harvard.hms.dbmi.psama",
+                claims,
+                AuthNaming.LONG_TERM_TOKEN_PREFIX + "|" + claims.get("sub").toString(),
+                testTokenExpiration
+        );
+        user.setToken(userToken);
+
         // User privileges should be a subset of the application's privileges
         application.setPrivileges(user.getTotalPrivilege());
         inputMap.put("token", token);
@@ -235,6 +244,96 @@ public class TokenServiceTest {
 
         Map<String, Object> response = tokenService.inspectToken(inputMap);
         assertEquals("Cannot find matched long term token, your token might have been refreshed.", response.get("message"));
+    }
+
+    @Test
+    public void testLongTermInspectToken_withUserRolesNull() {
+        Application application = createTestApplication();
+        configureApplicationSecurityContext(application);
+
+        User user = createTestUser();
+        user.setSubject(user.getSubject());
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("sub", user.getSubject());
+
+        Map<String, Object> inputMap = new HashMap<>();
+        // Application Long term token
+        String token = jwtUtil.createJwtToken(
+                "whatever",
+                "edu.harvard.hms.dbmi.psama",
+                claims,
+                AuthNaming.LONG_TERM_TOKEN_PREFIX + "|" + claims.get("sub").toString(),
+                testTokenExpiration
+        );
+        user.setToken(token);
+
+        // User privileges should be a subset of the application's privileges
+        application.setPrivileges(user.getTotalPrivilege());
+        user.setRoles(null);
+        inputMap.put("token", token);
+        when(userRepository.findBySubject(user.getSubject())).thenReturn(user);
+
+        Map<String, Object> response = tokenService.inspectToken(inputMap);
+        assertEquals("User doesn't have enough privileges.", response.get("message"));
+    }
+
+    @Test
+    public void testLongTermInspectToken_withUserTokenCompromised_() {
+        Application application = createTestApplication();
+        configureApplicationSecurityContext(application);
+
+        User user = createTestUser();
+        user.setSubject(user.getSubject());
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("sub", user.getSubject());
+
+        Map<String, Object> inputMap = new HashMap<>();
+        // Application Long term token
+        String token = jwtUtil.createJwtToken(
+                "whatever",
+                "edu.harvard.hms.dbmi.psama",
+                claims,
+                AuthNaming.LONG_TERM_TOKEN_PREFIX + "|" + claims.get("sub").toString(),
+                testTokenExpiration
+        );
+
+        user.setToken(token);
+
+        // User privileges should be a subset of the application's privileges
+        application.setPrivileges(user.getTotalPrivilege());
+        user.setRoles(null);
+        inputMap.put("token", token);
+        when(userRepository.findBySubject(user.getSubject())).thenReturn(user);
+
+        Map<String, Object> response = tokenService.inspectToken(inputMap);
+        assertEquals("User doesn't have enough privileges.", response.get("message"));
+    }
+
+    @Test
+    public void testRefreshToken() {
+        User user = createTestUser();
+        configureUserSecurityContext(user);
+        user.setSubject(user.getSubject());
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("sub", user.getSubject());
+
+        // Application Long term token
+        String token = jwtUtil.createJwtToken(
+                "whatever",
+                "edu.harvard.hms.dbmi.psama",
+                claims,
+                claims.get("sub").toString(),
+                testTokenExpiration
+        );
+
+        // User privileges should be a subset of the application's privileges
+        when(userRepository.findBySubject(user.getSubject())).thenReturn(user);
+        when(userRepository.findById(user.getUuid())).thenReturn(Optional.of(user));
+
+        String authorizationHeader = "Bearer " + token;
+        Map<String, String> response = tokenService.refreshToken(authorizationHeader);
+        assertNotNull(response.get("token"));
+        assertNotNull(response.get("expirationDate"));
     }
 
     private User createTestUser() {
@@ -273,10 +372,8 @@ public class TokenServiceTest {
         return application;
     }
 
-    private void configureUserSecurityContext() {
-        User user = createTestUser();
+    private void configureUserSecurityContext(User user) {
         CustomUserDetails customUserDetails = new CustomUserDetails(user);
-
         // configure security context
         UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(customUserDetails, null, customUserDetails.getAuthorities());
         when(securityContext.getAuthentication()).thenReturn(authentication);

@@ -5,6 +5,7 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.exceptions.NotAuthorizedException;
 import edu.harvard.hms.dbmi.avillach.auth.model.CustomApplicationDetails;
+import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
 import edu.harvard.hms.dbmi.avillach.auth.model.TokenInspection;
 import edu.harvard.hms.dbmi.avillach.auth.repository.UserRepository;
 import edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming;
@@ -210,11 +211,12 @@ public class TokenService {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Object principal = authentication.getPrincipal();
-        if (!(principal instanceof User user)) {
+        if (!(principal instanceof CustomUserDetails customUserDetails)) {
             logger.error("refreshToken() Principal is not an instance of User.");
             throw new NotAuthorizedException("User not found");
         }
 
+        User user = customUserDetails.getUser();
         if (user.getUuid() == null) {
             logger.error("refreshToken() Stored user doesn't have a uuid.");
             return Map.of("error", "Inner application error, please contact admin.");
