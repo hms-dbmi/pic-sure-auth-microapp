@@ -5,6 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.PostConstruct;
+import javax.ejb.DependsOn;
 import javax.ejb.Singleton;
 import javax.ejb.Startup;
 import java.io.File;
@@ -16,6 +17,7 @@ import java.util.Map;
 
 @Singleton
 @Startup
+@DependsOn("JAXRSConfiguration")
 public class FenceMappingUtility {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
