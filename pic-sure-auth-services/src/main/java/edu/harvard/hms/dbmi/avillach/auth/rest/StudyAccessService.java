@@ -2,6 +2,7 @@ package edu.harvard.hms.dbmi.avillach.auth.rest;
 
 import edu.harvard.hms.dbmi.avillach.auth.data.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.data.repository.RoleRepository;
+import edu.harvard.hms.dbmi.avillach.auth.model.BioDataCatalyst;
 import edu.harvard.hms.dbmi.avillach.auth.service.auth.FENCEAuthenticationService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.FenceMappingUtility;
 import io.swagger.annotations.Api;
@@ -35,8 +36,6 @@ public class StudyAccessService {
     Logger logger = LoggerFactory.getLogger(StudyAccessService.class);
 
     public static final String MANUAL = "MANUAL_";
-    public static final String STUDY_IDENTIFIER = "study_identifier";
-    public static final String CONSENT_GROUP_CODE = "consent_group_code";
 
     @Inject
     FENCEAuthenticationService fenceAuthenticationService;
@@ -56,10 +55,9 @@ public class StudyAccessService {
             return Response.status(Response.Status.BAD_REQUEST).entity("Study identifier cannot be blank").build();
         }
 
-        Map fenceMappingForStudy = null;
-
+        BioDataCatalyst fenceMappingForStudy;
         try {
-            Map<String, Map> fenceMapping = fenceMappingUtility.getFENCEMapping();
+            Map<String, BioDataCatalyst> fenceMapping = fenceMappingUtility.getFENCEMapping();
             if (fenceMapping == null) {
                 throw new Exception("Fence mapping is null");
             }
@@ -69,22 +67,22 @@ public class StudyAccessService {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Error occurred while fetching FENCE mapping").build();
         }
 
-        if (fenceMappingForStudy == null || fenceMappingForStudy.isEmpty()) {
-            logger.error("addStudyAccess - Could not find study: " + studyIdentifier + " in FENCE mapping");
+        if (fenceMappingForStudy == null) {
+            logger.error("addStudyAccess - Could not find study: {} in FENCE mapping", studyIdentifier);
             return Response.status(Response.Status.BAD_REQUEST).entity("Could not find study with the provided identifier").build();
         }
 
-        String projectId = (String) fenceMappingForStudy.get(STUDY_IDENTIFIER);
-        String consentCode = (String) fenceMappingForStudy.get(CONSENT_GROUP_CODE);
+        String projectId = fenceMappingForStudy.getStudy_identifier();
+        String consentCode = fenceMappingForStudy.getConsent_group_code();
         String newRoleName = StringUtils.isNotBlank(consentCode) ? MANUAL+projectId+"_"+consentCode : MANUAL+projectId;
 
-        logger.debug("addStudyAccess - New manual PSAMA role name: "+newRoleName);
+        logger.debug("addStudyAccess - New manual PSAMA role name: {}", newRoleName);
 
         if (fenceAuthenticationService.upsertRole(null, newRoleName, MANUAL + " role "+newRoleName)) {
-            logger.info("addStudyAccess - Updated user role. Now it includes `"+newRoleName+"`");
+            logger.info("addStudyAccess - Updated user role. Now it includes `{}`", newRoleName);
              return Response.ok("Role '" + newRoleName + "' successfully created").build();
         } else {
-            logger.error("addStudyAccess - could not add " + newRoleName + " role to to database");
+            logger.error("addStudyAccess - could not add {} role to to database", newRoleName);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                            .entity("Could not add role '" + newRoleName + "' to database").build();
         }

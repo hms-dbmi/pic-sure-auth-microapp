@@ -1,6 +1,8 @@
 package edu.harvard.hms.dbmi.avillach.auth.utils;
 
 import edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration;
+import edu.harvard.hms.dbmi.avillach.auth.model.BioDataCatalyst;
+import edu.harvard.hms.dbmi.avillach.auth.model.FenceMapping;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -10,10 +12,7 @@ import javax.ejb.Singleton;
 import javax.ejb.Startup;
 import java.io.File;
 import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Singleton
 @Startup
@@ -21,8 +20,8 @@ import java.util.Map;
 public class FenceMappingUtility {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
-    private Map<String, Map> _projectMap;
-    private Map<String, Map> fenceMappingByAuthZ;
+    private Map<String, BioDataCatalyst> _projectMap;
+    private Map<String, BioDataCatalyst> fenceMappingByAuthZ;
 
     @PostConstruct
     public void init() {
@@ -30,52 +29,51 @@ public class FenceMappingUtility {
             initializeFENCEMapping();
             initializeFenceMappingByAuthZ();
         } catch (IOException e) {
-            // Handle exceptions appropriately
             logger.error("Error initializing FENCE mappings", e);
         }
     }
 
     private void initializeFENCEMapping() throws IOException {
-        List<Map> projects = loadBioDataCatalystFenceMappingData();
+        ArrayList<BioDataCatalyst> projects = loadBioDataCatalystFenceMappingData();
         _projectMap = new HashMap<>(projects.size());
-        for (Map project : projects) {
-            String consentVal = (project.get("consent_group_code") != null && project.get("consent_group_code") != "") ?
-                    project.get("study_identifier") + "." + project.get("consent_group_code") :
-                    project.get("study_identifier").toString();
+        for (BioDataCatalyst project : projects) {
+            String consentVal = (project.getConsent_group_code() != null && !project.getConsent_group_code().isEmpty()) ?
+                    project.getStudy_identifier() + "." + project.getConsent_group_code() :
+                    project.getStudy_identifier();
             _projectMap.put(consentVal, project);
         }
     }
 
     private void initializeFenceMappingByAuthZ() throws IOException {
-        List<Map> projects = loadBioDataCatalystFenceMappingData();
+        ArrayList<BioDataCatalyst> projects = loadBioDataCatalystFenceMappingData();
         fenceMappingByAuthZ = new HashMap<>(projects.size());
-        for (Map project : projects) {
-            fenceMappingByAuthZ.put(project.get("authZ").toString().replace("\\/", "/"), project);
+        for (BioDataCatalyst project : projects) {
+            fenceMappingByAuthZ.put(project.getAuthZ().replace("\\/", "/"), project);
         }
     }
 
-    public Map<String, Map> getFENCEMapping() {
+    public Map<String, BioDataCatalyst> getFENCEMapping() {
         return _projectMap;
     }
 
-    public Map<String, Map> getFenceMappingByAuthZ() {
+    public Map<String, BioDataCatalyst> getFenceMappingByAuthZ() {
         return fenceMappingByAuthZ;
     }
 
-    private List<Map> loadBioDataCatalystFenceMappingData() {
-        Map fenceMapping = null;
-        List<Map> projects = null;
+    private ArrayList<BioDataCatalyst> loadBioDataCatalystFenceMappingData() {
+        FenceMapping fenceMapping;
+        ArrayList<BioDataCatalyst> projects;
         try {
             fenceMapping = JAXRSConfiguration.objectMapper.readValue(
                     new File(String.join(File.separator,
                             new String[] {JAXRSConfiguration.templatePath ,"fence_mapping.json"}))
-                    , Map.class);
+                    , FenceMapping.class);
 
-            projects = (List<Map>) fenceMapping.get("bio_data_catalyst");
+            projects = fenceMapping.getProjectMetaData();
             logger.debug("getFENCEMapping: found FENCE mapping with {} entries", projects.size());
         } catch (Exception e) {
             logger.error("loadFenceMappingData: Non-fatal error parsing fence_mapping.json: {}", JAXRSConfiguration.templatePath, e);
-            return Collections.singletonList(new HashMap());
+            return new ArrayList<>();
         }
         return projects;
     }

@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
+import javax.ejb.Singleton;
 import javax.ejb.Startup;
 import javax.inject.Inject;
 import javax.mail.Session;
@@ -39,6 +40,7 @@ import static edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming.AuthRoleNaming
  * <p>When you deploy the PSAMA application WAR file to a new server, this class is called to supply basic configuration information.</p>
  */
 @Startup
+@Singleton(name = "JAXRSConfiguration")
 @ApplicationPath("auth")
 public class JAXRSConfiguration extends Application {
 
