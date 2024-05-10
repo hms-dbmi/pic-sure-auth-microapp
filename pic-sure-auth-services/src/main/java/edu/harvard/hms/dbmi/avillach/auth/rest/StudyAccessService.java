@@ -3,6 +3,7 @@ package edu.harvard.hms.dbmi.avillach.auth.rest;
 import edu.harvard.hms.dbmi.avillach.auth.data.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.data.repository.RoleRepository;
 import edu.harvard.hms.dbmi.avillach.auth.service.auth.FENCEAuthenticationService;
+import edu.harvard.hms.dbmi.avillach.auth.utils.FenceMappingUtility;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
@@ -40,6 +41,9 @@ public class StudyAccessService {
     @Inject
     FENCEAuthenticationService fenceAuthenticationService;
 
+    @Inject
+    private FenceMappingUtility fenceMappingUtility;
+
     @ApiOperation(value = "POST a single study and it creates the role, privs, and rules for it, requires SUPER_ADMIN role")
     @Transactional
     @POST
@@ -55,7 +59,7 @@ public class StudyAccessService {
         Map fenceMappingForStudy = null;
 
         try {
-            Map<String, Map> fenceMapping = fenceAuthenticationService.getFENCEMapping();
+            Map<String, Map> fenceMapping = fenceMappingUtility.getFENCEMapping();
             if (fenceMapping == null) {
                 throw new Exception("Fence mapping is null");
             }
