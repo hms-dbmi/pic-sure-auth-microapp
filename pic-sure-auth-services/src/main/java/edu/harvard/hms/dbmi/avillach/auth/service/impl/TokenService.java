@@ -217,7 +217,7 @@ public class TokenService {
         }
 
         User user = customUserDetails.getUser();
-        if (user.getUuid() == null) {
+        if (user == null || user.getUuid() == null) {
             logger.error("refreshToken() Stored user doesn't have a uuid.");
             return Map.of("error", "Inner application error, please contact admin.");
         }
@@ -236,6 +236,7 @@ public class TokenService {
         String subject = loadUser.get().getSubject();
         if (subject == null || subject.isEmpty()) {
             logger.error("refreshToken() subject doesn't exist in the user.");
+            return Map.of("error", "Inner application error, please contact admin.");
         }
 
         // parse origin token
@@ -243,16 +244,12 @@ public class TokenService {
         try {
             String token = JWTUtil.getTokenFromAuthorizationHeader(authorizationHeader).orElseThrow(() -> new NotAuthorizedException("Token not found"));
             jws = this.jwtUtil.parseToken(token);
-
         } catch (NotAuthorizedException ex) {
             return Map.of("error", "Cannot parse original token");
         }
 
         Claims claims = jws.getPayload();
-
-        // just check if the subject is along with the database record,
-        // just in case something has changed in middle
-        if (StringUtils.isNotBlank(subject) && !subject.equals(claims.getSubject())) {
+        if (!subject.equals(claims.getSubject())) {
             logger.error("refreshToken() user subject is not the same as the subject of the input token");
             return Map.of("error", "Inner application error, try again or contact admin.");
         }
