@@ -244,7 +244,14 @@ public class UserService {
         for (User user : users) {
             if (user.getRoles() != null) {
                 Set<Role> roles = new HashSet<>();
-                user.getRoles().forEach(t -> this.roleService.addObjectToSet(roles, t));
+                user.getRoles().forEach(t -> {
+                    Optional<Role> role = this.roleService.getRoleById(t.getUuid());
+                    if (role.isEmpty()) {
+                        throw new RuntimeException("Role not found - uuid: " + t.getUuid().toString());
+                    }
+                    roles.add(role.get());
+                });
+
                 user.setRoles(roles);
             }
 
