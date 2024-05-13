@@ -40,7 +40,6 @@ import static edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming.AuthRoleNaming
  * <p>When you deploy the PSAMA application WAR file to a new server, this class is called to supply basic configuration information.</p>
  */
 @Startup
-@Singleton(name = "JAXRSConfiguration")
 @ApplicationPath("auth")
 public class JAXRSConfiguration extends Application {
 
