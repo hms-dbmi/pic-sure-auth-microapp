@@ -20,6 +20,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -338,6 +339,35 @@ public class UserServiceTest {
     @Test
     public void testGetCurrentUser() {
         User user = createTestUser();
+
+
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("sub", user.getSubject());
+
+        // Application Long term token
+        String token = jwtUtil.createJwtToken(
+                "whatever",
+                "edu.harvard.hms.dbmi.psama",
+                claims,
+                claims.get("sub").toString(),
+                longTermTokenExpirationTime
+        );
+        user.setToken(token);
+        configureUserSecurityContext(user);
+
+        Jws<Claims> claimsJws = this.jwtUtil.parseToken(token);
+        System.out.println(claimsJws);
+
+        when(mockJwtUtil.parseToken(anyString())).thenReturn(claimsJws);
+        when(tosService.hasUserAcceptedLatest(any())).thenReturn(true);
+        User.UserForDisplay currentUser = userService.getCurrentUser("Bearer " + token, true);
+        assertNotNull(currentUser);
+        assertEquals(user.getToken(), currentUser.getToken());
+    }
+
+    @Test
+    public void testGetCurrentUser_withNoToken() {
+        User user = createTestUser();
         configureUserSecurityContext(user);
 
         Map<String, Object> claims = new HashMap<>();
@@ -354,10 +384,7 @@ public class UserServiceTest {
 
         Jws<Claims> claimsJws = this.jwtUtil.parseToken(token);
         System.out.println(claimsJws);
-
         when(mockJwtUtil.parseToken(anyString())).thenReturn(claimsJws);
-
-        user.setToken(token);
         when(tosService.hasUserAcceptedLatest(any())).thenReturn(true);
         User.UserForDisplay currentUser = userService.getCurrentUser("Bearer " + token, true);
         assertNotNull(currentUser);
@@ -374,6 +401,34 @@ public class UserServiceTest {
         when(securityContext.getAuthentication()).thenReturn(authentication);
 
         assertNull(userService.getCurrentUser("Bearer some-token", true));
+    }
+
+    @Test
+    public void testGetCurrentUser_withNoPrivileges() {
+        User user = createTestUser();
+        user.setRoles(new HashSet<>());
+        configureUserSecurityContext(user);
+
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("sub", user.getSubject());
+
+        // Application Long term token
+        String token = jwtUtil.createJwtToken(
+                "whatever",
+                "edu.harvard.hms.dbmi.psama",
+                claims,
+                claims.get("sub").toString(),
+                longTermTokenExpirationTime
+        );
+
+        Jws<Claims> claimsJws = this.jwtUtil.parseToken(token);
+
+        when(mockJwtUtil.parseToken(anyString())).thenReturn(claimsJws);
+        user.setToken(token);
+        when(tosService.hasUserAcceptedLatest(any())).thenReturn(true);
+        User.UserForDisplay currentUser = userService.getCurrentUser("Bearer " + token, true);
+        assertNotNull(currentUser);
+        assertEquals(user.getToken(), currentUser.getToken());
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -421,6 +476,114 @@ public class UserServiceTest {
         assertTrue(result.isPresent());
     }
 
+    @Test
+    public void testGetDefaultQueryTemplate() {
+        User user = createTestUser();
+        configureUserSecurityContext(user);
+        Application application = createTestApplication();
+
+        when(applicationRepository.findById(any(UUID.class))).thenReturn(Optional.of(application));
+        when(applicationRepository.findById(application.getUuid())).thenReturn(Optional.of(application));
+
+        Map<String, String> result = userService.getDefaultQueryTemplate();
+        assertTrue(result.containsKey("queryTemplate"));
+        assertNotNull(result.get("queryTemplate"));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testAddUsers_withUserHavingNullRoleSet() {
+        User user = createTestUser();
+        user.setRoles(null);
+
+        configureUserSecurityContext(user);
+        when(userRepository.saveAll(List.of(user))).thenReturn(List.of(user));
+
+        List<User> result = userService.addUsers(List.of(user));
+        assertNull(result.getFirst().getRoles());
+    }
+
+    @Test
+    public void testUpdateUser_withNoChanges() {
+        User user = createTestUser();
+        configureUserSecurityContext(user);
+        when(userRepository.findById(user.getUuid())).thenReturn(Optional.of(user));
+        when(userRepository.saveAll(List.of(user))).thenReturn(List.of(user));
+
+        doAnswer(invocation -> {
+            UUID argument = invocation.getArgument(0);
+            return user.getRoles().stream().filter(role -> role.getUuid().equals(argument)).findFirst();
+        }).when(roleService).getRoleById(any(UUID.class));
+
+        List<User> result = userService.updateUser(List.of(user));
+        assertEquals(user, result.getFirst());
+    }
+
+    @Test
+    public void testRefreshUserToken() {
+        User user = createTestUser();
+        configureUserSecurityContext(user);
+        when(userRepository.saveAll(List.of(user))).thenReturn(List.of(user));
+
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("sub", user.getSubject());
+
+        // Application Long term token
+        String token = jwtUtil.createJwtToken(
+                "whatever",
+                "edu.harvard.hms.dbmi.psama",
+                claims,
+                claims.get("sub").toString(),
+                longTermTokenExpirationTime
+        );
+
+        String authorizationHeader = "Bearer " + token;
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Authorization", authorizationHeader);
+
+        Jws<Claims> claimsJws = this.jwtUtil.parseToken(token);
+        when(mockJwtUtil.parseToken(anyString())).thenReturn(claimsJws);
+        when(mockJwtUtil.createJwtToken(anyString(), anyString(), anyMap(), anyString(), anyLong())).thenReturn(token);
+
+        Map<String, String> result = userService.refreshUserToken(headers);
+        assertNotNull(result);
+        assertEquals(token, result.get("userLongTermToken"));
+    }
+
+    @Test
+    public void testChangeRole() {
+        User user = createTestUser();
+        configureUserSecurityContext(user);
+        when(userRepository.saveAll(List.of(user))).thenReturn(List.of(user));
+
+        // new roles
+        Role role = createTestRole();
+        role.setName("NEW_ROLE");
+
+        Set<Role> newRoles = new HashSet<>();
+        newRoles.add(role);
+
+        userService.changeRole(user, newRoles);
+    }
+
+    @Test
+    public void testFindUserBySubject() {
+        User user = createTestUser();
+        when(userRepository.findBySubject(user.getSubject())).thenReturn(user);
+
+        User result = userService.findBySubject(user.getSubject());
+        assertNotNull(result);
+        assertEquals(user, result);
+    }
+
+    @Test
+    public void testSaveUser() {
+        User user = createTestUser();
+        when(userRepository.save(user)).thenReturn(user);
+
+        User result = userService.save(user);
+        assertNotNull(result);
+        assertEquals(user, result);
+    }
 
     private User createTestUser() {
         User user = new User();

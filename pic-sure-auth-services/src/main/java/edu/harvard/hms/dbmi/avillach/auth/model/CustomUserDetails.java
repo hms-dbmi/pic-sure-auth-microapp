@@ -14,7 +14,7 @@ public class CustomUserDetails implements UserDetails {
 
     public CustomUserDetails(User user) {
         this.user = user;
-        if (user != null) {
+        if (user != null && user.getRoles() != null) {
             this.authorities = user.getRoles().stream()
                     .map(role -> (GrantedAuthority) role::getName)
                     .toList();
