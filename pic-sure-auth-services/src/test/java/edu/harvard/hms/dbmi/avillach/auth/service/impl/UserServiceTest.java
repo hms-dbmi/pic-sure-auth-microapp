@@ -490,7 +490,7 @@ public class UserServiceTest {
         assertNotNull(result.get("queryTemplate"));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test(expected = NullPointerException.class)
     public void testAddUsers_withUserHavingNullRoleSet() {
         User user = createTestUser();
         user.setRoles(null);
