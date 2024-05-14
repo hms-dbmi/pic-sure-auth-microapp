@@ -33,8 +33,8 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 public class BasicMailService implements MailService {
 	private static final Logger logger = LoggerFactory.getLogger(BasicMailService.class);
 	private static final MustacheFactory mf = new DefaultMustacheFactory();
-	private final Mustache accessTemplate = compileTemplate("accessEmail.mustache");
-	private final Mustache deniedTemplate = compileTemplate("deniedAccessEmail.mustache");
+	private Mustache accessTemplate = compileTemplate("accessEmail.mustache");
+	private Mustache deniedTemplate = compileTemplate("deniedAccessEmail.mustache");
 	private final JavaMailSender mailSender;
 	private final String templatePath;
 	private final String systemName;
@@ -55,7 +55,7 @@ public class BasicMailService implements MailService {
 	/**
 	 * Compile mustache template from templateFile
      */
-	private Mustache compileTemplate(String templateFile)  {
+    Mustache compileTemplate(String templateFile)  {
 		try {
 			FileReader reader = new FileReader(templatePath + templateFile);
 			return mf.compile(reader, templateFile);
@@ -124,5 +124,13 @@ public class BasicMailService implements MailService {
 		helper.setText(emailTemplate.execute(new StringWriter(), scope).toString(), true);
 		mailSender.send(message);
 		logger.debug("sendEmail() finished");
+	}
+
+	public void setDeniedTemplate(Mustache deniedTemplate) {
+		this.deniedTemplate = deniedTemplate;
+	}
+
+	public void setAccessTemplate(Mustache accessTemplate) {
+		this.accessTemplate = accessTemplate;
 	}
 }
