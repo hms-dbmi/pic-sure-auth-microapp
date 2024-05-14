@@ -668,16 +668,6 @@ public class UserServiceTest {
         return Base64.getEncoder().encodeToString(secret);
     }
 
-//    String queryTemplateText = "{\"categoryFilters\": {\""
-//                    + consent_concept_path
-//                    + "\":\""
-//                    + project_name + "." + consent_group
-//                    + "\"},"
-//                    + "\"numericFilters\":{},\"requiredFields\":[],"
-//                    + "\"variantInfoFilters\":[{\"categoryVariantInfoFilters\":{},\"numericVariantInfoFilters\":{}}],"
-//                    + "\"expectedResultType\": \"COUNT\""
-//                    + "}";
-
     private String createQueryTemplate(String consent_concept_path, String project_name, String consent_group) {
     	return "{\"categoryFilters\": {\""
                 + consent_concept_path
