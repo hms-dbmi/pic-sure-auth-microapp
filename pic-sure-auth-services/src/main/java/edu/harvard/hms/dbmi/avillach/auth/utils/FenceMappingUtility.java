@@ -79,7 +79,7 @@ public class FenceMappingUtility {
                             new String[]{templatePath, "fence_mapping.json"}))
                     , FenceMapping.class);
 
-            projects = fenceMapping.getProjectMetaData();
+            projects = fenceMapping.getBio_data_catalyst();
             logger.debug("getFENCEMapping: found FENCE mapping with {} entries", projects.size());
         } catch (Exception e) {
             logger.error("loadFenceMappingData: Non-fatal error parsing fence_mapping.json: {}", templatePath, e);
