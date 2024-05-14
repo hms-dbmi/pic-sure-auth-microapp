@@ -1,6 +1,6 @@
 package edu.harvard.hms.dbmi.avillach.auth.model;
 
-public class BioDataCatalyst {
+public class ProjectMetaData {
     private int raw_clinical_variable_count;
     private int raw_clinical_sample_size;
     private String study_identifier;

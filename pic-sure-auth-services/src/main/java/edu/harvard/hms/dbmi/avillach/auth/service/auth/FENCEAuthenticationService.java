@@ -6,7 +6,6 @@ import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_parent
 import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_standard_access_rules;
 import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_topmed_consent_group_concept_path;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -20,7 +19,7 @@ import javax.ws.rs.core.Response;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import edu.harvard.hms.dbmi.avillach.auth.model.BioDataCatalyst;
+import edu.harvard.hms.dbmi.avillach.auth.model.ProjectMetaData;
 import edu.harvard.hms.dbmi.avillach.auth.utils.FenceMappingUtility;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.Header;
@@ -247,7 +246,7 @@ public class FENCEAuthenticationService {
 
     private void createAndUpsertRole(String access_role_name, User current_user) {
         logger.debug("createAndUpsertRole() starting...");
-        BioDataCatalyst projectMetadata = fenceMappingUtility.getFenceMappingByAuthZ().get(access_role_name);
+        ProjectMetaData projectMetadata = fenceMappingUtility.getFenceMappingByAuthZ().get(access_role_name);
 
         if (projectMetadata == null) {
             logger.error("getFENCEProfile() -> createAndUpsertRole could not find study in FENCE mapping SKIPPING: {}", access_role_name);

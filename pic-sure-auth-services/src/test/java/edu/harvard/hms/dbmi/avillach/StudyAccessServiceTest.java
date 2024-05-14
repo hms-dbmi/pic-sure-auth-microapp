@@ -1,7 +1,6 @@
 package edu.harvard.hms.dbmi.avillach;
 
-import edu.harvard.hms.dbmi.avillach.auth.data.repository.RoleRepository;
-import edu.harvard.hms.dbmi.avillach.auth.model.BioDataCatalyst;
+import edu.harvard.hms.dbmi.avillach.auth.model.ProjectMetaData;
 import edu.harvard.hms.dbmi.avillach.auth.rest.StudyAccessService;
 import edu.harvard.hms.dbmi.avillach.auth.service.auth.FENCEAuthenticationService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.FenceMappingUtility;
@@ -9,11 +8,9 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 import javax.ws.rs.core.Response;
-import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
@@ -47,7 +44,7 @@ public class StudyAccessServiceTest {
     @Test
     public void testAddStudyAccess() {
         String studyIdentifier = "testStudy";
-        BioDataCatalyst bioDataCatalyst = new BioDataCatalyst();
+        ProjectMetaData bioDataCatalyst = new ProjectMetaData();
         bioDataCatalyst.setStudy_identifier("testStudy");
         bioDataCatalyst.setConsent_group_code("");
         when(fenceMappingUtility.getFENCEMapping()).thenReturn(Map.of(studyIdentifier, bioDataCatalyst));
@@ -61,7 +58,7 @@ public class StudyAccessServiceTest {
     @Test
     public void testAddStudyAccessWithConsent() {
         String studyIdentifier = "testStudy2.c2";
-        BioDataCatalyst bioDataCatalyst = new BioDataCatalyst();
+        ProjectMetaData bioDataCatalyst = new ProjectMetaData();
         bioDataCatalyst.setStudy_identifier("testStudy2");
         bioDataCatalyst.setConsent_group_code("c2");
 

@@ -1,7 +1,7 @@
 package edu.harvard.hms.dbmi.avillach.auth.utils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import edu.harvard.hms.dbmi.avillach.auth.model.BioDataCatalyst;
+import edu.harvard.hms.dbmi.avillach.auth.model.ProjectMetaData;
 import edu.harvard.hms.dbmi.avillach.auth.model.FenceMapping;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,8 +21,8 @@ import java.util.*;
 public class FenceMappingUtility {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
-    private Map<String, BioDataCatalyst> _projectMap;
-    private Map<String, BioDataCatalyst> fenceMappingByAuthZ;
+    private Map<String, ProjectMetaData> _projectMap;
+    private Map<String, ProjectMetaData> fenceMappingByAuthZ;
     private static String templatePath;
     private ObjectMapper objectMapper;
 
@@ -43,9 +43,9 @@ public class FenceMappingUtility {
     }
 
     private void initializeFENCEMapping() throws IOException {
-        ArrayList<BioDataCatalyst> projects = loadBioDataCatalystFenceMappingData();
+        ArrayList<ProjectMetaData> projects = loadBioDataCatalystFenceMappingData();
         _projectMap = new HashMap<>(projects.size());
-        for (BioDataCatalyst project : projects) {
+        for (ProjectMetaData project : projects) {
             String consentVal = (project.getConsent_group_code() != null && !project.getConsent_group_code().isEmpty()) ?
                     project.getStudy_identifier() + "." + project.getConsent_group_code() :
                     project.getStudy_identifier();
@@ -54,24 +54,24 @@ public class FenceMappingUtility {
     }
 
     private void initializeFenceMappingByAuthZ() throws IOException {
-        ArrayList<BioDataCatalyst> projects = loadBioDataCatalystFenceMappingData();
+        ArrayList<ProjectMetaData> projects = loadBioDataCatalystFenceMappingData();
         fenceMappingByAuthZ = new HashMap<>(projects.size());
-        for (BioDataCatalyst project : projects) {
+        for (ProjectMetaData project : projects) {
             fenceMappingByAuthZ.put(project.getAuthZ().replace("\\/", "/"), project);
         }
     }
 
-    public Map<String, BioDataCatalyst> getFENCEMapping() {
+    public Map<String, ProjectMetaData> getFENCEMapping() {
         return _projectMap;
     }
 
-    public Map<String, BioDataCatalyst> getFenceMappingByAuthZ() {
+    public Map<String, ProjectMetaData> getFenceMappingByAuthZ() {
         return fenceMappingByAuthZ;
     }
 
-    private ArrayList<BioDataCatalyst> loadBioDataCatalystFenceMappingData() {
+    private ArrayList<ProjectMetaData> loadBioDataCatalystFenceMappingData() {
         FenceMapping fenceMapping;
-        ArrayList<BioDataCatalyst> projects;
+        ArrayList<ProjectMetaData> projects;
         try {
             logger.debug("getFENCEMapping: loading FENCE mapping from {}", templatePath);
             fenceMapping = objectMapper.readValue(
