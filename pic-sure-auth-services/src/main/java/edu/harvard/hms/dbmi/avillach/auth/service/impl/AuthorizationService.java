@@ -68,9 +68,6 @@ public class AuthorizationService {
 	 * @see AccessRule
 	 */
 	public boolean isAuthorized(Application application , Object requestBody, User user){
-
-	    // (application.getPrivileges().isEmpty() && !user.getPrivilegeNameSetByApplication(application).isEmpty())
-
         String applicationName = application.getName();
 		//in some cases, we don't go through the evaluation
 		if (requestBody == null) {
@@ -115,7 +112,6 @@ public class AuthorizationService {
         }
 
         Set<AccessRule> accessRules = preProcessAccessRules(privileges);
-
 		if (accessRules == null || accessRules.isEmpty()) {
 			logger.info("ACCESS_LOG ___ " + user.getUuid().toString() + "," + user.getEmail() + "," + user.getName() + 
 					" ___ has been granted access to execute query ___ " + formattedQuery + " ___ in application ___ " + applicationName
@@ -399,7 +395,7 @@ public class AuthorizationService {
      * @param parsedRequestBody
      * @return
      */
-	private boolean extractAndCheckRule(AccessRule accessRule, Object parsedRequestBody){
+    boolean extractAndCheckRule(AccessRule accessRule, Object parsedRequestBody){
 	    logger.debug("extractAndCheckRule() starting");
         String rule = accessRule.getRule();
 
@@ -586,7 +582,7 @@ public class AuthorizationService {
      * @param requestBodyValue
      * @return
      */
-    private boolean decisionMaker(AccessRule accessRule, String requestBodyValue){
+    boolean decisionMaker(AccessRule accessRule, String requestBodyValue){
 
         // it might be possible that sometimes there is value in the accessRule.getValue()
         // but the mergedValues doesn't have elements in it...
