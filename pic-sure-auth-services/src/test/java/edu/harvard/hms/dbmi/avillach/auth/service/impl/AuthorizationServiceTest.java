@@ -36,27 +36,27 @@ public class AuthorizationServiceTest {
         SecurityContextHolder.setContext(securityContext);
     }
 
-    @Test
-    public void testIsAuthorized_NoRequestBody() {
-        Application application = createTestApplication();
-        User user = createTestUser();
-
-        boolean result = authorizationService.isAuthorized(application, null, user);
-
-        assertTrue(result);
-    }
-
-    @Test
-    public void testIsAuthorized_NoPrivileges() {
-        Application application = createTestApplication();
-        User user = createTestUser();
-
-        user.getRoles().iterator().next().setPrivileges(Collections.emptySet());
-        boolean result = authorizationService.isAuthorized(application, new HashMap<>(), user);
-
-        assertFalse(result);
-    }
-
+//    @Test
+//    public void testIsAuthorized_NoRequestBody() {
+//        Application application = createTestApplication();
+//        User user = createTestUser();
+//
+//        boolean result = authorizationService.isAuthorized(application, null, user);
+//
+//        assertTrue(result);
+//    }
+//
+//    @Test
+//    public void testIsAuthorized_NoPrivileges() {
+//        Application application = createTestApplication();
+//        User user = createTestUser();
+//
+//        user.getRoles().iterator().next().setPrivileges(Collections.emptySet());
+//        boolean result = authorizationService.isAuthorized(application, new HashMap<>(), user);
+//
+//        assertFalse(result);
+//    }
+//
     @Test
     public void testIsAuthorized_AccessRulePassed() {
         Application application = createTestApplication();
@@ -179,6 +179,183 @@ public class AuthorizationServiceTest {
         boolean result = authorizationService.decisionMaker(accessRule, "differentValue");
 
         assertFalse(result);
+    }
+
+    @Test
+    public void testIsAuthorized_NoRequestBody() {
+        Application application = createTestApplication();
+        User user = createTestUser();
+        configureUserSecurityContext(user);
+        application.setPrivileges(user.getPrivilegesByApplication(application));
+
+        boolean result = authorizationService.isAuthorized(application, null, user);
+
+        assertTrue(result);
+    }
+
+    @Test
+    public void testIsAuthorized_NoPrivileges() {
+        Application application = createTestApplication();
+        User user = createTestUser();
+
+        user.getRoles().iterator().next().setPrivileges(Collections.emptySet());
+        boolean result = authorizationService.isAuthorized(application, new HashMap<>(), user);
+
+        assertFalse(result);
+    }
+
+    @Test
+    public void testEvaluateAccessRule_NoGates() {
+        AccessRule accessRule = new AccessRule();
+        accessRule.setRule("$.test");
+        accessRule.setType(AccessRule.TypeNaming.ALL_EQUALS);
+        accessRule.setValue("value");
+
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("test", "value");
+
+        boolean result = authorizationService.evaluateAccessRule(requestBody, accessRule);
+
+        assertTrue(result);
+    }
+
+    @Test
+    public void testEvaluateAccessRule_AllGatesPassed_AND() {
+        AccessRule gate1 = new AccessRule();
+        gate1.setRule("$.test");
+        gate1.setType(AccessRule.TypeNaming.ALL_EQUALS);
+        gate1.setValue("value");
+
+        AccessRule gate2 = new AccessRule();
+        gate2.setRule("$.test2");
+        gate2.setType(AccessRule.TypeNaming.ALL_EQUALS);
+        gate2.setValue("value2");
+
+        AccessRule accessRule = new AccessRule();
+        accessRule.setGates(new HashSet<>(Arrays.asList(gate1, gate2)));
+
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("test", "value");
+        requestBody.put("test2", "value2");
+
+        boolean result = authorizationService.evaluateAccessRule(requestBody, accessRule);
+
+        assertTrue(result);
+    }
+
+    @Test
+    public void testEvaluateAccessRule_OneGateFails_AND() {
+        AccessRule gate1 = new AccessRule();
+        gate1.setRule("$.test");
+        gate1.setType(AccessRule.TypeNaming.ALL_EQUALS);
+        gate1.setValue("value");
+
+        AccessRule gate2 = new AccessRule();
+        gate2.setRule("$.test2");
+        gate2.setType(AccessRule.TypeNaming.ALL_EQUALS);
+        gate2.setValue("value2");
+
+        AccessRule accessRule = new AccessRule();
+        accessRule.setGates(new HashSet<>(Arrays.asList(gate1, gate2)));
+
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("test", "value");
+        requestBody.put("test2", "differentValue");
+
+        boolean result = authorizationService.evaluateAccessRule(requestBody, accessRule);
+
+        assertFalse(result);
+    }
+
+    @Test
+    public void testEvaluateAccessRule_OneGatePassed_OR() {
+        AccessRule gate1 = new AccessRule();
+        gate1.setRule("$.test");
+        gate1.setType(AccessRule.TypeNaming.ALL_EQUALS);
+        gate1.setValue("value");
+
+        AccessRule gate2 = new AccessRule();
+        gate2.setRule("$.test2");
+        gate2.setType(AccessRule.TypeNaming.ALL_EQUALS);
+        gate2.setValue("value2");
+
+        AccessRule accessRule = new AccessRule();
+        accessRule.setGates(new HashSet<>(Arrays.asList(gate1, gate2)));
+        accessRule.setGateAnyRelation(true);
+
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("test", "value");
+        requestBody.put("test2", "differentValue");
+
+        boolean result = authorizationService.evaluateAccessRule(requestBody, accessRule);
+
+        assertTrue(result);
+    }
+
+    @Test
+    public void testEvaluateAccessRule_AllGatesFail_OR() {
+        AccessRule gate1 = new AccessRule();
+        gate1.setRule("$.test");
+        gate1.setType(AccessRule.TypeNaming.ALL_EQUALS);
+        gate1.setValue("value");
+
+        AccessRule gate2 = new AccessRule();
+        gate2.setRule("$.test2");
+        gate2.setType(AccessRule.TypeNaming.ALL_EQUALS);
+        gate2.setValue("value2");
+
+        AccessRule accessRule = new AccessRule();
+        accessRule.setGates(new HashSet<>(Arrays.asList(gate1, gate2)));
+        accessRule.setGateAnyRelation(true);
+
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("test", "differentValue");
+        requestBody.put("test2", "differentValue");
+
+        boolean result = authorizationService.evaluateAccessRule(requestBody, accessRule);
+
+        assertFalse(result);
+    }
+
+    @Test
+    public void testEvaluateAccessRule_EvaluateOnlyByGates() {
+        AccessRule gate1 = new AccessRule();
+        gate1.setRule("$.test");
+        gate1.setType(AccessRule.TypeNaming.ALL_EQUALS);
+        gate1.setValue("value");
+
+        AccessRule accessRule = new AccessRule();
+        accessRule.setGates(new HashSet<>(Collections.singletonList(gate1)));
+        accessRule.setEvaluateOnlyByGates(true);
+
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("test", "value");
+
+        boolean result = authorizationService.evaluateAccessRule(requestBody, accessRule);
+
+        assertTrue(result);
+    }
+
+    @Test
+    public void testEvaluateAccessRule_SubAccessRules() {
+        AccessRule subAccessRule = new AccessRule();
+        subAccessRule.setRule("$.test2");
+        subAccessRule.setType(AccessRule.TypeNaming.ALL_EQUALS);
+        subAccessRule.setValue("value2");
+
+        AccessRule accessRule = new AccessRule();
+        accessRule.setRule("$.test");
+        accessRule.setType(AccessRule.TypeNaming.ALL_EQUALS);
+        accessRule.setValue("value");
+        accessRule.setSubAccessRule(new HashSet<>(Collections.singletonList(subAccessRule)));
+
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("test", "value");
+        requestBody.put("test2", "value2");
+
+        boolean result = authorizationService.evaluateAccessRule(requestBody, accessRule);
+
+        assertTrue(result);
     }
 
     private Role createTestRole() {
