@@ -1,5 +1,6 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.impl;
 
+import edu.harvard.hms.dbmi.avillach.auth.entity.Application;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
@@ -12,6 +13,8 @@ import edu.harvard.hms.dbmi.avillach.auth.repository.UserRepository;
 import edu.harvard.hms.dbmi.avillach.auth.service.RoleService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming;
 import edu.harvard.hms.dbmi.avillach.auth.utils.JWTUtil;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
 import jakarta.mail.MessagingException;
 import org.junit.Before;
 import org.junit.Test;
@@ -22,6 +25,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.security.SecureRandom;
 import java.util.*;
 
 import static org.junit.Assert.*;
@@ -44,8 +48,12 @@ public class UserServiceTest {
     private ApplicationRepository applicationRepository;
     @Mock
     private RoleService roleService;
-    @Mock
+
     private JWTUtil jwtUtil;
+
+    @Mock
+    private JWTUtil mockJwtUtil;
+
     @Mock
     private RoleRepository roleRepository;
 
@@ -63,6 +71,7 @@ public class UserServiceTest {
         SecurityContextHolder.setContext(securityContext);
         when(securityContext.getAuthentication()).thenReturn(authentication);
 
+        jwtUtil = new JWTUtil(generate256Base64Secret(), true);
         applicationUUID = UUID.randomUUID().toString();
         userService = new UserService(
                 basicMailService,
@@ -74,7 +83,7 @@ public class UserServiceTest {
                 defaultTokenExpirationTime,
                 applicationUUID,
                 longTermTokenExpirationTime,
-                jwtUtil);
+                mockJwtUtil);
     }
 
     @Test
@@ -327,6 +336,35 @@ public class UserServiceTest {
     }
 
     @Test
+    public void testGetCurrentUser() {
+        User user = createTestUser();
+        configureUserSecurityContext(user);
+
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("sub", user.getSubject());
+
+        // Application Long term token
+        String token = jwtUtil.createJwtToken(
+                "whatever",
+                "edu.harvard.hms.dbmi.psama",
+                claims,
+                claims.get("sub").toString(),
+                longTermTokenExpirationTime
+        );
+
+        Jws<Claims> claimsJws = this.jwtUtil.parseToken(token);
+        System.out.println(claimsJws);
+
+        when(mockJwtUtil.parseToken(anyString())).thenReturn(claimsJws);
+
+        user.setToken(token);
+        when(tosService.hasUserAcceptedLatest(any())).thenReturn(true);
+        User.UserForDisplay currentUser = userService.getCurrentUser("Bearer " + token, true);
+        assertNotNull(currentUser);
+        assertEquals(user.getToken(), currentUser.getToken());
+    }
+
+    @Test
     public void testGetCurrentUser_noUserInContext() {
         when(securityContext.getAuthentication()).thenReturn(null);
 
@@ -343,6 +381,47 @@ public class UserServiceTest {
         userService.getQueryTemplate(null);
     }
 
+    @Test
+    public void testGetUserProfileResponse_withoutAcceptedTOS() {
+        User user = createTestUser();
+        when(tosService.hasUserAcceptedLatest(anyString())).thenReturn(false);
+
+        HashMap<String, Object> claims = new HashMap<>();
+        claims.put("email", user.getEmail());
+        claims.put("sub", user.getSubject());
+
+        HashMap<String, String> result = userService.getUserProfileResponse(claims);
+        assertEquals("false", result.get("acceptedTOS"));
+    }
+
+    @Test
+    public void testGetUserProfileResponse_withAcceptedTOS() {
+        User user = createTestUser();
+        when(tosService.hasUserAcceptedLatest(anyString())).thenReturn(true);
+
+        HashMap<String, Object> claims = new HashMap<>();
+        claims.put("email", user.getEmail());
+        claims.put("sub", user.getSubject());
+
+        HashMap<String, String> result = userService.getUserProfileResponse(claims);
+        assertEquals("true", result.get("acceptedTOS"));
+    }
+
+    @Test
+    public void testGetQueryTemplate_validApplicationId() {
+        User user = createTestUser();
+        configureUserSecurityContext(user);
+        Application application = createTestApplication();
+
+
+        when(applicationRepository.findById(any(UUID.class))).thenReturn(Optional.of(application));
+        when(applicationRepository.findById(application.getUuid())).thenReturn(Optional.of(application));
+
+        Optional<String> result = userService.getQueryTemplate(application.getUuid().toString());
+        assertTrue(result.isPresent());
+    }
+
+
     private User createTestUser() {
         User user = new User();
         user.setUuid(UUID.randomUUID());
@@ -353,6 +432,26 @@ public class UserServiceTest {
         user.setActive(true);
 
         return user;
+    }
+
+    private Application createTestApplication() {
+        Application application = new Application();
+        application.setUuid(UUID.randomUUID());
+        application.setName("TEST_APPLICATION");
+        application.setToken(createValidApplicationTestToken(application));
+        application.setPrivileges(new HashSet<>());
+        return application;
+    }
+
+    private String createValidApplicationTestToken(Application application) {
+        return this.jwtUtil.createJwtToken(
+                null, null,
+                new HashMap<>(
+                        Map.of(
+                                "user_id", AuthNaming.PSAMA_APPLICATION_TOKEN_PREFIX + "|" + application.getName()
+                        )
+                ),
+                AuthNaming.PSAMA_APPLICATION_TOKEN_PREFIX + "|" + application.getUuid().toString(), 365L * 1000 * 60 * 60 * 24);
     }
 
     private Role createTestRole() {
@@ -367,6 +466,8 @@ public class UserServiceTest {
         Privilege privilege = new Privilege();
         privilege.setName("TEST_PRIVILEGE");
         privilege.setUuid(UUID.randomUUID());
+        privilege.setQueryTemplate(createQueryTemplate("consent_concept_path_"+privilege.getUuid(), "project_name_"+privilege.getUuid(), "consent_group_"+privilege.getUuid()));
+
         return privilege;
     }
 
@@ -390,6 +491,40 @@ public class UserServiceTest {
         privilege.setName(AuthNaming.AuthRoleNaming.SUPER_ADMIN);
         privilege.setUuid(UUID.randomUUID());
         return privilege;
+    }
+
+    /**
+     * Do not use this method in production code. This is only for testing purposes.
+     *
+     * @return a 256-bit base64 encoded secret
+     */
+    private String generate256Base64Secret() {
+        SecureRandom random = new SecureRandom();
+        byte[] secret = new byte[32];
+        random.nextBytes(secret);
+        return Base64.getEncoder().encodeToString(secret);
+    }
+
+//    String queryTemplateText = "{\"categoryFilters\": {\""
+//                    + consent_concept_path
+//                    + "\":\""
+//                    + project_name + "." + consent_group
+//                    + "\"},"
+//                    + "\"numericFilters\":{},\"requiredFields\":[],"
+//                    + "\"variantInfoFilters\":[{\"categoryVariantInfoFilters\":{},\"numericVariantInfoFilters\":{}}],"
+//                    + "\"expectedResultType\": \"COUNT\""
+//                    + "}";
+
+    private String createQueryTemplate(String consent_concept_path, String project_name, String consent_group) {
+    	return "{\"categoryFilters\": {\""
+                + consent_concept_path
+                + "\":\""
+                + project_name + "." + consent_group
+                + "\"},"
+                + "\"numericFilters\":{},\"requiredFields\":[],"
+                + "\"variantInfoFilters\":[{\"categoryVariantInfoFilters\":{},\"numericVariantInfoFilters\":{}}],"
+                + "\"expectedResultType\": \"COUNT\""
+                + "}";
     }
 
 }
