@@ -36,27 +36,6 @@ public class AuthorizationServiceTest {
         SecurityContextHolder.setContext(securityContext);
     }
 
-//    @Test
-//    public void testIsAuthorized_NoRequestBody() {
-//        Application application = createTestApplication();
-//        User user = createTestUser();
-//
-//        boolean result = authorizationService.isAuthorized(application, null, user);
-//
-//        assertTrue(result);
-//    }
-//
-//    @Test
-//    public void testIsAuthorized_NoPrivileges() {
-//        Application application = createTestApplication();
-//        User user = createTestUser();
-//
-//        user.getRoles().iterator().next().setPrivileges(Collections.emptySet());
-//        boolean result = authorizationService.isAuthorized(application, new HashMap<>(), user);
-//
-//        assertFalse(result);
-//    }
-//
     @Test
     public void testIsAuthorized_AccessRulePassed() {
         Application application = createTestApplication();
