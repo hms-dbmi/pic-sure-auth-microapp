@@ -73,10 +73,6 @@ public class FENCEAuthenticationService {
     private Application picSureApp;
     private Connection fenceConnection;
 
-    //read the fence_mapping.json into this object to improve lookup speeds
-    private static Map<String, Map> _projectMap;
-    private static Map<String, Map> fenceMappingByAuthZ;
-
     private static final String parentAccessionField = "\\\\_Parent Study Accession with Subject ID\\\\";
     private static final String topmedAccessionField = "\\\\_Topmed Study Accession with Subject ID\\\\";
 
@@ -155,7 +151,7 @@ public class FENCEAuthenticationService {
     }
 
     // Get access_token from FENCE, based on the provided `code`
-    public Response getFENCEProfile(String callback_url, Map<String, String> authRequest) throws IOException {
+    public Response getFENCEProfile(String callback_url, Map<String, String> authRequest) {
         logger.debug("getFENCEProfile() starting...");
         String fence_code  = authRequest.get("code");
 
@@ -405,20 +401,19 @@ public class FENCEAuthenticationService {
         logger.info("addFENCEPrivileges() project name: "+project_name+" consent group: "+consent_group);
 
         // Look up the metadata by consent group.
-       Map projectMetadata = getFENCEMappingforProjectAndConsent(project_name, consent_group);
-
-        if(projectMetadata == null || projectMetadata.isEmpty()) {
+       ProjectMetaData projectMetadata = getFENCEMappingforProjectAndConsent(project_name, consent_group);
+        if(projectMetadata == null) {
         	//no privileges means no access to this project.  just return existing set of privs.
-        	logger.warn("No metadata available for project " + project_name + "." + consent_group);
+            logger.warn("No metadata available for project {}.{}", project_name, consent_group);
         	return privs;
         }
 
         logger.info("addPrivileges() This is a new privilege");
 
-        String dataType = (String) projectMetadata.get("data_type");
-        Boolean isHarmonized = "Y".equals(projectMetadata.get("is_harmonized"));
-        String concept_path = (String) projectMetadata.get("top_level_path");
-        String projectAlias = (String) projectMetadata.get("abbreviated_name");
+        String dataType = projectMetadata.getData_type();
+        Boolean isHarmonized = "Y".equals(projectMetadata.getIs_harmonized());
+        String concept_path = projectMetadata.getTop_level_path();
+        String projectAlias = projectMetadata.getAbbreviated_name();
 
         //we need to add escape sequence back in to the path for parsing later (also need to double escape the regex)
         //
@@ -1145,16 +1140,15 @@ public class FENCEAuthenticationService {
 		return gate;
 	}
 
-	private Map getFENCEMappingforProjectAndConsent(String projectId, String consent_group) {
-
-		String consentVal = (consent_group != null && consent_group != "") ? projectId + "." + consent_group : projectId;
+	private ProjectMetaData getFENCEMappingforProjectAndConsent(String projectId, String consent_group) {
+		String consentVal = (consent_group != null && !consent_group.isEmpty()) ? projectId + "." + consent_group : projectId;
         logger.info("getFENCEMappingforProjectAndConsent() looking up {}", consentVal);
 
-		Object projectMetadata = fenceMappingUtility.getFENCEMapping().get(consentVal);
+		ProjectMetaData projectMetadata = fenceMappingUtility.getFENCEMapping().get(consentVal);
 		if( projectMetadata instanceof Map) {
-			return (Map)projectMetadata;
+			return projectMetadata;
 		} else if (projectMetadata != null) {
-			logger.info("getFENCEMappingforProjectAndConsent() Obj instance of " + projectMetadata.getClass().getCanonicalName());
+            logger.info("getFENCEMappingforProjectAndConsent() Obj instance of {}", projectMetadata.getClass().getCanonicalName());
 		}
 		return null;
 	}
