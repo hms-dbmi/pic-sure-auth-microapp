@@ -47,16 +47,17 @@ public class AuthenticationService {
     private final UserService userService;
     private static final int AUTH_RETRY_LIMIT = 3;
 
-    private final String deniedEmailEnabled;
+    private String deniedEmailEnabled;
 
     private final String auth0host;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final ConnectionRepository connectionRepository;
+    private final RestClientUtil restClientUtil;
 
     @Autowired
     public AuthenticationService(OauthUserMatchingService matchingService, UserRepository userRepository, BasicMailService basicMailService, UserService userService,
-                                 @Value("${application.denied.email.enabled}") String deniedEmailEnabled, @Value("${application.auth0.host}") String auth0host, ConnectionRepository connectionRepository) {
+                                 @Value("${application.denied.email.enabled}") String deniedEmailEnabled, @Value("${application.auth0.host}") String auth0host, ConnectionRepository connectionRepository, RestClientUtil restClientUtil) {
         this.matchingService = matchingService;
         this.userRepository = userRepository;
         this.basicMailService = basicMailService;
@@ -64,6 +65,7 @@ public class AuthenticationService {
         this.deniedEmailEnabled = deniedEmailEnabled;
         this.auth0host = auth0host;
         this.connectionRepository = connectionRepository;
+        this.restClientUtil = restClientUtil;
     }
 
     public ResponseEntity<?> getToken(Map<String, String> authRequest) throws IOException {
@@ -119,7 +121,7 @@ public class AuthenticationService {
         return PICSUREResponse.success(responseMap);
     }
 
-    private JsonNode retrieveUserInfo(String accessToken) throws IOException {
+    JsonNode retrieveUserInfo(String accessToken) throws IOException {
         String auth0UserInfoURI = this.auth0host + "/userinfo";
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -129,10 +131,10 @@ public class AuthenticationService {
 
         for (int i = 1; i <= AUTH_RETRY_LIMIT && auth0Response == null; i++) {
             try {
-                ResponseEntity<String> response = RestClientUtil.retrieveGetResponseWithRequestConfiguration(
+                ResponseEntity<String> response = this.restClientUtil.retrieveGetResponseWithRequestConfiguration(
                         auth0UserInfoURI,
                         headers,
-                        createRequestConfigWithCustomTimeout(2000)
+                        this.createRequestConfigWithCustomTimeout(2000)
                 );
 
                 auth0Response = objectMapper.readTree(response.getBody());
@@ -153,5 +155,9 @@ public class AuthenticationService {
         requestFactory.setConnectTimeout(timeoutMs);
         requestFactory.setReadTimeout(timeoutMs);
         return requestFactory;
+    }
+
+    public void setDeniedEmailEnabled(String deniedEmailEnabled) {
+        this.deniedEmailEnabled = deniedEmailEnabled;
     }
 }

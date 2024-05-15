@@ -34,6 +34,10 @@ public class RoleService {
         return roleRepository.findById(UUID.fromString(roleId));
     }
 
+    public Optional<Role> getRoleById(UUID roleId) {
+        return roleRepository.findById(roleId);
+    }
+
     public List<Role> getAllRoles() {
         return roleRepository.findAll();
     }

@@ -4,6 +4,7 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.util.ArrayList;
 import java.util.Collection;
 
 public class CustomUserDetails implements UserDetails {
@@ -13,9 +14,13 @@ public class CustomUserDetails implements UserDetails {
 
     public CustomUserDetails(User user) {
         this.user = user;
-        this.authorities = user.getRoles().stream()
-                .map(role -> (GrantedAuthority) role::getName)
-                .toList();
+        if (user != null && user.getRoles() != null) {
+            this.authorities = user.getRoles().stream()
+                    .map(role -> (GrantedAuthority) role::getName)
+                    .toList();
+        } else {
+            this.authorities = new ArrayList<>();
+        }
     }
 
     @Override

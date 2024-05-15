@@ -62,8 +62,12 @@ public class Application extends BaseEntity implements Principal {
     }
 
     public void setPrivileges(Set<Privilege> privileges) {
-        this.privileges.clear();
-        this.privileges.addAll(privileges);
+        if (this.privileges != null) {
+            this.privileges.clear();
+            this.privileges.addAll(privileges);
+        } else {
+            this.privileges = privileges;
+        }
     }
 
     public String getUrl() {

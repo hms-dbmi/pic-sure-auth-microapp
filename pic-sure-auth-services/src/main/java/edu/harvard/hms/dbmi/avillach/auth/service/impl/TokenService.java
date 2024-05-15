@@ -5,8 +5,8 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.exceptions.NotAuthorizedException;
 import edu.harvard.hms.dbmi.avillach.auth.model.CustomApplicationDetails;
+import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
 import edu.harvard.hms.dbmi.avillach.auth.model.TokenInspection;
-import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.repository.UserRepository;
 import edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming;
 import edu.harvard.hms.dbmi.avillach.auth.utils.JWTUtil;
@@ -76,7 +76,7 @@ public class TokenService {
         TokenInspection tokenInspection = new TokenInspection();
         String token = (String) inputMap.get("token");
         if (token == null || token.isEmpty()) {
-            logger.error("Token - " + token + " is blank");
+            logger.error("Token - {} is blank", token);
             tokenInspection.setMessage("Token not found");
             return tokenInspection;
         }
@@ -108,12 +108,11 @@ public class TokenService {
             SecurityContext securityContext = SecurityContextHolder.getContext();
             String principalName = securityContext.getAuthentication().getName();
             logger.error("{} - {} - is trying to use token introspection endpoint, but it is not an application", principalName, principalName);
-            throw new IllegalAccessException("The application token does not associate with an application but "
-                    + principalName);
+            throw new IllegalAccessException("The application token does not associate with an application but " + principalName);
         }
 
         // application null check should be finished when application token goes through the JWTFilter authentication process,
-        // here we just double check it to prevent a null application object goes further.
+        // here we just double-check it to prevent a null application object goes further.
         if (application == null) {
             logger.error("_inspectToken() There is no application in securityContext, which shall not be.");
             throw new NullPointerException("Inner application error, please ask admin to check the log.");
@@ -137,13 +136,12 @@ public class TokenService {
         }
 
         user = this.userRepository.findBySubject(subject);
-        logger.info("_inspectToken() user with subject - {} - exists in database", subject);
+        logger.info("_inspectToken() does user with subject - {} - exists in database", subject);
         if (user == null) {
             logger.error("_inspectToken() could not find user with subject {}", subject);
             tokenInspection.setMessage("user doesn't exist");
             return tokenInspection;
         }
-
 
         //Essentially we want to return jws.getBody() with an additional active: true field
         //only under certain circumstances, the token will return active
@@ -213,16 +211,13 @@ public class TokenService {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Object principal = authentication.getPrincipal();
-        if (!(principal instanceof User)) {
-            logger.error("refreshToken() Security context didn't have a user stored.");
-        }
-
-        if (!(principal instanceof User user)) {
+        if (!(principal instanceof CustomUserDetails customUserDetails)) {
             logger.error("refreshToken() Principal is not an instance of User.");
             throw new NotAuthorizedException("User not found");
         }
 
-        if (user.getUuid() == null) {
+        User user = customUserDetails.getUser();
+        if (user == null || user.getUuid() == null) {
             logger.error("refreshToken() Stored user doesn't have a uuid.");
             return Map.of("error", "Inner application error, please contact admin.");
         }
@@ -241,6 +236,7 @@ public class TokenService {
         String subject = loadUser.get().getSubject();
         if (subject == null || subject.isEmpty()) {
             logger.error("refreshToken() subject doesn't exist in the user.");
+            return Map.of("error", "Inner application error, please contact admin.");
         }
 
         // parse origin token
@@ -248,16 +244,12 @@ public class TokenService {
         try {
             String token = JWTUtil.getTokenFromAuthorizationHeader(authorizationHeader).orElseThrow(() -> new NotAuthorizedException("Token not found"));
             jws = this.jwtUtil.parseToken(token);
-
         } catch (NotAuthorizedException ex) {
             return Map.of("error", "Cannot parse original token");
         }
 
         Claims claims = jws.getPayload();
-
-        // just check if the subject is along with the database record,
-        // just in case something has changed in middle
-        if (StringUtils.isNotBlank(subject) && !subject.equals(claims.getSubject())) {
+        if (!subject.equals(claims.getSubject())) {
             logger.error("refreshToken() user subject is not the same as the subject of the input token");
             return Map.of("error", "Inner application error, try again or contact admin.");
         }

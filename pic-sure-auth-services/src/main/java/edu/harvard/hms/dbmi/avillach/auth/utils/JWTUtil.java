@@ -118,4 +118,14 @@ public class JWTUtil {
 
         return Optional.of(authorizationHeader.substring("Bearer".length()).trim());
     }
+
+    public String setClientSecret(String clientSecret) {
+        return clientSecret;
+    }
+
+    public boolean setClientSecretIsBase64(boolean clientSecretIsBase64) {
+        return clientSecretIsBase64;
+    }
+
+
 }

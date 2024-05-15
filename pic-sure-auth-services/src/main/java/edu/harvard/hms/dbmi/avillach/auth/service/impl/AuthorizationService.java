@@ -258,7 +258,7 @@ public class AuthorizationService {
      * @param parsedRequestBody
      * @return
      */
-    private boolean extractAndCheckRule(AccessRule accessRule, Object parsedRequestBody) {
+    boolean extractAndCheckRule(AccessRule accessRule, Object parsedRequestBody){
         logger.debug("extractAndCheckRule() starting");
         String rule = accessRule.getRule();
 
@@ -443,7 +443,7 @@ public class AuthorizationService {
      * @param requestBodyValue
      * @return
      */
-    private boolean decisionMaker(AccessRule accessRule, String requestBodyValue) {
+    boolean decisionMaker(AccessRule accessRule, String requestBodyValue){
 
         // it might be possible that sometimes there is value in the accessRule.getValue()
         // but the mergedValues doesn't have elements in it...
