@@ -80,7 +80,7 @@ public class OauthUserMatchingService {
 			}
 
 			//We only care about unmatched users
-			List<User> users = userRepo.findByConnectionAndMatched(connection.orElse(null), false);
+			List<User> users = userRepo.findByConnectionAndMatched(connection.get(), false);
 			if (users == null || users.isEmpty()) {
                 logger.info("No unmatched users exist with connectionId {}", connection);
 				return null;
