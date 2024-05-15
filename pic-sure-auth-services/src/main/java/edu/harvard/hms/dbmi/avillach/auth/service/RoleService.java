@@ -89,7 +89,7 @@ public class RoleService {
         Set<String> roles = context.getAuthentication().getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority).collect(Collectors.toSet());
 
-        if (!SecurityRoles.contains(roles, SecurityRoles.PIC_SURE_TOP_ADMIN.getRole())){
+        if (!roles.contains(SecurityRoles.PIC_SURE_TOP_ADMIN.getRole()){
             logger.info("User doesn't have PIC-SURE Top Admin role, can't remove any role");
             return Optional.empty();
         }
