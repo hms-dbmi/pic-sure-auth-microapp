@@ -214,7 +214,7 @@ public class FENCEAuthenticationService {
             ProjectMetaData projectMetadata = fenceMappingUtility.getFenceMappingByAuthZ().get(access_role_name);
 
             if (projectMetadata == null) {
-                logger.error("getFENCEProfile() -> createAndUpsertRole could not find study in FENCE mapping SKIPPING: {}", access_role_name);
+                logger.info("getFENCEProfile() -> createAndUpsertRole could not find study in FENCE mapping SKIPPING: {}", access_role_name);
                 continue;
             }
 
