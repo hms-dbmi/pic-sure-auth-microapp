@@ -6,11 +6,9 @@ import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_parent
 import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_standard_access_rules;
 import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_topmed_consent_group_concept_path;
 
-import java.io.IOException;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
@@ -221,26 +219,70 @@ public class FENCEAuthenticationService {
             project_access_set.add(newRoleName);
         }
 
-        // given a set of all access role names, we can create a sinlge query to get all Role objects
-        // that match the names in the set
-        Set<String> roles = roleRepo.getRoleNamesByNames(project_access_set);
+        /*
+        Considerations for updating the user's roles:
+        1. If the user has a role that is not in the project_access_set, we need to remove it.
+            a. Unless it is a manual role, PIC-SURE Top Admin, Admin, and Manual, in which case we do not need to do anything.
+        2. If the user does not have a role that is in the project_access_set, we need to add it.
+            a. We can first check if the role exists in the database, and if it does, we can add it to the user.
+            b. If the role does not exist in the database, we need to create it and add it to the user.
+        3. If the user has a role that is in the project_access_set, we do not need to do anything.
+         */
+
+        // Step 1: Remove roles that are not in the project_access_set
+        Set<Role> rolesToRemove = new HashSet<>();
+        // Also, track the roles that are assigned to the user and in the project_access_set
+        Set<String> rolesAssigned = new HashSet<>();
+        for (Role role : current_user.getRoles()) {
+            // .filter(userRole -> "PIC-SURE Top Admin".equals(userRole.getName()) || "Admin".equals(userRole.getName()) || userRole.getName().startsWith("MANUAL_"))
+            if (!project_access_set.contains(role.getName())
+                    && !role.getName().startsWith("MANUAL_")
+                    && !role.getName().equals(fence_open_access_role_name)
+                    && !role.getName().equals("PIC-SURE Top Admin")
+                    && !role.getName().equals("Admin")) {
+                rolesToRemove.add(role);
+            }
+
+            if (project_access_set.contains(role.getName())) {
+                rolesAssigned.add(role.getName());
+            }
+        }
+
+        // Remove roles that are not in the project_access_set
+        if (!CollectionUtils.isEmpty(rolesToRemove)) {
+            logger.info("getFENCEProfile() removing roles: {}", rolesToRemove);
+            current_user.getRoles().removeAll(rolesToRemove);
+        }
+
+        // Given the set of roles assigned and that set of roles that should be assigned, we can reduce the set of roles from the project_access_set
+        // to only those that are not in the rolesAssigned set
+        project_access_set.removeAll(rolesAssigned);
+
+        // Given our reduced list of roles that should be assigned, we can determine which of those roles are not in the database
+        // This also tells use which roles are in the database
+        Set<String> rolesThatExist = roleRepo.getRoleNamesByNames(project_access_set);
+
+        // Assign the roles that exist in the database to the user
+        logger.info("getFENCEProfile() roles that exist in the database: {}", rolesThatExist);
+        roleRepo.getRolesByNames(rolesThatExist).forEach(role -> current_user.getRoles().add(role));
 
         // Given a set of all access role names that exist in the database we can now determine which do not exist
         // and create them
-        project_access_set.removeAll(roles);
-        logger.info("getFENCEProfile() roles that do not exist in the database: {}", project_access_set);
+        project_access_set.removeAll(rolesThatExist);
 
+        logger.info("getFENCEProfile() roles that do not exist in the database: {}", project_access_set);
         // Given the set of all access role names that do not exist in the database we can now create them
         ArrayList<Role> newRoles = new ArrayList<>();
         for (String access_role_name : project_access_set) {
             newRoles.add(createAndUpsertRole(access_role_name, current_user));
         }
 
-        // add the new roles to the user
-        current_user.getRoles().addAll(newRoles);
-
         // Persist the new roles
+        logger.info("getFENCEProfile() persisting {} new roles", newRoles.size());
         roleRepo.persistAll(newRoles);
+
+        // Assign the new roles to the user
+        current_user.getRoles().addAll(newRoles);
 
         final String idp = extractIdp(current_user);
         if (current_user.getRoles() != null && (!current_user.getRoles().isEmpty() || openAccessIdpValues.contains(idp))) {
@@ -316,15 +358,15 @@ public class FENCEAuthenticationService {
 
         User actual_user = userRepo.findOrCreate(new_user);
 
-        Set<Role> roles = new HashSet<>();
-        if (actual_user != null && !CollectionUtils.isEmpty(actual_user.getRoles()))  {
-            roles = actual_user.getRoles().stream()
-                .filter(userRole -> "PIC-SURE Top Admin".equals(userRole.getName()) || "Admin".equals(userRole.getName()) || userRole.getName().startsWith("MANUAL_"))
-                .collect(Collectors.toSet());
-        }
+//        Set<Role> roles = new HashSet<>();
+//        if (actual_user != null && !CollectionUtils.isEmpty(actual_user.getRoles()))  {
+//            roles = actual_user.getRoles().stream()
+//                .filter(userRole -> "PIC-SURE Top Admin".equals(userRole.getName()) || "Admin".equals(userRole.getName()) || userRole.getName().startsWith("MANUAL_"))
+//                .collect(Collectors.toSet());
+//        }
 
         // Clear current set of roles every time we create or retrieve a user but persist admin status
-        actual_user.setRoles(roles);
+//        actual_user.setRoles(roles);
 
         logger.debug("createUserFromFENCEProfile() cleared roles");
 

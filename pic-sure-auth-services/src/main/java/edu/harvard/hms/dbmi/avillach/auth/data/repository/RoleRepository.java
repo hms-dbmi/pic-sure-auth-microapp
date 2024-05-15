@@ -5,10 +5,7 @@ import edu.harvard.hms.dbmi.avillach.auth.data.entity.Role;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.transaction.Transactional;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * <p>Provides operations for the Role entity to interact with a database.</p>
@@ -45,5 +42,11 @@ public class RoleRepository extends BaseRepository<Role, UUID> {
             em.flush();
             em.clear();
         }
+    }
+
+    public Set<Role> getRolesByNames(Set<String> rolesThatExist) {
+        return new HashSet<>(em.createQuery("SELECT r FROM role r WHERE r.name IN :rolesThatExist", Role.class)
+                .setParameter("rolesThatExist", rolesThatExist)
+                .getResultList());
     }
 }
