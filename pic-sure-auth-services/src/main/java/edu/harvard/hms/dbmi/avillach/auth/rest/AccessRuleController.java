@@ -14,6 +14,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming.AuthRoleNaming.ADMIN;
@@ -55,7 +56,7 @@ public class AccessRuleController {
     @Operation(description = "GET a list of existing AccessRules, requires ADMIN or SUPER_ADMIN role")
     @Secured({ADMIN, SUPER_ADMIN})
     @GetMapping("")
-    public ResponseEntity<?> getAccessRuleAll() {
+    public ResponseEntity<List<AccessRule>> getAccessRuleAll() {
         List<AccessRule> allAccessRules = this.accessRuleService.getAllAccessRules();
         return PICSUREResponse.success(allAccessRules);
     }
@@ -78,7 +79,7 @@ public class AccessRuleController {
     @Operation(description = "Update a list of AccessRules, will only update the fields listed, requires SUPER_ADMIN role")
     @RolesAllowed(SUPER_ADMIN)
     @PutMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> updateAccessRule(
+    public ResponseEntity<List<AccessRule>> updateAccessRule(
             @Parameter(required = true, description = "A list of AccessRule with fields to be updated in JSON format")
             @RequestBody List<AccessRule> accessRules) {
         accessRules = this.accessRuleService.updateAccessRules(accessRules);
@@ -88,7 +89,7 @@ public class AccessRuleController {
     @Operation(description = "DELETE an AccessRule by Id only if the accessRule is not associated by others, requires SUPER_ADMIN role")
     @RolesAllowed(SUPER_ADMIN)
     @DeleteMapping(path = "/{accessRuleId}")
-    public ResponseEntity<?> removeById(
+    public ResponseEntity<List<AccessRule>> removeById(
             @Parameter(required = true, description = "A valid accessRule Id")
             @PathVariable("accessRuleId") final String accessRuleId) {
         return PICSUREResponse.success(this.accessRuleService.removeAccessRuleById(accessRuleId));
@@ -97,7 +98,7 @@ public class AccessRuleController {
     @Operation(description = "GET all types listed for the rule in accessRule that could be used, requires SUPER_ADMIN role")
     @RolesAllowed(SUPER_ADMIN)
     @GetMapping(path = "/allTypes", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> getAllTypes() {
+    public ResponseEntity<Map<String, Integer>> getAllTypes() {
         return PICSUREResponse.success(AccessRule.TypeNaming.getTypeNameMap());
     }
 

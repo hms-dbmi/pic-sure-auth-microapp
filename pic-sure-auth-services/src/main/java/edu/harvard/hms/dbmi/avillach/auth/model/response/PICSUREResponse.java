@@ -15,68 +15,63 @@ public class PICSUREResponse {
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
-    public static ResponseEntity<?> success(Object content) {
-        return new ResponseEntity<>(content, HttpStatus.OK);
+    public static <T> ResponseEntity<T> success(T content) {
+        return ResponseEntity.ok(content);
     }
 
-    public static ResponseEntity<?> success(String message, Object content) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", message);
-        response.put("content", content);
-        return new ResponseEntity<>(response, HttpStatus.OK);
+    public static <T> ResponseEntity<PicSureResponseBody<T>> success(String message, T content) {
+        PicSureResponseBody<T> body = new PicSureResponseBody<>(message, content);
+        return new ResponseEntity<>(body, HttpStatus.OK);
     }
 
-    public static ResponseEntity<?> error(Object content) {
+    public static <T> ResponseEntity<T> error(T content) {
         return error(DEFAULT_RESPONSE_ERROR_CODE, content);
     }
 
-    public static ResponseEntity<?> error(String message, Object content) {
+    public static <T> ResponseEntity<PicSureResponseBody<T>> error(String message, T content) {
         return error(DEFAULT_RESPONSE_ERROR_CODE, message, content);
     }
 
-    public static ResponseEntity<?> error(HttpStatus status, Object content) {
+    public static <T> ResponseEntity<T> error(HttpStatus status, T content) {
         if (status == null) {
             status = DEFAULT_RESPONSE_ERROR_CODE;
         }
         return new ResponseEntity<>(content, status);
     }
 
-    public static ResponseEntity<?> error(HttpStatus status, String message, Object content) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", message);
-        response.put("content", content);
-        return new ResponseEntity<>(response, status);
+    public static <T> ResponseEntity<PicSureResponseBody<T>> error(HttpStatus status, String message, T content) {
+        return new ResponseEntity<>(new PicSureResponseBody<>(message, content), status);
     }
 
-    public static ResponseEntity<?> applicationError(Object content) {
+    public static <T> ResponseEntity<PicSureResponseBody<T>> applicationError(T content) {
         return error(DEFAULT_RESPONSE_ERROR_CODE, "Application error", content);
     }
 
-    public static ResponseEntity<?> applicationError(String message, Object content) {
+    public static <T> ResponseEntity<PicSureResponseBody<T>> applicationError(String message, T content) {
         return error(DEFAULT_RESPONSE_ERROR_CODE, message, content);
     }
 
-    public static ResponseEntity<?> riError(Object content) {
+    public static <T> ResponseEntity<PicSureResponseBody<T>> riError(T content) {
         return error(DEFAULT_RESPONSE_ERROR_CODE, "RI error", content);
     }
 
-    public static ResponseEntity<?> riError(String message, Object content) {
+    public static <T> ResponseEntity<PicSureResponseBody<T>> riError(String message, T content) {
         return error(DEFAULT_RESPONSE_ERROR_CODE, message, content);
     }
 
-    public static ResponseEntity<?> protocolError(Object content) {
+    public static <T> ResponseEntity<T> protocolError(T content) {
         return error(HttpStatus.BAD_REQUEST, content);
     }
 
-    public static ResponseEntity<?> protocolError(String message, Object content) {
+    public static <T> ResponseEntity<PicSureResponseBody<T>> protocolError(String message, T content) {
         return error(HttpStatus.BAD_REQUEST, message, content);
     }
 
-    public static ResponseEntity<?> unauthorizedError(Object content) {
+    public static <T> ResponseEntity<PicSureResponseBody<T>> unauthorizedError(T content) {
         return error(HttpStatus.UNAUTHORIZED, "Unauthorized", content);
     }
 
-    public static ResponseEntity<?> unauthorizedError(String message, Object content) {
+    public static <T> ResponseEntity<PicSureResponseBody<T>> unauthorizedError(String message, T content) {
         return error(HttpStatus.UNAUTHORIZED, message, content);
     }
 }
