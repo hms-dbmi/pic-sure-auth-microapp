@@ -108,7 +108,7 @@ public class FENCEAuthenticationService {
         List<Header> headers = new ArrayList<>();
         headers.add(new BasicHeader("Authorization", "Bearer " + access_token));
 
-        logger.debug("getFENCEUserProfile() getting user profile from uri:"+JAXRSConfiguration.idp_provider_uri+"/user/user");
+        logger.debug("getFENCEUserProfile() getting user profile from uri:{}/user/user", JAXRSConfiguration.idp_provider_uri);
         JsonNode fence_user_profile_response = HttpClientUtil.simpleGet(
                 JAXRSConfiguration.idp_provider_uri+"/user/user",
                 JAXRSConfiguration.client,
@@ -116,7 +116,7 @@ public class FENCEAuthenticationService {
                 headers.toArray(new Header[headers.size()])
         );
 
-        logger.debug("getFENCEUserProfile() finished, returning user profile"+fence_user_profile_response.asText());
+        logger.debug("getFENCEUserProfile() finished, returning user profile{}", fence_user_profile_response.asText());
         return fence_user_profile_response;
     }
 
@@ -165,7 +165,7 @@ public class FENCEAuthenticationService {
             throw new NotAuthorizedException("The fence code is not alphanumeric");
         }
 
-        JsonNode fence_user_profile = null;
+        JsonNode fence_user_profile;
         // Get the Gen3/FENCE user profile. It is a JsonNode object
         try {
             logger.debug("getFENCEProfile() query FENCE for user profile with code");
@@ -176,7 +176,6 @@ public class FENCEAuthenticationService {
 	            ObjectMapper mapper = new ObjectMapper();
 	            // `JsonNode` to JSON string
 	            String prettyString = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(fence_user_profile);
-
                 logger.trace("getFENCEProfile() user profile structure:{}", prettyString);
             }
             logger.debug("getFENCEProfile() .username:{}", fence_user_profile.get("username"));
@@ -188,36 +187,67 @@ public class FENCEAuthenticationService {
                     "from the Gen3 authentication provider."+ex.getMessage());
         }
 
-        User current_user = null;
+        User current_user;
         try {
             // Create or retrieve the user profile from our database, based on the the key
             // in the Gen3/FENCE profile
             current_user = createUserFromFENCEProfile(fence_user_profile);
-            logger.info("getFENCEProfile() saved details for user with e-mail:"
-                    +current_user.getEmail()
-                    +" and subject:"
-                    +current_user.getSubject());
+            logger.info("getFENCEProfile() saved details for user with e-mail:{} and subject:{}", current_user.getEmail(), current_user.getSubject());
 
             //clear some cache entries if we register a new login
             AuthorizationService.clearCache(current_user);
             UserService.clearCache(current_user);
 
         } catch (Exception ex) {
-            logger.error("getFENCEToken() Could not persist the user information, because "+ex.getMessage());
+            logger.error("getFENCEToken() Could not persist the user information, because {}", ex.getMessage());
             throw new NotAuthorizedException("The user details could not be persisted. Please contact the administrator.");
         }
 
-        // Update the user's roles (or create them if none exists)
-        //Set<Role> actual_user_roles = u.getRoles();
         Iterator<String> project_access_names = fence_user_profile.get("authz").fieldNames();
+
+        // Convert Iterator to a set of strings
+        Set<String> project_access_set = new HashSet<>();
+
+        // Loop over the project access names and convert them to database fence role names
         while (project_access_names.hasNext()) {
             String access_role_name = project_access_names.next();
-            createAndUpsertRole(access_role_name, current_user);
+            ProjectMetaData projectMetadata = fenceMappingUtility.getFenceMappingByAuthZ().get(access_role_name);
+
+            if (projectMetadata == null) {
+                logger.error("getFENCEProfile() -> createAndUpsertRole could not find study in FENCE mapping SKIPPING: {}", access_role_name);
+                continue;
+            }
+
+            String projectId = projectMetadata.getStudy_identifier();
+            String consentCode = projectMetadata.getConsent_group_code();
+            String newRoleName = StringUtils.isNotBlank(consentCode) ? "FENCE_"+projectId+"_"+consentCode : "FENCE_"+projectId;
+
+            project_access_set.add(newRoleName);
         }
 
-        final String idp = extractIdp(current_user);
+        // given a set of all access role names, we can create a sinlge query to get all Role objects
+        // that match the names in the set
+        Set<String> roles = roleRepo.getRoleNamesByNames(project_access_set);
 
-        if (current_user.getRoles() != null && (current_user.getRoles().size() > 0 || openAccessIdpValues.contains(idp))) {
+        // Given a set of all access role names that exist in the database we can now determine which do not exist
+        // and create them
+        project_access_set.removeAll(roles);
+        logger.info("getFENCEProfile() roles that do not exist in the database: {}", project_access_set);
+
+        // Given the set of all access role names that do not exist in the database we can now create them
+        ArrayList<Role> newRoles = new ArrayList<>();
+        for (String access_role_name : project_access_set) {
+            newRoles.add(createAndUpsertRole(access_role_name, current_user));
+        }
+
+        // add the new roles to the user
+        current_user.getRoles().addAll(newRoles);
+
+        // Persist the new roles
+        roleRepo.persistAll(newRoles);
+
+        final String idp = extractIdp(current_user);
+        if (current_user.getRoles() != null && (!current_user.getRoles().isEmpty() || openAccessIdpValues.contains(idp))) {
 	        Role openAccessRole = roleRepo.getUniqueResultByColumn("name", fence_open_access_role_name);
 	        if (openAccessRole != null) {
 	        	current_user.getRoles().add(openAccessRole);
@@ -226,44 +256,33 @@ public class FENCEAuthenticationService {
 	        }
         }
 
-
         try {
             userRepo.changeRole(current_user, current_user.getRoles());
-            logger.debug("upsertRole() updated user, who now has "+current_user.getRoles().size()+" roles.");
+            logger.debug("upsertRole() updated user, who now has {} roles.", current_user.getRoles().size());
         } catch (Exception ex) {
-            logger.error("upsertRole() Could not add roles to user, because "+ex.getMessage());
+            logger.error("upsertRole() Could not add roles to user, because {}", ex.getMessage());
         }
         HashMap<String, Object> claims = new HashMap<String,Object>();
         claims.put("name", fence_user_profile.get("name"));
         claims.put("email", current_user.getEmail());
         claims.put("sub", current_user.getSubject());
         HashMap<String, String> responseMap = authUtil.getUserProfileResponse(claims);
-        logger.info("LOGIN SUCCESS ___ " + current_user.getEmail() + ":" + current_user.getUuid().toString() + ":" + current_user.getSubject() + " ___ Authorization will expire at  ___ " + responseMap.get("expirationDate") + "___");
+        logger.info("LOGIN SUCCESS ___ {}:{}:{} ___ Authorization will expire at  ___ {}___", current_user.getEmail(), current_user.getUuid().toString(), current_user.getSubject(), responseMap.get("expirationDate"));
         logger.debug("getFENCEProfile() UserProfile response object has been generated");
         logger.debug("getFENCEToken() finished");
         return PICSUREResponse.success(responseMap);
     }
 
-    private void createAndUpsertRole(String access_role_name, User current_user) {
-        logger.debug("createAndUpsertRole() starting...");
-        ProjectMetaData projectMetadata = fenceMappingUtility.getFenceMappingByAuthZ().get(access_role_name);
-
-        if (projectMetadata == null) {
-            logger.error("getFENCEProfile() -> createAndUpsertRole could not find study in FENCE mapping SKIPPING: {}", access_role_name);
-            return;
-        }
-
-        String projectId = projectMetadata.getStudy_identifier();
-        String consentCode = projectMetadata.getConsent_group_code();
-        String newRoleName = StringUtils.isNotBlank(consentCode) ? "FENCE_"+projectId+"_"+consentCode : "FENCE_"+projectId;
-
-        logger.info("getFENCEProfile() New PSAMA role name:{}", newRoleName);
-
-        if (upsertRole(current_user, newRoleName, "FENCE role "+newRoleName)) {
-            logger.info("getFENCEProfile() Updated user role. Now it includes `{}`", newRoleName);
-        } else {
-            logger.error("getFENCEProfile() could not add roles to user's profile");
-        }
+    private Role createAndUpsertRole(String newRoleName, User current_user) {
+        // This is a new Role
+        Role r = new Role();
+        r.setName(newRoleName);
+        r.setDescription("FENCE role "+newRoleName);
+        // Since this is a new Role, we need to ensure that the
+        // corresponding Privilege (with gates) and AccessRule is added.
+        r.setPrivileges(addFENCEPrivileges(current_user, r));
+        logger.info("getFENCEProfile() Updated user role. Now it includes `{}`", newRoleName);
+        return r;
     }
 
     private String extractIdp(User current_user) {
