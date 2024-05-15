@@ -23,7 +23,7 @@ public class RoleRepository extends BaseRepository<Role, UUID> {
     }
 
     public Set<String> getRoleNamesByNames(Set<String> accessRoleNames) {
-        return new HashSet<>(em.createQuery("SELECT r.name FROM Role r WHERE r.name IN :projectAccessSet", String.class)
+        return new HashSet<>(em.createQuery("SELECT r.name FROM role r WHERE r.name IN :projectAccessSet", String.class)
                 .setParameter("projectAccessSet", accessRoleNames)
                 .getResultList());
     }
