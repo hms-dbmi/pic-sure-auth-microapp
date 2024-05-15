@@ -248,41 +248,48 @@ public class FENCEAuthenticationService {
             }
         }
 
+        logger.info("getFENCEProfile() roles assigned to user: {}", rolesAssigned);
+        logger.info("getFENCEProfile() roles to remove: {}", rolesToRemove);
+
         // Remove roles that are not in the project_access_set
         if (!CollectionUtils.isEmpty(rolesToRemove)) {
-            logger.info("getFENCEProfile() removing roles: {}", rolesToRemove);
             current_user.getRoles().removeAll(rolesToRemove);
         }
 
         // Given the set of roles assigned and that set of roles that should be assigned, we can reduce the set of roles from the project_access_set
         // to only those that are not in the rolesAssigned set
         project_access_set.removeAll(rolesAssigned);
+        if (!project_access_set.isEmpty()) {
+            logger.info("getFENCEProfile() roles that should be assigned: {}", project_access_set);
 
-        // Given our reduced list of roles that should be assigned, we can determine which of those roles are not in the database
-        // This also tells use which roles are in the database
-        Set<String> rolesThatExist = roleRepo.getRoleNamesByNames(project_access_set);
+            // Given our reduced list of roles that should be assigned, we can determine which of those roles are not in the database
+            // This also tells use which roles are in the database
+            Set<String> rolesThatExist = roleRepo.getRoleNamesByNames(project_access_set);
 
-        // Assign the roles that exist in the database to the user
-        logger.info("getFENCEProfile() roles that exist in the database: {}", rolesThatExist);
-        roleRepo.getRolesByNames(rolesThatExist).forEach(role -> current_user.getRoles().add(role));
+            // Assign the roles that exist in the database to the user
+            logger.info("getFENCEProfile() roles that exist in the database: {}", rolesThatExist);
+            roleRepo.getRolesByNames(rolesThatExist).forEach(role -> current_user.getRoles().add(role));
 
-        // Given a set of all access role names that exist in the database we can now determine which do not exist
-        // and create them
-        project_access_set.removeAll(rolesThatExist);
+            // Given a set of all access role names that exist in the database we can now determine which do not exist
+            // and create them
+            project_access_set.removeAll(rolesThatExist);
 
-        logger.info("getFENCEProfile() roles that do not exist in the database: {}", project_access_set);
-        // Given the set of all access role names that do not exist in the database we can now create them
-        ArrayList<Role> newRoles = new ArrayList<>();
-        for (String access_role_name : project_access_set) {
-            newRoles.add(createAndUpsertRole(access_role_name, current_user));
+            logger.info("getFENCEProfile() roles that do not exist in the database: {}", project_access_set);
+            // Given the set of all access role names that do not exist in the database we can now create them
+            ArrayList<Role> newRoles = new ArrayList<>();
+            for (String access_role_name : project_access_set) {
+                newRoles.add(createAndUpsertRole(access_role_name, current_user));
+            }
+
+            // Persist the new roles
+            logger.info("getFENCEProfile() persisting {} new roles", newRoles.size());
+            roleRepo.persistAll(newRoles);
+
+            // Assign the new roles to the user
+            current_user.getRoles().addAll(newRoles);
+        } else {
+            logger.info("getFENCEProfile() no roles to assign user has all necessary roles");
         }
-
-        // Persist the new roles
-        logger.info("getFENCEProfile() persisting {} new roles", newRoles.size());
-        roleRepo.persistAll(newRoles);
-
-        // Assign the new roles to the user
-        current_user.getRoles().addAll(newRoles);
 
         final String idp = extractIdp(current_user);
         if (current_user.getRoles() != null && (!current_user.getRoles().isEmpty() || openAccessIdpValues.contains(idp))) {
