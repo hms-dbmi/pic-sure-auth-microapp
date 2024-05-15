@@ -12,7 +12,6 @@ import org.junit.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -342,7 +341,6 @@ public class AuthorizationServiceTest {
         gates.add(GATE_resouceUUID);
         AR_CategoryFilter_String_contains.setGates(gates);
         Assert.assertFalse(authorizationService.evaluateAccessRule(mapper.readValue(getSample_passGate_passCheck_array_contains, Map.class), AR_CategoryFilter_String_contains));
-
     }
 
     @Test
