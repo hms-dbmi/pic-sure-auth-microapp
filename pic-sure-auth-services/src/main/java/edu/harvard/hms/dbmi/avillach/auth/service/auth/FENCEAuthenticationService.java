@@ -225,7 +225,7 @@ public class FENCEAuthenticationService {
             ProjectMetaData projectMetadata = fenceMappingUtility.getFenceMappingByAuthZ().get(access_role_name);
 
             if (projectMetadata == null) {
-                logger.info("getFENCEProfile() -> createAndUpsertRole could not find study in FENCE mapping SKIPPING: {}", access_role_name);
+                logger.info("getFENCEProfile() -> Could not find study in FENCE mapping SKIPPING: {}", access_role_name);
                 continue;
             }
 
@@ -284,13 +284,12 @@ public class FENCEAuthenticationService {
                     current_user.getRoles().add(role);
                 }
 
+                // Given a set of all access role names that exist in the database we can now determine which do not exist
+                // and create them
+                project_access_set.removeAll(rolesThatExist);
             } else {
                 logger.info("getFENCEProfile() none of the following roles exist in the database: {}", project_access_set);
             }
-
-            // Given a set of all access role names that exist in the database we can now determine which do not exist
-            // and create them
-            project_access_set.removeAll(rolesThatExist);
 
             logger.info("getFENCEProfile() creating roles that do not exist in the database: {}", project_access_set);
             // Given the set of all access role names that do not exist in the database we can now create them

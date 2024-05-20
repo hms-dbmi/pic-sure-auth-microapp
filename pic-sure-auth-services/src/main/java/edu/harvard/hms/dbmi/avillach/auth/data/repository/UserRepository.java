@@ -136,7 +136,7 @@ public class UserRepository extends BaseRepository<User, UUID> {
     }
 
     public User changeRole(User user, Set<Role> roles) {
-        logger.info("Starting changing the role of user: {}, with subject: {}, to {}", user.getUuid(), user.getSubject(), roles.stream().map(role -> role.getName()).collect(Collectors.joining(",")));
+        logger.info("Starting changing the role of user: {}, with subject: {}, to {}", user.getUuid(), user.getSubject(), roles.stream().map(Role::getName).collect(Collectors.joining(",")));
         user.setRoles(roles);
         em().merge(user);
         User updatedUser = getById(user.getUuid());
