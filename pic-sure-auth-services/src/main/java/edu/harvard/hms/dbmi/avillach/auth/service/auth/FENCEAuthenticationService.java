@@ -210,7 +210,6 @@ public class FENCEAuthenticationService {
             //clear some cache entries if we register a new login
             AuthorizationService.clearCache(current_user);
             UserService.clearCache(current_user);
-
         } catch (Exception ex) {
             logger.error("getFENCEToken() Could not persist the user information, because {}", ex.getMessage());
             throw new NotAuthorizedException("The user details could not be persisted. Please contact the administrator.");

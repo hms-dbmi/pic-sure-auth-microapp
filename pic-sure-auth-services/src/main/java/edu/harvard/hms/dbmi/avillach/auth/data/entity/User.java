@@ -81,6 +81,10 @@ public class User extends BaseEntity implements Serializable, Principal {
 	}
 
 	public Set<Role> getRoles() {
+		if (roles == null) {
+			roles = new HashSet<>();
+		}
+
 		return roles;
 	}
 
