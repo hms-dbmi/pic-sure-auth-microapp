@@ -6,6 +6,7 @@ import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_parent
 import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_standard_access_rules;
 import static edu.harvard.hms.dbmi.avillach.auth.JAXRSConfiguration.fence_topmed_consent_group_concept_path;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -140,7 +141,7 @@ public class FENCEAuthenticationService {
         // We are decreasing the timeout to 1 second to allow for quicker retries.
         // We will fail after 3 retries.
         JsonNode resp = null;
-        try (CloseableHttpClient client = HttpClientBuilder.create().setDefaultRequestConfig(getFenceRequestConfig()).build()){
+        try (CloseableHttpClient client = HttpClientBuilder.create().setDefaultRequestConfig(getFenceRequestConfig()).build()) {
             int maxRetries = 3;
             int retryCount = 0;
             boolean success = false;
@@ -155,12 +156,12 @@ public class FENCEAuthenticationService {
                     );
                     success = true;
                 } catch (Exception ex) {
-                    logger.error("getFENCEAccessToken() failed to call FENCE token service, "+ex.getMessage());
+                    logger.error("getFENCEAccessToken() failed to call FENCE token service, {}", ex.getMessage());
                     retryCount++;
                 }
             }
-        } catch (Exception ex) {
-            logger.error("getFENCEAccessToken() failed to call FENCE token service, "+ex.getMessage());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
         logger.debug("getFENCEAccessToken() finished: {}", resp.asText());
         return resp;
