@@ -219,22 +219,11 @@ public class FENCEAuthenticationService {
             project_access_set.add(newRoleName);
         }
 
-        /*
-        Considerations for updating the user's roles:
-        1. If the user has a role that is not in the project_access_set, we need to remove it.
-            a. Unless it is a manual role, PIC-SURE Top Admin, Admin, and Manual, in which case we do not need to do anything.
-        2. If the user does not have a role that is in the project_access_set, we need to add it.
-            a. We can first check if the role exists in the database, and if it does, we can add it to the user.
-            b. If the role does not exist in the database, we need to create it and add it to the user.
-        3. If the user has a role that is in the project_access_set, we do not need to do anything.
-         */
-
         // Step 1: Remove roles that are not in the project_access_set
         Set<Role> rolesToRemove = new HashSet<>();
         // Also, track the roles that are assigned to the user and in the project_access_set
         Set<String> rolesAssigned = new HashSet<>();
         for (Role role : current_user.getRoles()) {
-            // .filter(userRole -> "PIC-SURE Top Admin".equals(userRole.getName()) || "Admin".equals(userRole.getName()) || userRole.getName().startsWith("MANUAL_"))
             if (!project_access_set.contains(role.getName())
                     && !role.getName().startsWith("MANUAL_")
                     && !role.getName().equals(fence_open_access_role_name)
@@ -364,17 +353,6 @@ public class FENCEAuthenticationService {
         logger.debug("createUserFromFENCEProfile() finished setting fields");
 
         User actual_user = userRepo.findOrCreate(new_user);
-
-//        Set<Role> roles = new HashSet<>();
-//        if (actual_user != null && !CollectionUtils.isEmpty(actual_user.getRoles()))  {
-//            roles = actual_user.getRoles().stream()
-//                .filter(userRole -> "PIC-SURE Top Admin".equals(userRole.getName()) || "Admin".equals(userRole.getName()) || userRole.getName().startsWith("MANUAL_"))
-//                .collect(Collectors.toSet());
-//        }
-
-        // Clear current set of roles every time we create or retrieve a user but persist admin status
-//        actual_user.setRoles(roles);
-
         logger.debug("createUserFromFENCEProfile() cleared roles");
 
         userRepo.persist(actual_user);
