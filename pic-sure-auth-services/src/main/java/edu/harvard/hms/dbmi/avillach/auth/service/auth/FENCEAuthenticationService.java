@@ -22,7 +22,6 @@ import edu.harvard.hms.dbmi.avillach.auth.model.ProjectMetaData;
 import edu.harvard.hms.dbmi.avillach.auth.utils.FenceMappingUtility;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.Header;
-import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -274,18 +273,18 @@ public class FENCEAuthenticationService {
             Set<String> rolesThatExist = roleRepo.getRoleNamesByNames(project_access_set);
 
             // Assign the roles that exist in the database to the user
-            logger.info("getFENCEProfile() roles that exist in the database: {}", rolesThatExist);
+            logger.info("getFENCEProfile() assigning roles that exist in the database: {}", rolesThatExist);
             roleRepo.getRolesByNames(rolesThatExist).forEach(role -> current_user.getRoles().add(role));
 
             // Given a set of all access role names that exist in the database we can now determine which do not exist
             // and create them
             project_access_set.removeAll(rolesThatExist);
 
-            logger.info("getFENCEProfile() roles that do not exist in the database: {}", project_access_set);
+            logger.info("getFENCEProfile() creating roles that do not exist in the database: {}", project_access_set);
             // Given the set of all access role names that do not exist in the database we can now create them
             ArrayList<Role> newRoles = new ArrayList<>();
             for (String access_role_name : project_access_set) {
-                newRoles.add(createAndUpsertRole(access_role_name, current_user));
+                newRoles.add(createRole(access_role_name, current_user));
             }
 
             // Persist the new roles
@@ -293,6 +292,7 @@ public class FENCEAuthenticationService {
             roleRepo.persistAll(newRoles);
 
             // Assign the new roles to the user
+            logger.info("getFENCEProfile() assigning {} new roles to the user", newRoles.size());
             current_user.getRoles().addAll(newRoles);
         } else {
             logger.info("getFENCEProfile() no roles to assign user has all necessary roles");
@@ -325,7 +325,7 @@ public class FENCEAuthenticationService {
         return PICSUREResponse.success(responseMap);
     }
 
-    private Role createAndUpsertRole(String newRoleName, User current_user) {
+    private Role createRole(String newRoleName, User current_user) {
         // This is a new Role
         Role r = new Role();
         r.setName(newRoleName);
