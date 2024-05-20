@@ -21,7 +21,11 @@ import edu.harvard.hms.dbmi.avillach.auth.model.ProjectMetaData;
 import edu.harvard.hms.dbmi.avillach.auth.utils.FenceMappingUtility;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.Header;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicHeader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -132,19 +136,33 @@ public class FENCEAuthenticationService {
 
         String fence_token_url = JAXRSConfiguration.idp_provider_uri+"/user/oauth2/token";
 
+        // We have found that if the request is not quickly successful, it will time out.
+        // We are decreasing the timeout to 1 second to allow for quicker retries.
+        // We will fail after 3 retries.
         JsonNode resp = null;
-        try {
-            resp = HttpClientUtil.simplePost(
-                    fence_token_url,
-                    new StringEntity(query_string),
-                    JAXRSConfiguration.client,
-                    JAXRSConfiguration.objectMapper,
-                    headers.toArray(new Header[headers.size()])
-            );
+        try (CloseableHttpClient client = HttpClientBuilder.create().setDefaultRequestConfig(getFenceRequestConfig()).build()){
+            int maxRetries = 3;
+            int retryCount = 0;
+            boolean success = false;
+            while (!success && retryCount < maxRetries) {
+                try {
+                    resp = HttpClientUtil.simplePost(
+                            fence_token_url,
+                            new StringEntity(query_string),
+                            client,
+                            JAXRSConfiguration.objectMapper,
+                            headers.toArray(new Header[headers.size()])
+                    );
+                    success = true;
+                } catch (Exception ex) {
+                    logger.error("getFENCEAccessToken() failed to call FENCE token service, "+ex.getMessage());
+                    retryCount++;
+                }
+            }
         } catch (Exception ex) {
             logger.error("getFENCEAccessToken() failed to call FENCE token service, "+ex.getMessage());
         }
-        logger.debug("getFENCEAccessToken() finished: "+resp.asText());
+        logger.debug("getFENCEAccessToken() finished: {}", resp.asText());
         return resp;
     }
 
@@ -1179,5 +1197,13 @@ public class FENCEAuthenticationService {
 		}
 		return null;
 	}
+
+    private RequestConfig getFenceRequestConfig() {
+        RequestConfig.Builder requestConfigBuilder = RequestConfig.custom();
+        requestConfigBuilder.setConnectTimeout(1000);
+        requestConfigBuilder.setConnectionRequestTimeout(1000);
+        requestConfigBuilder.setSocketTimeout(1000);
+        return requestConfigBuilder.build();
+    }
 
 }
