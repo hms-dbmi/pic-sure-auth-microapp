@@ -236,6 +236,12 @@ public class FENCEAuthenticationService {
             project_access_set.add(newRoleName);
         }
 
+        // Project access set is now a set of role names that should be assigned to the user
+        logger.info("getFENCEProfile() project access set: {}", project_access_set);
+
+        // current user roles
+        logger.info("getFENCEProfile() current user roles: {}", current_user.getRoles());
+
         // Step 1: Remove roles that are not in the project_access_set
         Set<Role> rolesToRemove = new HashSet<>();
         // Also, track the roles that are assigned to the user and in the project_access_set
@@ -271,11 +277,13 @@ public class FENCEAuthenticationService {
             // Given our reduced list of roles that should be assigned, we can determine which of those roles are not in the database
             // This also tells use which roles are in the database
             Set<String> rolesThatExist = roleRepo.getRoleNamesByNames(project_access_set);
-
             if (!rolesThatExist.isEmpty()) {
                 // Assign the roles that exist in the database to the user
                 logger.info("getFENCEProfile() assigning roles that exist in the database: {}", rolesThatExist);
-                roleRepo.getRolesByNames(rolesThatExist).forEach(role -> current_user.getRoles().add(role));
+                for (Role role : roleRepo.getRolesByNames(rolesThatExist)) {
+                    current_user.getRoles().add(role);
+                }
+
             } else {
                 logger.info("getFENCEProfile() none of the following roles exist in the database: {}", project_access_set);
             }
@@ -313,7 +321,7 @@ public class FENCEAuthenticationService {
         }
 
         try {
-            userRepo.changeRole(current_user, current_user.getRoles());
+            current_user = userRepo.changeRole(current_user, current_user.getRoles());
             logger.debug("upsertRole() updated user, who now has {} roles.", current_user.getRoles().size());
         } catch (Exception ex) {
             logger.error("upsertRole() Could not add roles to user, because {}", ex.getMessage());
