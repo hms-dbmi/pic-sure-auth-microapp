@@ -272,9 +272,13 @@ public class FENCEAuthenticationService {
             // This also tells use which roles are in the database
             Set<String> rolesThatExist = roleRepo.getRoleNamesByNames(project_access_set);
 
-            // Assign the roles that exist in the database to the user
-            logger.info("getFENCEProfile() assigning roles that exist in the database: {}", rolesThatExist);
-            roleRepo.getRolesByNames(rolesThatExist).forEach(role -> current_user.getRoles().add(role));
+            if (!rolesThatExist.isEmpty()) {
+                // Assign the roles that exist in the database to the user
+                logger.info("getFENCEProfile() assigning roles that exist in the database: {}", rolesThatExist);
+                roleRepo.getRolesByNames(rolesThatExist).forEach(role -> current_user.getRoles().add(role));
+            } else {
+                logger.info("getFENCEProfile() none of the following roles exist in the database: {}", project_access_set);
+            }
 
             // Given a set of all access role names that exist in the database we can now determine which do not exist
             // and create them
