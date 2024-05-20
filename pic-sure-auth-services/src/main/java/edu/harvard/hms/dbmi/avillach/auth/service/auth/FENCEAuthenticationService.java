@@ -310,6 +310,7 @@ public class FENCEAuthenticationService {
             logger.info("getFENCEProfile() no roles to assign user has all necessary roles");
         }
 
+        logger.info("getFENCEProfile() current user roles: {}", current_user.getRoles());
         final String idp = extractIdp(current_user);
         if (current_user.getRoles() != null && (!current_user.getRoles().isEmpty() || openAccessIdpValues.contains(idp))) {
 	        Role openAccessRole = roleRepo.getUniqueResultByColumn("name", fence_open_access_role_name);
