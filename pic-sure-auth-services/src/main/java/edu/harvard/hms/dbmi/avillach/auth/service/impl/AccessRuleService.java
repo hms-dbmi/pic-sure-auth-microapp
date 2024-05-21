@@ -20,7 +20,7 @@ public class AccessRuleService {
     private final AccessRuleRepository accessRuleRepo;
 
     @Autowired
-    protected AccessRuleService(AccessRuleRepository accessRuleRepo) {
+    public AccessRuleService(AccessRuleRepository accessRuleRepo) {
         this.accessRuleRepo = accessRuleRepo;
     }
 
@@ -93,7 +93,7 @@ public class AccessRuleService {
      * @param privileges the privileges that need to be pre-processed
      * @return a set of accessRules that are pre-processed
      */
-    private Set<AccessRule> preProcessAccessRules(Set<Privilege> privileges) {
+    public Set<AccessRule> preProcessAccessRules(Set<Privilege> privileges) {
 
         Set<AccessRule> accessRules = new HashSet<>();
         for (Privilege privilege : privileges) {
