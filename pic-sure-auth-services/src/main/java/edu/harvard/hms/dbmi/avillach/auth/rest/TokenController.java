@@ -36,7 +36,7 @@ public class TokenController {
 
     @Operation(description = "Token introspection endpoint for user to retrieve a valid token")
     @PostMapping(path = "/inspect", produces = "application/json")
-    public ResponseEntity<?> inspectToken(
+    public ResponseEntity<Map<String, Object>> inspectToken(
             @Parameter(required = true, description = "A JSON object that at least" +
                     " include a user the token for validation")
             @RequestBody Map<String, Object> inputMap) {

@@ -51,14 +51,14 @@ public class ApplicationController {
 
     @Operation(description = "GET a list of existing Applications, no role restrictions")
     @GetMapping
-    public ResponseEntity<?> getApplicationAll() {
+    public ResponseEntity<List<Application>> getApplicationAll() {
         return PICSUREResponse.success(applicationService.getAllApplications());
     }
 
     @Operation(description = "POST a list of Applications, requires SUPER_ADMIN role")
     @RolesAllowed({SUPER_ADMIN})
     @PostMapping(consumes = "application/json", produces = "application/json")
-    public ResponseEntity<?> addApplication(
+    public ResponseEntity<List<Application>> addApplication(
             @Parameter(required = true, description = "A list of AccessRule in JSON format")
             @RequestBody List<Application> applications) {
         applications = applicationService.addNewApplications(applications);
@@ -68,7 +68,7 @@ public class ApplicationController {
     @Operation(description = "Update a list of Applications, will only update the fields listed, requires SUPER_ADMIN role")
     @RolesAllowed({SUPER_ADMIN})
     @PutMapping(consumes = "application/json", produces = "application/json")
-    public ResponseEntity<?> updateApplication(
+    public ResponseEntity<List<Application>> updateApplication(
             @Parameter(required = true, description = "A list of AccessRule with fields to be updated in JSON format")
             @RequestBody List<Application> applications) {
         applications = applicationService.updateApplications(applications);
@@ -78,7 +78,7 @@ public class ApplicationController {
     @Operation(description = "Refresh a token of an application by application Id, requires SUPER_ADMIN role")
     @RolesAllowed({SUPER_ADMIN})
     @GetMapping(value = "/refreshToken/{applicationId}")
-    public ResponseEntity<?> refreshApplicationToken(
+    public ResponseEntity<Map<String, String>> refreshApplicationToken(
             @Parameter(required = true, description = "A valid application Id")
             @PathVariable("applicationId") String applicationId) {
         String newApplicationToken = applicationService.refreshApplicationToken(applicationId);

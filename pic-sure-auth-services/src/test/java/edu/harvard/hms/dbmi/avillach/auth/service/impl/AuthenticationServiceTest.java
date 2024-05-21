@@ -90,9 +90,8 @@ public class AuthenticationServiceTest {
         // return null for matching user
         when(matchingService.matchTokenToUser(any())).thenReturn(null);
 
-        ResponseEntity<?> response = authenticationService.getToken(authRequest);
-        assertNotNull(response);
-        assertEquals(HttpStatus.OK, response.getStatusCode());
+        HashMap<String, String> token = authenticationService.getToken(authRequest);
+        assertNotNull(token);
     }
 
     // Additional test to handle retries in user info retrieval

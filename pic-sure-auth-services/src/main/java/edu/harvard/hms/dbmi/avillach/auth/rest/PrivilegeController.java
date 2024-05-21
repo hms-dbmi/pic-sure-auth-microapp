@@ -50,7 +50,7 @@ public class PrivilegeController {
     @Operation(description = "GET a list of existing privileges, requires ADMIN or SUPER_ADMIN role")
     @RolesAllowed({ADMIN, SUPER_ADMIN})
     @GetMapping(produces = "application/json")
-    public ResponseEntity<?> getPrivilegeAll() {
+    public ResponseEntity<List<Privilege>> getPrivilegeAll() {
         List<Privilege> privilegesAll = this.privilegeService.getPrivilegesAll();
         return PICSUREResponse.success(privilegesAll);
     }
@@ -58,7 +58,7 @@ public class PrivilegeController {
     @Operation(description = "POST a list of privileges, requires SUPER_ADMIN role")
     @RolesAllowed({SUPER_ADMIN})
     @PostMapping(consumes = "application/json", produces = "application/json")
-    public ResponseEntity<?> addPrivilege(
+    public ResponseEntity<List<Privilege>> addPrivilege(
             @Parameter(required = true, description = "A list of privileges in JSON format")
             @RequestBody List<Privilege> privileges){
         privileges = this.privilegeService.addPrivileges(privileges);
@@ -68,7 +68,7 @@ public class PrivilegeController {
     @Operation(description = "Update a list of privileges, will only update the fields listed, requires SUPER_ADMIN role")
     @RolesAllowed({SUPER_ADMIN})
     @PutMapping(consumes = "application/json", produces = "application/json")
-    public ResponseEntity<?> updatePrivilege(
+    public ResponseEntity<List<Privilege>> updatePrivilege(
             @Parameter(required = true, description = "A list of privilege with fields to be updated in JSON format")
             @RequestBody List<Privilege> privileges){
             privileges = this.privilegeService.updatePrivileges(privileges);
@@ -78,7 +78,7 @@ public class PrivilegeController {
     @Operation(description = "DELETE an privilege by Id only if the privilege is not associated by others, requires SUPER_ADMIN role")
     @RolesAllowed({SUPER_ADMIN})
     @DeleteMapping(path = "/{privilegeId}", produces = "application/json")
-    public ResponseEntity<?> removeById(
+    public ResponseEntity<List<Privilege>> removeById(
             @Parameter(required = true, description = "A valid privilege Id")
             @PathVariable("privilegeId") final String privilegeId) {
         List<Privilege> privileges = this.privilegeService.deletePrivilegeByPrivilegeId(privilegeId);

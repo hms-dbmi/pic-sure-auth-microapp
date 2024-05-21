@@ -26,10 +26,12 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 
 /**
@@ -204,7 +206,7 @@ public class JWTFilter extends OncePerRequestFilter {
         Set<Role> userRoles = authenticatedUser.getUser().getRoles();
 
         // Check if the user has any roles and privileges associated with them
-        if (userRoles == null || userRoles.isEmpty() || userRoles.stream().noneMatch(role -> role.getPrivileges() != null && !role.getPrivileges().isEmpty())) {
+        if (userRoles == null || userRoles.isEmpty() || userRoles.stream().allMatch(role -> CollectionUtils.isEmpty(role.getPrivileges()))) {
             logger.error("User doesn't have any roles or privileges.");
             try {
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User doesn't have any roles or privileges.");
@@ -213,7 +215,7 @@ public class JWTFilter extends OncePerRequestFilter {
             }
         }
 
-        logger.info("User with email {} has roles {}.", authenticatedUser.getUser().getEmail(), userRoles != null ? userRoles.stream().map(Role::getName).toList() : null);
+        logger.info("User with email {} has roles {}.", authenticatedUser.getUser().getEmail(), userRoles != null ? userRoles.stream().map(Role::getName).collect(Collectors.joining(",")) : null);
         UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(authenticatedUser, null, authenticatedUser.getAuthorities());
         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
         SecurityContextHolder.getContext().setAuthentication(authentication);

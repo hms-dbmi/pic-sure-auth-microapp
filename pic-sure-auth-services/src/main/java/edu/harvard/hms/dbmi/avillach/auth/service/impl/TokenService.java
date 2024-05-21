@@ -12,7 +12,6 @@ import edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming;
 import edu.harvard.hms.dbmi.avillach.auth.utils.JWTUtil;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,7 +54,7 @@ public class TokenService {
         logger.info("TokenInspect starting...");
         TokenInspection tokenInspection;
         try {
-            tokenInspection = _inspectToken(inputMap);
+            tokenInspection = validateToken(inputMap);
         } catch (IllegalAccessException e) {
             throw new RuntimeException(e);
         }
@@ -67,7 +66,7 @@ public class TokenService {
         return tokenInspection.getResponseMap();
     }
 
-    private TokenInspection _inspectToken(Map<String, Object> inputMap) throws IllegalAccessException {
+    private TokenInspection validateToken(Map<String, Object> inputMap) throws IllegalAccessException {
         logger.debug("_inspectToken, the incoming token map is: {}", inputMap.entrySet()
                 .stream()
                 .map(entry -> entry.getKey() + " - " + entry.getValue())

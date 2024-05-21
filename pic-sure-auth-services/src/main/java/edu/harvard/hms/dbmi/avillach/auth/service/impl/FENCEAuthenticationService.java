@@ -11,10 +11,8 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.exceptions.NotAuthorizedException;
-import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.service.PrivilegeService;
 import edu.harvard.hms.dbmi.avillach.auth.service.RoleService;
-import edu.harvard.hms.dbmi.avillach.auth.utils.JWTUtil;
 import edu.harvard.hms.dbmi.avillach.auth.utils.RestClientUtil;
 import jakarta.annotation.PostConstruct;
 import org.apache.commons.lang3.StringUtils;
@@ -138,7 +136,7 @@ public class FENCEAuthenticationService {
         fenceConnection = connectionService.getConnectionByLabel("FENCE");
     }
 
-    public ResponseEntity<?> getFENCEProfile(String callback_url, Map<String, String> authRequest){
+    public HashMap<String, String> getFENCEProfile(String callback_url, Map<String, String> authRequest){
         logger.debug("getFENCEProfile() starting...");
         String fence_code  = authRequest.get("code");
 
@@ -224,7 +222,7 @@ public class FENCEAuthenticationService {
         logger.info("LOGIN SUCCESS ___ {}:{}:{} ___ Authorization will expire at  ___ {}___", current_user.getEmail(), current_user.getUuid().toString(), current_user.getSubject(), responseMap.get("expirationDate"));
         logger.debug("getFENCEProfile() UserProfile response object has been generated");
         logger.debug("getFENCEToken() finished");
-        return PICSUREResponse.success(responseMap);
+        return responseMap;
     }
 
     private JsonNode getFENCEUserProfile(String access_token) {

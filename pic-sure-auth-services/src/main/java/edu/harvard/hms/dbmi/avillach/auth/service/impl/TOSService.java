@@ -5,6 +5,7 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.repository.TermsOfServiceRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.UserRepository;
 import edu.harvard.hms.dbmi.avillach.auth.rest.TermsOfServiceController;
+import jakarta.annotation.Nullable;
 import jakarta.persistence.NoResultException;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -66,15 +67,11 @@ public class TOSService {
         return termsOfServiceRepo.findTopByOrderByDateUpdatedDesc();
     }
 
-    public String getLatest() {
-        try {
-            Optional<TermsOfService> termsOfService = termsOfServiceRepo.findTopByOrderByDateUpdatedDesc();
-            if (termsOfService.isPresent()) {
-                return termsOfService.get().getContent();
-            }
-
-            throw new NoResultException();
-        } catch (NoResultException e) {
+    public @Nullable String getLatest() {
+        Optional<TermsOfService> termsOfService = termsOfServiceRepo.findTopByOrderByDateUpdatedDesc();
+        if (termsOfService.isPresent()) {
+            return termsOfService.get().getContent();
+        } else {
             logger.info("Terms Of Service disabled: No Terms of Service found in database");
             return null;
         }
@@ -92,7 +89,8 @@ public class TOSService {
             throw new RuntimeException("No Terms of Service found in database");
         }
 
-        logger.info("TOS_LOG : User {} accepted the Terms of Service dated {}", !StringUtils.isBlank(user.getEmail()) ? user.getEmail() : user.getGeneralMetadata(), tosDate.get().getDateUpdated());
+        String userLogId = !StringUtils.isBlank(user.getEmail()) ? user.getEmail() : user.getGeneralMetadata();
+        logger.info("TOS_LOG : User {} accepted the Terms of Service dated {}", userLogId, tosDate.get().getDateUpdated());
         return user;
     }
 

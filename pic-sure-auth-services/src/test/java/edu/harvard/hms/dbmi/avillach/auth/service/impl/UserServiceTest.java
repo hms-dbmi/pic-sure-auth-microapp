@@ -28,6 +28,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.security.SecureRandom;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -146,10 +147,7 @@ public class UserServiceTest {
         configureUserSecurityContext(user);
         when(userRepository.saveAll(List.of(user))).thenReturn(List.of(user));
 
-        doAnswer(invocation -> {
-            UUID argument = invocation.getArgument(0);
-            return user.getRoles().stream().filter(role -> role.getUuid().equals(argument)).findFirst();
-        }).when(roleService).getRoleById(any(UUID.class));
+        doAnswer(invocation -> new HashSet<>(user.getRoles())).when(roleService).getRolesByIds(anySet());
 
         List<User> result = userService.addUsers(List.of(user));
         System.out.println(result);
@@ -165,10 +163,7 @@ public class UserServiceTest {
         configureUserSecurityContext(user);
         when(userRepository.saveAll(List.of(user))).thenReturn(List.of(user));
 
-        doAnswer(invocation -> {
-            UUID argument = invocation.getArgument(0);
-            return user.getRoles().stream().filter(role -> role.getUuid().equals(argument)).findFirst();
-        }).when(roleService).getRoleById(any(UUID.class));
+        doAnswer(invocation -> new HashSet<>(user.getRoles())).when(roleService).getRolesByIds(anySet());
 
         List<User> result = userService.addUsers(List.of(user));
         assertNotNull(result);
@@ -183,10 +178,7 @@ public class UserServiceTest {
         roles.add(createSuperAdminRole());
         user.setRoles(roles);
 
-        doAnswer(invocation -> {
-            UUID argument = invocation.getArgument(0);
-            return user.getRoles().stream().filter(role -> role.getUuid().equals(argument)).findFirst();
-        }).when(roleService).getRoleById(any(UUID.class));
+        doAnswer(invocation -> new HashSet<>(user.getRoles())).when(roleService).getRolesByIds(anySet());
 
         System.out.println(user.getRoles());
         User loggedInUser = createTestUser();
@@ -219,11 +211,7 @@ public class UserServiceTest {
         user.setGeneralMetadata("bad metadata");
 
         when(userRepository.saveAll(List.of(user))).thenReturn(List.of(user));
-
-        doAnswer(invocation -> {
-            UUID argument = invocation.getArgument(0);
-            return user.getRoles().stream().filter(role -> role.getUuid().equals(argument)).findFirst();
-        }).when(roleService).getRoleById(any(UUID.class));
+        doAnswer(invocation -> new HashSet<>(user.getRoles())).when(roleService).getRolesByIds(anySet());
 
         userService.addUsers(List.of(user));
     }
@@ -240,10 +228,7 @@ public class UserServiceTest {
 
         when(userRepository.saveAll(List.of(user))).thenReturn(List.of(user));
 
-        doAnswer(invocation -> {
-            UUID argument = invocation.getArgument(0);
-            return user.getRoles().stream().filter(role -> role.getUuid().equals(argument)).findFirst();
-        }).when(roleService).getRoleById(any(UUID.class));
+        doAnswer(invocation -> new HashSet<>(user.getRoles())).when(roleService).getRolesByIds(anySet());
 
         userService.addUsers(List.of(user));
     }
@@ -254,10 +239,7 @@ public class UserServiceTest {
         configureUserSecurityContext(user);
         when(userRepository.saveAll(List.of(user))).thenReturn(List.of(user));
 
-        doAnswer(invocation -> {
-            UUID argument = invocation.getArgument(0);
-            return user.getRoles().stream().filter(role -> role.getUuid().equals(argument)).findFirst();
-        }).when(roleService).getRoleById(any(UUID.class));
+        doAnswer(invocation -> new HashSet<>(user.getRoles())).when(roleService).getRolesByIds(anySet());
 
         when(userRepository.findById(user.getUuid())).thenReturn(Optional.of(user));
 
@@ -272,10 +254,7 @@ public class UserServiceTest {
         configureUserSecurityContext(user);
         when(userRepository.saveAll(List.of(user))).thenReturn(List.of(user));
 
-        doAnswer(invocation -> {
-            UUID argument = invocation.getArgument(0);
-            return user.getRoles().stream().filter(role -> role.getUuid().equals(argument)).findFirst();
-        }).when(roleService).getRoleById(any(UUID.class));
+        doAnswer(invocation -> new HashSet<>(user.getRoles())).when(roleService).getRolesByIds(anySet());
 
         when(userRepository.findById(user.getUuid())).thenReturn(Optional.of(user));
 
@@ -290,10 +269,7 @@ public class UserServiceTest {
         roles.add(createSuperAdminRole());
         user.setRoles(roles);
 
-        doAnswer(invocation -> {
-            UUID argument = invocation.getArgument(0);
-            return user.getRoles().stream().filter(role -> role.getUuid().equals(argument)).findFirst();
-        }).when(roleService).getRoleById(any(UUID.class));
+        doAnswer(invocation -> new HashSet<>(user.getRoles())).when(roleService).getRolesByIds(anySet());
 
         User loggedInUser = createTestUser();
         configureUserSecurityContext(loggedInUser);
@@ -509,10 +485,7 @@ public class UserServiceTest {
         when(userRepository.findById(user.getUuid())).thenReturn(Optional.of(user));
         when(userRepository.saveAll(List.of(user))).thenReturn(List.of(user));
 
-        doAnswer(invocation -> {
-            UUID argument = invocation.getArgument(0);
-            return user.getRoles().stream().filter(role -> role.getUuid().equals(argument)).findFirst();
-        }).when(roleService).getRoleById(any(UUID.class));
+        doAnswer(invocation -> new HashSet<>(user.getRoles())).when(roleService).getRolesByIds(anySet());
 
         List<User> result = userService.updateUser(List.of(user));
         assertEquals(user, result.getFirst());

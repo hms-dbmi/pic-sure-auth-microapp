@@ -6,7 +6,6 @@ import java.util.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Connection;
 import edu.harvard.hms.dbmi.avillach.auth.exceptions.NotAuthorizedException;
-import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.repository.ConnectionRepository;
 import edu.harvard.hms.dbmi.avillach.auth.utils.RestClientUtil;
 import org.slf4j.Logger;
@@ -68,7 +67,7 @@ public class AuthenticationService {
         this.restClientUtil = restClientUtil;
     }
 
-    public ResponseEntity<?> getToken(Map<String, String> authRequest) throws IOException {
+    public HashMap<String, String> getToken(Map<String, String> authRequest) throws IOException {
         String accessToken = authRequest.get("access_token");
         String redirectURI = authRequest.get("redirectURI");
 
@@ -118,7 +117,7 @@ public class AuthenticationService {
         HashMap<String, String> responseMap = userService.getUserProfileResponse(claims);
 
         logger.info("LOGIN SUCCESS ___ {}:{} ___ Authorization will expire at  ___ {}___", user.getEmail(), user.getUuid().toString(), responseMap.get("expirationDate"));
-        return PICSUREResponse.success(responseMap);
+        return responseMap;
     }
 
     JsonNode retrieveUserInfo(String accessToken) throws IOException {
