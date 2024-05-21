@@ -1204,8 +1204,9 @@ public class FENCEAuthenticationService {
 		if(projectMetadata != null) {
 			return projectMetadata;
 		} else {
-            logger.info("getFENCEMappingforProjectAndConsent() Obj instance of {}", projectMetadata.getClass().getCanonicalName());
+            logger.info("getFENCEMappingforProjectAndConsent() no mapping found for {}", consentVal);
 		}
+
 		return null;
 	}
 
