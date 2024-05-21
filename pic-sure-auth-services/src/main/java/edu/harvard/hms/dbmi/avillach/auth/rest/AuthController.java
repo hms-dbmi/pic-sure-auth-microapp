@@ -7,6 +7,7 @@ import edu.harvard.hms.dbmi.avillach.auth.service.impl.FENCEAuthenticationServic
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,8 +52,10 @@ public class AuthController {
     @PostMapping(path = "/authentication", consumes = "application/json", produces = "application/json")
     public ResponseEntity<?> authentication(
             @Parameter(required = true, description = "A json object that includes all Oauth authentication needs, for example, access_token and redirectURI")
-            @RequestBody Map<String, String> authRequest) throws IOException {
+            @RequestBody Map<String, String> authRequest, HttpServletRequest request) throws IOException {
         logger.debug("authentication() starting...");
+        String requestHost = request.getRemoteHost();
+        logger.debug("authentication() requestHost: {}", requestHost);
 
         if(authRequest == null) {
             logger.error("authentication() authRequest is null");
@@ -61,7 +64,7 @@ public class AuthController {
 
         if (this.idp_provider.equalsIgnoreCase("fence")) {
             logger.debug("authentication() FENCE authentication");
-            HashMap<String, String> fenceProfile = fenceAuthenticationService.getFENCEProfile(authRequest);
+            HashMap<String, String> fenceProfile = fenceAuthenticationService.getFENCEProfile("https://" + requestHost + "/psamaui/login/", authRequest);
             return PICSUREResponse.success(fenceProfile);
         } else {
             logger.debug("authentication() default authentication");
