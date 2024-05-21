@@ -30,6 +30,9 @@ public class AuthorizationServiceTest {
     @InjectMocks
     private AuthorizationService authorizationService;
 
+    @Mock
+    private AccessRuleService accessRuleService;
+
     @Before
     public void setUp() {
         MockitoAnnotations.initMocks(this);
