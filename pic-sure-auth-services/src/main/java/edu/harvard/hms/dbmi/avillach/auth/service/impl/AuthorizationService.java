@@ -77,42 +77,35 @@ public class AuthorizationService {
      * @see AccessRule
      */
     public boolean isAuthorized(Application application, Object requestBody, User user) {
-
         String applicationName = application.getName();
-
-        String resourceId = null;
-        String targetService = null;
-
         //in some cases, we don't go through the evaluation
         if (requestBody == null) {
-            logger.info("ACCESS_LOG ___ {},{},{} ___ has been granted access to application ___ {} ___ NO REQUEST BODY FORWARDED BY APPLICATION", user.getUuid().toString(), user.getEmail(), user.getName(), applicationName);
+            logger.info("ACCESS_LOG ___ " + user.getUuid().toString() + "," + user.getEmail() + "," + user.getName() +
+                    " ___ has been granted access to application ___ " + applicationName + " ___ NO REQUEST BODY FORWARDED BY APPLICATION");
             return true;
         }
 
-        try {
-            Map requestBodyMap = (Map) requestBody;
-            Map queryMap = (Map) requestBodyMap.get("query");
-            resourceId = (String) queryMap.get("resourceUUID");
-            targetService = (String) requestBodyMap.get("Target Service");
-        } catch (RuntimeException e) {
-            logger.info("Error parsing resource and target service from requestBody", e);
-        }
-
         // start to process the jsonpath checking
+
         String formattedQuery = null;
         try {
-            formattedQuery = (String) ((Map) requestBody).get("formattedQuery");
+            formattedQuery = (String) ((Map)requestBody).get("formattedQuery");
 
-            if (formattedQuery == null) {
+            if(formattedQuery == null) {
                 //fallback in case no formatted query info present
                 formattedQuery = new ObjectMapper().writeValueAsString(requestBody);
             }
 
         } catch (ClassCastException | JsonProcessingException e1) {
+            // TODO Auto-generated catch block
             e1.printStackTrace();
-            logger.info("ACCESS_LOG ___ {},{},{} ___ has been denied access to execute query ___ {} ___ in application ___ {} ___ UNABLE TO PARSE REQUEST", user.getUuid().toString(), user.getEmail(), user.getName(), requestBody, applicationName);
+            logger.info("ACCESS_LOG ___ " + user.getUuid().toString() + "," + user.getEmail() + "," + user.getName() +
+                    " ___ has been denied access to execute query ___ " + requestBody + " ___ in application ___ " + applicationName
+                    + " ___ UNABLE TO PARSE REQUEST");
             return false;
         }
+
+        Set<Privilege> privileges = user.getPrivilegesByApplication(application);
 
         // If the user doesn't have any privileges associated to the application,
         // it will return false. The logic is if there are any privileges associated with the application,
@@ -120,12 +113,18 @@ public class AuthorizationService {
         // or be denied.
         // The check if the application has privileges or not should be outside this function.
         // Here we assume that the application has at least one privilege
+        if (privileges == null || privileges.isEmpty()) {
+            logger.info("ACCESS_LOG ___ " + user.getUuid().toString() + "," + user.getEmail() + "," + user.getName() +
+                    " ___ has been denied access to execute query ___ " + formattedQuery + " ___ in application ___ " + applicationName
+                    + " __ USER HAS NO PRIVILEGES ASSOCIATED TO THE APPLICATION, BUT APPLICATION HAS PRIVILEGES");
+            return false;
+        }
 
-        // TODO: Investigate if this is causing a known bug. If no user privileges are associated with the application,
-        // the user somehow gets all privileges associated with the application.
-        Set<AccessRule> accessRules = accessRuleService.getAccessRulesForUserAndApp(user, application);
+        Set<AccessRule> accessRules = this.accessRuleService.preProcessAccessRules(privileges);
         if (accessRules == null || accessRules.isEmpty()) {
-            logger.info("ACCESS_LOG ___ {},{},{} ___ has been granted access to execute query ___ {} ___ in application ___ {} ___ NO ACCESS RULES EVALUATED", user.getUuid().toString(), user.getEmail(), user.getName(), formattedQuery, applicationName);
+            logger.info("ACCESS_LOG ___ " + user.getUuid().toString() + "," + user.getEmail() + "," + user.getName() +
+                    " ___ has been granted access to execute query ___ " + formattedQuery + " ___ in application ___ " + applicationName
+                    + " ___ NO ACCESS RULES EVALUATED");
             return true;
         }
 
