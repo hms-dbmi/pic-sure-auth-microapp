@@ -97,22 +97,24 @@ public class FENCEAuthenticationService {
     private final String fence_allowed_query_types;
     private final String variantAnnotationColumns;
     private final String templatePath;
+    private final RestClientUtil restClientUtil;
 
     @Autowired
     public FENCEAuthenticationService(UserService userService,
-                                        RoleService roleService,
-                                        ConnectionWebService connectionService,
-                                        AccessRuleService accessruleService,
-                                        ApplicationService applicationService,
-                                        PrivilegeService privilegeService,
-                                        @Value("${idp.provider.uri}") String idpProviderUri,
-                                        @Value("${fence.client.id}") String fenceClientId,
-                                        @Value("${fence.client.secret}") String fenceClientSecret,
-                                        @Value("${application.idp.provider}") String idpProvider,
-                                        @Value("${fence.standard.access.rules}") String fenceStandardAccessRules,
-                                        @Value("${fence.allowed.query.types}") String fenceAllowedQueryTypes,
-                                        @Value("${fence.variant.annotation.columns}") String variantAnnotationColumns,
-                                        @Value("${application.template.path}") String templatePath){
+                                      RoleService roleService,
+                                      ConnectionWebService connectionService,
+                                      AccessRuleService accessruleService,
+                                      ApplicationService applicationService,
+                                      PrivilegeService privilegeService,
+                                      RestClientUtil restClientUtil,
+                                      @Value("${idp.provider.uri}") String idpProviderUri,
+                                      @Value("${fence.client.id}") String fenceClientId,
+                                      @Value("${fence.client.secret}") String fenceClientSecret,
+                                      @Value("${application.idp.provider}") String idpProvider,
+                                      @Value("${fence.standard.access.rules}") String fenceStandardAccessRules,
+                                      @Value("${fence.allowed.query.types}") String fenceAllowedQueryTypes,
+                                      @Value("${fence.variant.annotation.columns}") String variantAnnotationColumns,
+                                      @Value("${application.template.path}") String templatePath){
         this.userService = userService;
         this.roleService = roleService;
         this.connectionService = connectionService;
@@ -127,6 +129,7 @@ public class FENCEAuthenticationService {
         this.fence_allowed_query_types = fenceAllowedQueryTypes;
         this.variantAnnotationColumns = variantAnnotationColumns;
         this.templatePath = templatePath;
+        this.restClientUtil = restClientUtil;
     }
 
     @PostConstruct
@@ -231,7 +234,7 @@ public class FENCEAuthenticationService {
         headers.setBearerAuth(access_token);
 
         logger.debug("getFENCEUserProfile() getting user profile from uri:{}/user/user", this.idp_provider_uri);
-        ResponseEntity<String> fence_user_profile_response = RestClientUtil.retrieveGetResponse(
+        ResponseEntity<String> fence_user_profile_response = this.restClientUtil.retrieveGetResponse(
                 this.idp_provider_uri+"/user/user",
                 headers
         );
