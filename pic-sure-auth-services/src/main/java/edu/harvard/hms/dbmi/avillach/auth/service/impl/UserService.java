@@ -578,8 +578,4 @@ public class UserService {
         return user;
     }
 
-
-    public Optional<User> findById(UUID uuid) {
-        return this.userRepository.findById(uuid);
-    }
 }

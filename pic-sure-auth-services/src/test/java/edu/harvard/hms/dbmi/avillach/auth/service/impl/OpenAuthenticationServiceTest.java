@@ -88,7 +88,6 @@ public class OpenAuthenticationServiceTest {
         Map<String, String> authenticate = openAuthenticationService.authenticate(authRequest);
         assertNotNull(authenticate);
 
-        verify(userService, never()).findById(any());
         verify(userService).createOpenAccessUser(any(Role.class));
         verify(userService).getUserProfileResponse(any(Map.class));
     }
