@@ -1,10 +1,12 @@
-package edu.harvard.hms.dbmi.avillach.auth.service.impl;
+package edu.harvard.hms.dbmi.avillach.auth.service.impl.authentication;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
+import edu.harvard.hms.dbmi.avillach.auth.service.impl.RoleService;
+import edu.harvard.hms.dbmi.avillach.auth.service.impl.UserService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.RestClientUtil;
 import jakarta.persistence.NoResultException;
 import org.apache.commons.lang3.StringUtils;

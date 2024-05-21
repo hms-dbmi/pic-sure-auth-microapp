@@ -1,4 +1,4 @@
-package edu.harvard.hms.dbmi.avillach.auth.service.impl;
+package edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.harvard.hms.dbmi.avillach.auth.entity.AccessRule;

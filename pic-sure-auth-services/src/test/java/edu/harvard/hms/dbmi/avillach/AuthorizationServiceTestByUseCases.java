@@ -2,7 +2,7 @@ package edu.harvard.hms.dbmi.avillach;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.harvard.hms.dbmi.avillach.auth.entity.AccessRule;
-import edu.harvard.hms.dbmi.avillach.auth.service.impl.AuthorizationService;
+import edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization.AuthorizationService;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
