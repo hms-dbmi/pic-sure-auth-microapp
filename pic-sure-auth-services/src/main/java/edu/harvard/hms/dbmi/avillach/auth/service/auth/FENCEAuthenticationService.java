@@ -291,7 +291,6 @@ public class FENCEAuthenticationService {
                 logger.info("getFENCEProfile() none of the following roles exist in the database: {}", project_access_set);
             }
 
-            logger.info("getFENCEProfile() creating roles that do not exist in the database: {}", project_access_set);
             // Given the set of all access role names that do not exist in the database we can now create them
             ArrayList<Role> newRoles = new ArrayList<>();
             for (String access_role_name : project_access_set) {
