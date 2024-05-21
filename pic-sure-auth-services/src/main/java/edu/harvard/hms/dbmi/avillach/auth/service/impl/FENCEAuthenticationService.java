@@ -11,8 +11,6 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.exceptions.NotAuthorizedException;
-import edu.harvard.hms.dbmi.avillach.auth.service.PrivilegeService;
-import edu.harvard.hms.dbmi.avillach.auth.service.RoleService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.RestClientUtil;
 import jakarta.annotation.PostConstruct;
 import org.apache.commons.lang3.StringUtils;
