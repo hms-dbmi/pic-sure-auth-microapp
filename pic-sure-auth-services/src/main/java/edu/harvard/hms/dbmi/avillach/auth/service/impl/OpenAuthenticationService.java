@@ -17,13 +17,13 @@ public class OpenAuthenticationService {
     private final Logger logger = LoggerFactory.getLogger(OpenAuthenticationService.class);
 
     private final UserService userService;
-    private final RoleService roleRepository;
+    private final RoleService roleService;
     private final AccessRuleService accessRuleService;
 
     @Autowired
-    public OpenAuthenticationService(UserService userService, RoleService roleRepository, AccessRuleService accessRuleService) {
+    public OpenAuthenticationService(UserService userService, RoleService roleService, AccessRuleService accessRuleService) {
         this.userService = userService;
-        this.roleRepository = roleRepository;
+        this.roleService = roleService;
         this.accessRuleService = accessRuleService;
     }
 
@@ -43,7 +43,7 @@ public class OpenAuthenticationService {
 
         // If we can't find the user by UUID, create a new one
         if (current_user == null) {
-            Role openAccessRole = roleRepository.getRoleByName(FENCEAuthenticationService.fence_open_access_role_name);
+            Role openAccessRole = roleService.getRoleByName(FENCEAuthenticationService.fence_open_access_role_name);
             current_user = userService.createOpenAccessUser(openAccessRole);
 
             //clear some cache entries if we register a new login

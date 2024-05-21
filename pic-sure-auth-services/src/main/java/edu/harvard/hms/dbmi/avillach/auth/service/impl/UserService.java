@@ -579,4 +579,7 @@ public class UserService {
     }
 
 
+    public Optional<User> findById(UUID uuid) {
+        return this.userRepository.findById(uuid);
+    }
 }
