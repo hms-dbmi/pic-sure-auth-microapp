@@ -18,7 +18,7 @@ import javax.ws.rs.core.Response;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import edu.harvard.hms.dbmi.avillach.auth.model.ProjectMetaData;
+import edu.harvard.hms.dbmi.avillach.auth.model.StudyMetaData;
 import edu.harvard.hms.dbmi.avillach.auth.utils.FenceMappingUtility;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.Header;
@@ -40,7 +40,6 @@ import edu.harvard.hms.dbmi.avillach.auth.data.entity.*;
 import edu.harvard.hms.dbmi.avillach.auth.data.repository.*;
 import edu.harvard.hms.dbmi.avillach.auth.rest.UserService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.AuthUtils;
-import org.springframework.util.CollectionUtils;
 
 public class FENCEAuthenticationService {
 	private Logger logger = LoggerFactory.getLogger(FENCEAuthenticationService.class);
@@ -222,15 +221,15 @@ public class FENCEAuthenticationService {
         // Loop over the project access names and convert them to database fence role names
         while (project_access_names.hasNext()) {
             String access_role_name = project_access_names.next();
-            ProjectMetaData projectMetadata = fenceMappingUtility.getFenceMappingByAuthZ().get(access_role_name);
+            StudyMetaData studyMetadata = fenceMappingUtility.getFenceMappingByAuthZ().get(access_role_name);
 
-            if (projectMetadata == null) {
+            if (studyMetadata == null) {
                 logger.info("getFENCEProfile() -> Could not find study in FENCE mapping SKIPPING: {}", access_role_name);
                 continue;
             }
 
-            String projectId = projectMetadata.getStudy_identifier();
-            String consentCode = projectMetadata.getConsent_group_code();
+            String projectId = studyMetadata.getStudy_identifier();
+            String consentCode = studyMetadata.getConsent_group_code();
             String newRoleName = StringUtils.isNotBlank(consentCode) ? "FENCE_"+projectId+"_"+consentCode : "FENCE_"+projectId;
 
             project_access_set.add(newRoleName);
@@ -457,8 +456,8 @@ public class FENCEAuthenticationService {
         logger.info("addFENCEPrivileges() project name: "+project_name+" consent group: "+consent_group);
 
         // Look up the metadata by consent group.
-       ProjectMetaData projectMetadata = getFENCEMappingforProjectAndConsent(project_name, consent_group);
-        if(projectMetadata == null) {
+       StudyMetaData studyMetadata = getFENCEMappingforProjectAndConsent(project_name, consent_group);
+        if(studyMetadata == null) {
         	//no privileges means no access to this project.  just return existing set of privs.
             logger.warn("No metadata available for project {}.{}", project_name, consent_group);
         	return privs;
@@ -466,10 +465,10 @@ public class FENCEAuthenticationService {
 
         logger.info("addPrivileges() This is a new privilege");
 
-        String dataType = projectMetadata.getData_type();
-        Boolean isHarmonized = "Y".equals(projectMetadata.getIs_harmonized());
-        String concept_path = projectMetadata.getTop_level_path();
-        String projectAlias = projectMetadata.getAbbreviated_name();
+        String dataType = studyMetadata.getData_type();
+        Boolean isHarmonized = "Y".equals(studyMetadata.getIs_harmonized());
+        String concept_path = studyMetadata.getTop_level_path();
+        String projectAlias = studyMetadata.getAbbreviated_name();
 
         //we need to add escape sequence back in to the path for parsing later (also need to double escape the regex)
         //
@@ -1196,13 +1195,13 @@ public class FENCEAuthenticationService {
 		return gate;
 	}
 
-	private ProjectMetaData getFENCEMappingforProjectAndConsent(String projectId, String consent_group) {
+	private StudyMetaData getFENCEMappingforProjectAndConsent(String projectId, String consent_group) {
 		String consentVal = (consent_group != null && !consent_group.isEmpty()) ? projectId + "." + consent_group : projectId;
         logger.info("getFENCEMappingforProjectAndConsent() looking up {}", consentVal);
 
-		ProjectMetaData projectMetadata = fenceMappingUtility.getFENCEMapping().get(consentVal);
-		if(projectMetadata != null) {
-			return projectMetadata;
+		StudyMetaData studyMetadata = fenceMappingUtility.getFENCEMapping().get(consentVal);
+		if(studyMetadata != null) {
+			return studyMetadata;
 		} else {
             logger.info("getFENCEMappingforProjectAndConsent() no mapping found for {}", consentVal);
 		}

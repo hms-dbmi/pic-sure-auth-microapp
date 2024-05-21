@@ -1,6 +1,6 @@
 package edu.harvard.hms.dbmi.avillach.auth.rest;
 
-import edu.harvard.hms.dbmi.avillach.auth.model.ProjectMetaData;
+import edu.harvard.hms.dbmi.avillach.auth.model.StudyMetaData;
 import edu.harvard.hms.dbmi.avillach.auth.service.auth.FENCEAuthenticationService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.FenceMappingUtility;
 import io.swagger.annotations.Api;
@@ -53,9 +53,9 @@ public class StudyAccessService {
             return Response.status(Response.Status.BAD_REQUEST).entity("Study identifier cannot be blank").build();
         }
 
-        ProjectMetaData fenceMappingForStudy;
+        StudyMetaData fenceMappingForStudy;
         try {
-            Map<String, ProjectMetaData> fenceMapping = fenceMappingUtility.getFENCEMapping();
+            Map<String, StudyMetaData> fenceMapping = fenceMappingUtility.getFENCEMapping();
             if (fenceMapping == null) {
                 throw new Exception("Fence mapping is null");
             }

@@ -1,6 +1,6 @@
 package edu.harvard.hms.dbmi.avillach;
 
-import edu.harvard.hms.dbmi.avillach.auth.model.ProjectMetaData;
+import edu.harvard.hms.dbmi.avillach.auth.model.StudyMetaData;
 import edu.harvard.hms.dbmi.avillach.auth.rest.StudyAccessService;
 import edu.harvard.hms.dbmi.avillach.auth.service.auth.FENCEAuthenticationService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.FenceMappingUtility;
@@ -44,7 +44,7 @@ public class StudyAccessServiceTest {
     @Test
     public void testAddStudyAccess() {
         String studyIdentifier = "testStudy";
-        ProjectMetaData bioDataCatalyst = new ProjectMetaData();
+        StudyMetaData bioDataCatalyst = new StudyMetaData();
         bioDataCatalyst.setStudy_identifier("testStudy");
         bioDataCatalyst.setConsent_group_code("");
         when(fenceMappingUtility.getFENCEMapping()).thenReturn(Map.of(studyIdentifier, bioDataCatalyst));
@@ -58,7 +58,7 @@ public class StudyAccessServiceTest {
     @Test
     public void testAddStudyAccessWithConsent() {
         String studyIdentifier = "testStudy2.c2";
-        ProjectMetaData bioDataCatalyst = new ProjectMetaData();
+        StudyMetaData bioDataCatalyst = new StudyMetaData();
         bioDataCatalyst.setStudy_identifier("testStudy2");
         bioDataCatalyst.setConsent_group_code("c2");
 

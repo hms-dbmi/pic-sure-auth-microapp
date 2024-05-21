@@ -1,7 +1,7 @@
 package edu.harvard.hms.dbmi.avillach.auth.utils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import edu.harvard.hms.dbmi.avillach.auth.model.ProjectMetaData;
+import edu.harvard.hms.dbmi.avillach.auth.model.StudyMetaData;
 import edu.harvard.hms.dbmi.avillach.auth.model.FenceMapping;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,8 +21,8 @@ import java.util.*;
 public class FenceMappingUtility {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
-    private Map<String, ProjectMetaData> _projectMap;
-    private Map<String, ProjectMetaData> fenceMappingByAuthZ;
+    private Map<String, StudyMetaData> fenceMappingByConsent;
+    private Map<String, StudyMetaData> fenceMappingByAuthZ;
     private static String templatePath;
     private ObjectMapper objectMapper;
 
@@ -43,35 +43,35 @@ public class FenceMappingUtility {
     }
 
     private void initializeFENCEMapping() throws IOException {
-        ArrayList<ProjectMetaData> projects = loadBioDataCatalystFenceMappingData();
-        _projectMap = new HashMap<>(projects.size());
-        for (ProjectMetaData project : projects) {
-            String consentVal = (project.getConsent_group_code() != null && !project.getConsent_group_code().isEmpty()) ?
-                    project.getStudy_identifier() + "." + project.getConsent_group_code() :
-                    project.getStudy_identifier();
-            _projectMap.put(consentVal, project);
+        ArrayList<StudyMetaData> studies = loadBioDataCatalystFenceMappingData();
+        fenceMappingByConsent = new HashMap<>(studies.size());
+        for (StudyMetaData study : studies) {
+            String consentVal = (study.getConsent_group_code() != null && !study.getConsent_group_code().isEmpty()) ?
+                    study.getStudy_identifier() + "." + study.getConsent_group_code() :
+                    study.getStudy_identifier();
+            fenceMappingByConsent.put(consentVal, study);
         }
     }
 
     private void initializeFenceMappingByAuthZ() throws IOException {
-        ArrayList<ProjectMetaData> projects = loadBioDataCatalystFenceMappingData();
-        fenceMappingByAuthZ = new HashMap<>(projects.size());
-        for (ProjectMetaData project : projects) {
-            fenceMappingByAuthZ.put(project.getAuthZ().replace("\\/", "/"), project);
+        ArrayList<StudyMetaData> studies = loadBioDataCatalystFenceMappingData();
+        fenceMappingByAuthZ = new HashMap<>(studies.size());
+        for (StudyMetaData study : studies) {
+            fenceMappingByAuthZ.put(study.getAuthZ().replace("\\/", "/"), study);
         }
     }
 
-    public Map<String, ProjectMetaData> getFENCEMapping() {
-        return _projectMap;
+    public Map<String, StudyMetaData> getFENCEMapping() {
+        return fenceMappingByConsent;
     }
 
-    public Map<String, ProjectMetaData> getFenceMappingByAuthZ() {
+    public Map<String, StudyMetaData> getFenceMappingByAuthZ() {
         return fenceMappingByAuthZ;
     }
 
-    private ArrayList<ProjectMetaData> loadBioDataCatalystFenceMappingData() {
+    private ArrayList<StudyMetaData> loadBioDataCatalystFenceMappingData() {
         FenceMapping fenceMapping;
-        ArrayList<ProjectMetaData> projects;
+        ArrayList<StudyMetaData> studies;
         try {
             logger.debug("getFENCEMapping: loading FENCE mapping from {}", templatePath);
             fenceMapping = objectMapper.readValue(
@@ -79,13 +79,13 @@ public class FenceMappingUtility {
                             new String[]{templatePath, "fence_mapping.json"}))
                     , FenceMapping.class);
 
-            projects = fenceMapping.getBio_data_catalyst();
-            logger.debug("getFENCEMapping: found FENCE mapping with {} entries", projects.size());
+            studies = fenceMapping.getBio_data_catalyst();
+            logger.debug("getFENCEMapping: found FENCE mapping with {} entries", studies.size());
         } catch (Exception e) {
             logger.error("loadFenceMappingData: Non-fatal error parsing fence_mapping.json: {}", templatePath, e);
             return new ArrayList<>();
         }
-        return projects;
+        return studies;
     }
 
 }
