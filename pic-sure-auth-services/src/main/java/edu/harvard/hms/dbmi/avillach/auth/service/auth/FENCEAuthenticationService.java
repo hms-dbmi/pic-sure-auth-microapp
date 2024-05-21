@@ -238,9 +238,6 @@ public class FENCEAuthenticationService {
         // Project access set is now a set of role names that should be assigned to the user
         logger.info("getFENCEProfile() project access set: {}", project_access_set);
 
-        // current user roles
-        logger.info("getFENCEProfile() current user roles: {}", current_user.getRoles());
-
         // Step 1: Remove roles that are not in the project_access_set
         Set<Role> rolesToRemove = new HashSet<>();
         // Also, track the roles that are assigned to the user and in the project_access_set
@@ -258,9 +255,6 @@ public class FENCEAuthenticationService {
                 rolesAssigned.add(role.getName());
             }
         }
-
-        logger.info("getFENCEProfile() roles assigned to user: {}", rolesAssigned);
-        logger.info("getFENCEProfile() roles to remove: {}", rolesToRemove);
 
         // Remove roles that are not in the project_access_set
         if (!rolesToRemove.isEmpty()) {
@@ -296,9 +290,13 @@ public class FENCEAuthenticationService {
                 newRoles.add(createRole(access_role_name, current_user));
             }
 
-            // Persist the new roles
-            logger.info("getFENCEProfile() persisting {} new roles", newRoles.size());
-            roleRepo.persistAll(newRoles);
+            if (!newRoles.isEmpty()) {
+                // Persist the new roles
+                logger.info("getFENCEProfile() persisting {} new roles", newRoles.size());
+                roleRepo.persistAll(newRoles);
+            } else {
+                logger.info("getFENCEProfile() no new roles to persist");
+            }
 
             // Assign the new roles to the user
             logger.info("getFENCEProfile() assigning {} new roles to the user", newRoles.size());
