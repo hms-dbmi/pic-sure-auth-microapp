@@ -1,5 +1,6 @@
 package edu.harvard.hms.dbmi.avillach.auth.rest;
 
+import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.AuthenticationService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.AuthorizationService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.FENCEAuthenticationService;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 
 
@@ -59,10 +61,12 @@ public class AuthController {
 
         if (this.idp_provider.equalsIgnoreCase("fence")) {
             logger.debug("authentication() FENCE authentication");
-            return fenceAuthenticationService.getFENCEProfile(authRequest);
+            HashMap<String, String> fenceProfile = fenceAuthenticationService.getFENCEProfile(authRequest);
+            return PICSUREResponse.success(fenceProfile);
         } else {
             logger.debug("authentication() default authentication");
-            return authenticationService.getToken(authRequest);
+            HashMap<String, String> token = authenticationService.getToken(authRequest);
+            return PICSUREResponse.success(token);
         }
     }
 }

@@ -37,7 +37,7 @@ public class UserMetadataMappingWebController {
     @Operation(description = "GET information of one UserMetadataMapping with the UUID, requires ADMIN or SUPER_ADMIN role")
     @RolesAllowed({ADMIN, SUPER_ADMIN})
     @GetMapping(path = "{connectionId}", produces = "application/json")
-    public ResponseEntity<?> getMappingsForConnection(@PathVariable("connectionId") String connection) {
+    public ResponseEntity<Connection> getMappingsForConnection(@PathVariable("connectionId") String connection) {
         Connection allMappingsForConnection = this.mappingService.getAllMappingsForConnection(connection);
         return PICSUREResponse.success(allMappingsForConnection);
     }
@@ -45,7 +45,7 @@ public class UserMetadataMappingWebController {
     @Operation(description = "GET a list of existing UserMetadataMappings, requires ADMIN or SUPER_ADMIN role")
     @RolesAllowed({ADMIN, SUPER_ADMIN})
     @GetMapping(produces = "application/json")
-    public ResponseEntity<?> getAllMappings() {
+    public ResponseEntity<List<UserMetadataMapping>> getAllMappings() {
         List<UserMetadataMapping> allMappings = mappingService.getAllMappings();
         return PICSUREResponse.success(allMappings);
     }
@@ -83,7 +83,7 @@ public class UserMetadataMappingWebController {
     @Operation(description = "DELETE an UserMetadataMapping by Id only if the UserMetadataMapping is not associated by others, requires SUPER_ADMIN role")
     @RolesAllowed({SUPER_ADMIN})
     @DeleteMapping(path = "/{mappingId}", produces = "application/json")
-    public ResponseEntity<?> removeById(
+    public ResponseEntity<List<UserMetadataMapping>> removeById(
             @Parameter(required = true, description = "A valid UserMetadataMapping Id")
             @PathVariable("mappingId") final String mappingId) {
         List<UserMetadataMapping> userMetadataMappings = this.mappingService.removeMetadataMappingByIdAndRetrieveAll(mappingId);

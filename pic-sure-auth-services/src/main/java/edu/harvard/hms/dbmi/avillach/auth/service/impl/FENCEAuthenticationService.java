@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.harvard.hms.dbmi.avillach.auth.entity.*;
 import edu.harvard.hms.dbmi.avillach.auth.exceptions.NotAuthorizedException;
-import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.repository.*;
 import edu.harvard.hms.dbmi.avillach.auth.utils.RestClientUtil;
 import jakarta.annotation.PostConstruct;
@@ -157,7 +156,7 @@ public class FENCEAuthenticationService {
     }
 
     // Get access_token from FENCE, based on the provided `code`
-    public ResponseEntity<?> getFENCEProfile(Map<String, String> authRequest) {
+    public HashMap<String, String> getFENCEProfile(Map<String, String> authRequest) {
         logger.debug("getFENCEProfile() starting...");
         String fence_code = authRequest.get("code");
 
@@ -230,7 +229,7 @@ public class FENCEAuthenticationService {
         logger.debug("getFENCEProfile() UserProfile response object has been generated");
 
         logger.debug("getFENCEToken() finished");
-        return PICSUREResponse.success(responseMap);
+        return responseMap;
     }
 
 

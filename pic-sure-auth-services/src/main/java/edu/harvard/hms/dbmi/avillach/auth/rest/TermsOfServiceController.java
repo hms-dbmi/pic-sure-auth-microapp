@@ -46,7 +46,7 @@ public class TermsOfServiceController {
 
     @Operation(description = "GET the latest Terms of Service")
     @GetMapping(path = "/latest", produces = "text/html")
-    public ResponseEntity<?> getLatestTermsOfService(){
+    public ResponseEntity<String> getLatestTermsOfService(){
         logger.info("Getting latest Terms of Service");
         return PICSUREResponse.success(tosService.getLatest());
     }
@@ -65,7 +65,7 @@ public class TermsOfServiceController {
 
     @Operation(description = "GET if current user has acceptted his TOS or not")
     @GetMapping(produces = "text/plain")
-    public ResponseEntity<?> hasUserAcceptedTOS(){
+    public ResponseEntity<Boolean> hasUserAcceptedTOS(){
         SecurityContext context = SecurityContextHolder.getContext();
         String userSubject = context.getAuthentication().getName();
         logger.info("hasUserAcceptedTOS for user {}", userSubject);

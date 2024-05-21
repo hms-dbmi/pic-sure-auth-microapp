@@ -51,7 +51,7 @@ public class RoleController {
     @Operation(description = "GET a list of existing Roles, requires ADMIN or SUPER_ADMIN role")
     @GetMapping(produces = "application/json")
     @RolesAllowed({ADMIN, SUPER_ADMIN})
-    public ResponseEntity<?> getRoleAll() {
+    public ResponseEntity<List<Role>> getRoleAll() {
         List<Role> allRoles = this.roleService.getAllRoles();
         return PICSUREResponse.success(allRoles);
     }

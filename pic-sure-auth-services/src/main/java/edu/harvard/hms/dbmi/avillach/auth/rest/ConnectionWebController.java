@@ -51,7 +51,7 @@ public class ConnectionWebController {
     @Operation(description = "GET a list of existing Connection, requires SUPER_ADMIN or ADMIN role")
     @GetMapping(value = "/", produces = "application/json")
     @Secured({SUPER_ADMIN, ADMIN})
-    public ResponseEntity<?> getAllConnections() {
+    public ResponseEntity<List<Connection>> getAllConnections() {
         List<Connection> allConnections = connectionWebService.getAllConnections();
         return ResponseEntity.ok(allConnections);
     }
@@ -74,7 +74,7 @@ public class ConnectionWebController {
     @Operation(description = "Update a list of Connections, will only update the fields listed, requires SUPER_ADMIN role")
     @Secured({SUPER_ADMIN})
     @PutMapping(produces = "application/json", consumes = "application/json")
-    public ResponseEntity<?> updateConnection(
+    public ResponseEntity<List<Connection>> updateConnection(
             @Parameter(required = true, description = "A list of Connection with fields to be updated in JSON format")
             @RequestBody List<Connection> connections) {
         List<Connection> responseEntity = connectionWebService.updateConnections(connections);
@@ -84,7 +84,7 @@ public class ConnectionWebController {
     @Operation(description = "DELETE an Connection by Id only if the Connection is not associated by others, requires SUPER_ADMIN role")
     @Secured({SUPER_ADMIN})
     @DeleteMapping(path = "/{connectionId}", produces = "application/json")
-    public ResponseEntity<?> removeById(
+    public ResponseEntity<List<Connection>> removeById(
             @Parameter(required = true, description = "A valid connection Id")
             @PathVariable("connectionId") final String connectionId) {
         List<Connection> connections = connectionWebService.removeConnectionById(connectionId);

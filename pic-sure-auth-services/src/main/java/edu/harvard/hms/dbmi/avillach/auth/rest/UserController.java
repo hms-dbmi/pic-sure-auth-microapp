@@ -41,7 +41,7 @@ public class UserController {
     @Operation(description = "GET information of one user with the UUID, requires ADMIN or SUPER_ADMIN roles")
     @RolesAllowed({ADMIN, SUPER_ADMIN})
     @GetMapping(path = "/{userId}", produces = "application/json")
-    public ResponseEntity<?> getUserById(
+    public ResponseEntity<User> getUserById(
             @Parameter(required = true, description = "The UUID of the user to fetch information about")
             @PathVariable("userId") String userId) {
         User userById = this.userService.getUserById(userId);
@@ -51,7 +51,7 @@ public class UserController {
     @Operation(description = "GET a list of existing users, requires ADMIN or SUPER_ADMIN roles")
     @RolesAllowed({ADMIN, SUPER_ADMIN})
     @GetMapping(produces = "application/json")
-    public ResponseEntity<?> getUserAll() {
+    public ResponseEntity<List<User>> getUserAll() {
         List<User> entityAll = this.userService.getAllUsers();
         return PICSUREResponse.success(entityAll);
     }
