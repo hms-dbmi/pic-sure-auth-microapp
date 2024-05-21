@@ -32,6 +32,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 
 /**
@@ -215,7 +216,7 @@ public class JWTFilter extends OncePerRequestFilter {
             }
         }
 
-        logger.info("User with email {} has roles {}.", authenticatedUser.getUser().getEmail(), userRoles != null ? userRoles.stream().map(Role::getName).toList() : null);
+        logger.info("User with email {} has roles {}.", authenticatedUser.getUser().getEmail(), userRoles != null ? userRoles.stream().map(Role::getName).collect(Collectors.joining(",")) : null);
         UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(authenticatedUser, null, authenticatedUser.getAuthorities());
         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
         SecurityContextHolder.getContext().setAuthentication(authentication);
