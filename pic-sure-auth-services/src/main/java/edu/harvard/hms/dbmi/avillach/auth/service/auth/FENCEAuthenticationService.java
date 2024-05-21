@@ -1013,12 +1013,12 @@ public class FENCEAuthenticationService {
 
 
 //                	ar = upsertHarmonizedAccessRule(studyIdentifier, consent_group, "TOPMED+HARMONIZED+PARENT");
-//                    
+//
 //                    //if this is a new rule, we need to populate it
 //                	 if(ar.getGates() == null) {
 //                       	ar.setGates(new HashSet<AccessRule>());
 //                       	ar.getGates().addAll(getGates(true, true, true));
-//                      	
+//
 //                      	if(ar.getSubAccessRule() == null) {
 //                      		ar.setSubAccessRule(new HashSet<AccessRule>());
 //                      	}
@@ -1026,7 +1026,7 @@ public class FENCEAuthenticationService {
 //                    	ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, parentConceptPath,  projectAlias));
 //                		ar.getSubAccessRule().addAll(getHarmonizedSubRules());
 //                		ar.getSubAccessRule().add(createPhenotypeSubRule(fence_topmed_consent_group_concept_path, "ALLOW_TOPMED_CONSENT", "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
-//                    	
+//
 //                		accessruleRepo.merge(ar);
 //                    }
 //                    accessrules.add(ar);
@@ -1209,9 +1209,9 @@ public class FENCEAuthenticationService {
 
     private RequestConfig getFenceRequestConfig() {
         RequestConfig.Builder requestConfigBuilder = RequestConfig.custom();
-        requestConfigBuilder.setConnectTimeout(3000);
-        requestConfigBuilder.setConnectionRequestTimeout(3000);
-        requestConfigBuilder.setSocketTimeout(3000);
+        requestConfigBuilder.setConnectTimeout(5000);
+        requestConfigBuilder.setConnectionRequestTimeout(5000);
+        requestConfigBuilder.setSocketTimeout(5000);
         return requestConfigBuilder.build();
     }
 
