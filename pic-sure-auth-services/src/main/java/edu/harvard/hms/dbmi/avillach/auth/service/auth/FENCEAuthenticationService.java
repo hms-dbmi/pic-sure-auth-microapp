@@ -264,7 +264,7 @@ public class FENCEAuthenticationService {
         logger.info("getFENCEProfile() roles to remove: {}", rolesToRemove);
 
         // Remove roles that are not in the project_access_set
-        if (!CollectionUtils.isEmpty(rolesToRemove)) {
+        if (!rolesToRemove.isEmpty()) {
             current_user.getRoles().removeAll(rolesToRemove);
         }
 
