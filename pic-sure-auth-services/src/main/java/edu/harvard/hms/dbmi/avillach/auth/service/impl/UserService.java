@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class UserService {
@@ -243,16 +244,17 @@ public class UserService {
     private void checkAssociation(List<User> users) {
         for (User user : users) {
             if (user.getRoles() != null) {
-                Set<Role> roles = new HashSet<>();
-                user.getRoles().forEach(t -> {
-                    Optional<Role> role = this.roleService.getRoleById(t.getUuid());
-                    if (role.isEmpty()) {
-                        throw new RuntimeException("Role not found - uuid: " + t.getUuid().toString());
-                    }
-                    roles.add(role.get());
-                });
+                Set<UUID> roleUuids = user.getRoles().stream().map(Role::getUuid).collect(Collectors.toSet());
+                Set<Role> rolesFromDb = this.roleService.getRolesByIds(roleUuids);
 
-                user.setRoles(roles);
+                // If the size of the roles from the database is not the same as the input role UUIDs, then
+                // we cannot find all roles by the input UUIDs.
+                if (rolesFromDb.size() != roleUuids.size()) {
+                    logger.error("checkAssociation() cannot find all roles by UUIDs: {}", roleUuids);
+                    throw new IllegalArgumentException("Cannot find all roles by input UUIDs: " + roleUuids);
+                }
+
+                user.setRoles(rolesFromDb);
             }
 
             if (user.getConnection() != null) {

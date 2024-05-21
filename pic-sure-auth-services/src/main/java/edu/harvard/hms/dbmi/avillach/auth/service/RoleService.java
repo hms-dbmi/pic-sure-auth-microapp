@@ -107,5 +107,9 @@ public class RoleService {
 
         roles.add(t);
     }
+
+    public Set<Role> getRolesByIds(Set<UUID> roleUuids) {
+        return this.roleRepository.findByUuidIn(roleUuids);
+    }
 }
 
