@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
@@ -275,16 +276,13 @@ public class FENCEAuthenticationService {
 
             // Given our reduced list of roles that should be assigned, we can determine which of those roles are not in the database
             // This also tells use which roles are in the database
-            Set<String> rolesThatExist = roleRepo.getRoleNamesByNames(project_access_set);
+            Set<Role> rolesThatExist = roleRepo.getRolesByNames(project_access_set);
             if (!rolesThatExist.isEmpty()) {
-                // Assign the roles that exist in the database to the user
-                logger.info("getFENCEProfile() assigning roles that exist in the database: {}", rolesThatExist);
-                Set<Role> rolesThatExistSet = roleRepo.getRolesByNames(rolesThatExist);
-                current_user.getRoles().addAll(rolesThatExistSet);
+                current_user.getRoles().addAll(rolesThatExist);
 
-                // Given a set of all access role names that exist in the database we can now determine which do not exist
-                // and create them
-                project_access_set.removeAll(rolesThatExist);
+                // remove the set of role names from the project_access_set
+                Set<String> rolesThatExistNames = rolesThatExist.stream().map(Role::getName).collect(Collectors.toSet());
+                project_access_set.removeAll(rolesThatExistNames);
             } else {
                 logger.info("getFENCEProfile() none of the following roles exist in the database: {}", project_access_set);
             }
