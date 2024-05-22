@@ -311,9 +311,9 @@ public class FENCEAuthenticationService {
         }
 
         final String idp = extractIdp(current_user);
-        if (current_user.getRoles() != null && (!current_user.getRoles().isEmpty() || openAccessIdpValues.contains(idp))) {
+        if (current_user.getRoles() != null && openAccessIdpValues.contains(idp)) {
 	        Role openAccessRole = roleRepo.getUniqueResultByColumn("name", fence_open_access_role_name);
-	        if (openAccessRole != null) {
+	        if (openAccessRole != null && !current_user.getRoles().contains(openAccessRole)) {
 	        	current_user.getRoles().add(openAccessRole);
 	        } else {
 	        	logger.warn("Unable to find fence OPEN ACCESS role");
