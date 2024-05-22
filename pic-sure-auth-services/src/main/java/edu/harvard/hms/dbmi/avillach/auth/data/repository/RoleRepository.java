@@ -19,27 +19,15 @@ public class RoleRepository extends BaseRepository<Role, UUID> {
         super(Role.class);
     }
 
-    public Set<String> getRoleNamesByNames(Set<String> accessRoleNames) {
-        if (accessRoleNames.isEmpty()) {
-            return new HashSet<>();
-        }
-
-        return new HashSet<>(em.createQuery("SELECT r.name FROM role r WHERE r.name IN :projectAccessSet", String.class)
-                .setParameter("projectAccessSet", accessRoleNames)
-                .getResultList());
-    }
-
     /**
      * Persists all roles in the list to the database. This method is used to batch insert roles.
      * @param newRoles the list of roles to be inserted
      */
-    @Transactional
     public void persistAll(ArrayList<Role> newRoles) {
         // batch insert
         int batchSize = 50;
         for (int i = 0; i < newRoles.size(); i += batchSize) {
             int end = Math.min(newRoles.size(), i + batchSize);
-            em.joinTransaction();
             for (int j = i; j < end; j++) {
                 em.persist(newRoles.get(j));
             }
