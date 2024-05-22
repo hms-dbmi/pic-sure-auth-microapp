@@ -27,7 +27,7 @@ pipeline {
         }
         stage('push') {
             steps {
-                sh "aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 960263283676.dkr.ecr.us-east-1.amazonaws.com"
+                sh "aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${params.DOCKER_REGISTRY}"
                 sh "docker push ${params.DOCKER_REGISTRY}/${params.REPOSITORY_NAME}:${IMAGE_TAG}"
                 sh "docker push ${params.DOCKER_REGISTRY}/${params.REPOSITORY_NAME}:${LATEST_TAG}"
             }
