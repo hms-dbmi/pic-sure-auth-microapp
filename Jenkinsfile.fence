@@ -26,7 +26,6 @@ pipeline {
         }
         stage('build') {
             steps {
-                sh "ls"
                 sh "docker build ${DOCKER_BUILD_ARGS} -t ${params.DOCKER_REGISTRY}/${params.REPOSITORY_NAME}:${IMAGE_TAG} ."
                 sh "docker tag ${params.DOCKER_REGISTRY}/${params.REPOSITORY_NAME}:${IMAGE_TAG} ${params.DOCKER_REGISTRY}/${params.REPOSITORY_NAME}:${LATEST_TAG}"
             }
