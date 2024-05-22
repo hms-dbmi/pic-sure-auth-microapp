@@ -34,7 +34,7 @@ pipeline {
         }
         stage('deploy') {
             steps {
-                sh "docker save hms-dbmi/pic-sure-auth-microapp:${GIT_BRANCH_SHORT}_${GIT_COMMIT_SHORT} | gzip > pic-sure-auth-microapp.tar.gz"
+                sh "docker save ${params.DOCKER_REGISTRY}/${params.REPOSITORY_NAME}:${LATEST_TAG}" | gzip > pic-sure-auth-microapp.tar.gz"
                 sh "aws s3 --sse=AES256 cp pic-sure-auth-microapp.tar.gz s3://$S3_BUCKET_NAME/releases/jenkins_pipeline_build_${pipeline_build_id}/pic-sure-auth-microapp.tar.gz"
             }
         }
