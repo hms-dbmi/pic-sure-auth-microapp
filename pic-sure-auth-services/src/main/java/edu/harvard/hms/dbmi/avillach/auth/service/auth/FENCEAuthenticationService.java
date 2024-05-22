@@ -216,28 +216,7 @@ public class FENCEAuthenticationService {
             throw new NotAuthorizedException("The user details could not be persisted. Please contact the administrator.");
         }
 
-        Iterator<String> project_access_names = fence_user_profile.get("authz").fieldNames();
-
-        // Convert Iterator to a set of strings
-        Set<String> project_access_set = new HashSet<>();
-
-        // Loop over the project access names and convert them to database fence role names
-        while (project_access_names.hasNext()) {
-            String access_role_name = project_access_names.next();
-            StudyMetaData studyMetadata = fenceMappingUtility.getFenceMappingByAuthZ().get(access_role_name);
-
-            if (studyMetadata == null) {
-                logger.info("getFENCEProfile() -> Could not find study in FENCE mapping SKIPPING: {}", access_role_name);
-                continue;
-            }
-
-            String projectId = studyMetadata.getStudy_identifier();
-            String consentCode = studyMetadata.getConsent_group_code();
-            String newRoleName = StringUtils.isNotBlank(consentCode) ? "FENCE_"+projectId+"_"+consentCode : "FENCE_"+projectId;
-
-            project_access_set.add(newRoleName);
-        }
-
+        Set<String> project_access_set = getProjectAccessNames(fence_user_profile);
         // Project access set is now a set of role names that should be assigned to the user
         logger.info("getFENCEProfile() project access set: {}", project_access_set);
 
@@ -332,6 +311,29 @@ public class FENCEAuthenticationService {
         logger.debug("getFENCEProfile() UserProfile response object has been generated");
         logger.debug("getFENCEToken() finished");
         return PICSUREResponse.success(responseMap);
+    }
+
+    private Set<String> getProjectAccessNames(JsonNode fence_user_profile) {
+        Iterator<String> project_access_names = fence_user_profile.get("authz").fieldNames();
+        // Convert Iterator to a set of strings
+        Set<String> project_access_set = new HashSet<>();
+        // Loop over the project access names and convert them to database fence role names
+        while (project_access_names.hasNext()) {
+            String access_role_name = project_access_names.next();
+            StudyMetaData studyMetadata = fenceMappingUtility.getFenceMappingByAuthZ().get(access_role_name);
+
+            if (studyMetadata == null) {
+                logger.info("getFENCEProfile() -> Could not find study in FENCE mapping SKIPPING: {}", access_role_name);
+                continue;
+            }
+
+            String projectId = studyMetadata.getStudy_identifier();
+            String consentCode = studyMetadata.getConsent_group_code();
+            String newRoleName = StringUtils.isNotBlank(consentCode) ? "FENCE_"+projectId+"_"+consentCode : "FENCE_"+projectId;
+
+            project_access_set.add(newRoleName);
+        }
+        return project_access_set;
     }
 
     private Role createRole(String newRoleName, User current_user) {
