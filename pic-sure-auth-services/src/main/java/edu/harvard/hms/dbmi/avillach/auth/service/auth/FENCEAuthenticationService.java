@@ -263,7 +263,11 @@ public class FENCEAuthenticationService {
 
         // Given the set of roles assigned and that set of roles that should be assigned, we can reduce the set of roles from the project_access_set
         // to only those that are not in the rolesAssigned set
-        project_access_set.removeAll(rolesAssigned);
+        if (!rolesAssigned.isEmpty()) {
+            logger.info("getFENCEProfile() roles that are assigned: {}", rolesAssigned);
+            project_access_set.removeAll(rolesAssigned);
+        }
+
         if (!project_access_set.isEmpty()) {
             logger.info("getFENCEProfile() roles that should be assigned: {}", project_access_set);
 
@@ -273,9 +277,8 @@ public class FENCEAuthenticationService {
             if (!rolesThatExist.isEmpty()) {
                 // Assign the roles that exist in the database to the user
                 logger.info("getFENCEProfile() assigning roles that exist in the database: {}", rolesThatExist);
-                for (Role role : roleRepo.getRolesByNames(rolesThatExist)) {
-                    current_user.getRoles().add(role);
-                }
+                Set<Role> rolesThatExistSet = roleRepo.getRolesByNames(rolesThatExist);
+                current_user.getRoles().addAll(rolesThatExistSet);
 
                 // Given a set of all access role names that exist in the database we can now determine which do not exist
                 // and create them
@@ -294,13 +297,13 @@ public class FENCEAuthenticationService {
                 // Persist the new roles
                 logger.info("getFENCEProfile() persisting {} new roles", newRoles.size());
                 roleRepo.persistAll(newRoles);
+
+                // Assign the new roles to the user
+                logger.info("getFENCEProfile() assigning {} new roles to the user", newRoles.size());
+                current_user.getRoles().addAll(newRoles);
             } else {
                 logger.info("getFENCEProfile() no new roles to persist");
             }
-
-            // Assign the new roles to the user
-            logger.info("getFENCEProfile() assigning {} new roles to the user", newRoles.size());
-            current_user.getRoles().addAll(newRoles);
         } else {
             logger.info("getFENCEProfile() no roles to assign user has all necessary roles");
         }
@@ -316,12 +319,9 @@ public class FENCEAuthenticationService {
 	        }
         }
 
-        try {
-            current_user = userRepo.changeRole(current_user, current_user.getRoles());
-            logger.debug("upsertRole() updated user, who now has {} roles.", current_user.getRoles().size());
-        } catch (Exception ex) {
-            logger.error("upsertRole() Could not add roles to user, because {}", ex.getMessage());
-        }
+        // Persist the user with the updated roles
+        userRepo.save(current_user);
+
         HashMap<String, Object> claims = new HashMap<String,Object>();
         claims.put("name", fence_user_profile.get("name"));
         claims.put("email", current_user.getEmail());
