@@ -19,11 +19,6 @@ pipeline {
     }
 
     stages {
-        stage('Prepare Environment Variables') {
-            steps {
-                cleanWs()
-            }
-        }
         stage('build') {
             steps {
                 sh "docker build ${DOCKER_BUILD_ARGS} -t ${params.DOCKER_REGISTRY}/${params.REPOSITORY_NAME}:${IMAGE_TAG} ."
