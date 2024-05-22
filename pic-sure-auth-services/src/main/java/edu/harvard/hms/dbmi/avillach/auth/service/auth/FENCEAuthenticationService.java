@@ -242,17 +242,19 @@ public class FENCEAuthenticationService {
         Set<Role> rolesToRemove = new HashSet<>();
         // Also, track the roles that are assigned to the user and in the project_access_set
         Set<String> rolesAssigned = new HashSet<>();
-        for (Role role : current_user.getRoles()) {
-            if (!project_access_set.contains(role.getName())
-                    && !role.getName().startsWith("MANUAL_")
-                    && !role.getName().equals(fence_open_access_role_name)
-                    && !role.getName().equals("PIC-SURE Top Admin")
-                    && !role.getName().equals("Admin")) {
-                rolesToRemove.add(role);
-            }
+        if (current_user.getRoles() != null) {
+            for (Role role : current_user.getRoles()) {
+                if (!project_access_set.contains(role.getName())
+                        && !role.getName().startsWith("MANUAL_")
+                        && !role.getName().equals(fence_open_access_role_name)
+                        && !role.getName().equals("PIC-SURE Top Admin")
+                        && !role.getName().equals("Admin")) {
+                    rolesToRemove.add(role);
+                }
 
-            if (project_access_set.contains(role.getName())) {
-                rolesAssigned.add(role.getName());
+                if (project_access_set.contains(role.getName())) {
+                    rolesAssigned.add(role.getName());
+                }
             }
         }
 
