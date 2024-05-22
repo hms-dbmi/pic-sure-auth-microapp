@@ -162,7 +162,6 @@ public class FENCEAuthenticationService {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        logger.debug("getFENCEAccessToken() finished: {}", resp.asText());
         return resp;
     }
 
