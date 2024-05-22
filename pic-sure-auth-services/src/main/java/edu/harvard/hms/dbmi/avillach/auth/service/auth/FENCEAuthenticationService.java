@@ -135,7 +135,10 @@ public class FENCEAuthenticationService {
         				+ "&redirect_uri=" + callback_url;
 
         String fence_token_url = JAXRSConfiguration.idp_provider_uri+"/user/oauth2/token";
+        return requestAccessToken(fence_token_url, query_string, headers);
+    }
 
+    private JsonNode requestAccessToken(String fence_token_url, String query_string, List<Header> headers) throws RuntimeException {
         // We have found that if the request is not quickly successful, it will time out.
         // We are decreasing the timeout to 1 second to allow for quicker retries.
         // We will fail after 3 retries.
