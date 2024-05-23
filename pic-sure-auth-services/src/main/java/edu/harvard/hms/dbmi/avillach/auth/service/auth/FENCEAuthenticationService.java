@@ -165,6 +165,12 @@ public class FENCEAuthenticationService {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+
+        if (resp == null) {
+            logger.error("getFENCEAccessToken() failed to get FENCE access token");
+            throw new NotAuthorizedException("Could not authenticate with provider.");
+        }
+
         return resp;
     }
 
@@ -1214,7 +1220,7 @@ public class FENCEAuthenticationService {
         RequestConfig.Builder requestConfigBuilder = RequestConfig.custom();
         requestConfigBuilder.setConnectTimeout(3000);
         requestConfigBuilder.setConnectionRequestTimeout(3000);
-        requestConfigBuilder.setSocketTimeout(5000);
+        requestConfigBuilder.setSocketTimeout(3000);
         return requestConfigBuilder.build();
     }
 
