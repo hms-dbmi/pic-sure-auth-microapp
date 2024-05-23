@@ -270,17 +270,17 @@ public class FENCEAuthenticationService {
                 // remove the set of role names from the project_access_set
                 Set<String> rolesThatExistNames = rolesThatExist.stream().map(Role::getName).collect(Collectors.toSet());
                 project_access_set.removeAll(rolesThatExistNames);
-
-                ArrayList<Role> roles = createRoles(project_access_set, current_user);
-                logger.info("getFENCEProfile() created {} new roles", roles.size());
-                logger.info("getFENCEProfile() adding {} new roles to user", roles.size());
-                current_user.getRoles().addAll(roles);
             } else {
                 logger.info("getFENCEProfile() none of the following roles exist in the database: {}", project_access_set);
             }
         } else {
             logger.info("getFENCEProfile() no roles to assign user has all necessary roles");
         }
+
+        ArrayList<Role> roles = createRoles(project_access_set, current_user);
+        logger.info("getFENCEProfile() created {} new roles", roles.size());
+        logger.info("getFENCEProfile() adding {} new roles to user", roles.size());
+        current_user.getRoles().addAll(roles);
 
         final String idp = extractIdp(current_user);
         if (current_user.getRoles() != null && openAccessIdpValues.contains(idp)) {
@@ -314,10 +314,8 @@ public class FENCEAuthenticationService {
         }
 
         if (!newRoles.isEmpty()) {
-            // Persist the new roles
             logger.info("getFENCEProfile() persisting {} new roles", newRoles.size());
             roleRepo.persistAll(newRoles);
-
         } else {
             logger.info("getFENCEProfile() no new roles to persist");
         }
