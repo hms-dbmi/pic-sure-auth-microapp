@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     parameters {
-        string(name: 'DOCKER_REGISTRY', description: 'Docker registry URL (e.g., ECR URL)', defaultValue: 'hms-dbmi')
-        string(name: 'REPOSITORY_NAME', description: 'Docker repository name', defaultValue: 'psama')
+        string(name: 'DOCKER_REGISTRY', description: 'Docker registry URL (e.g., ECR URL)', defaultValue: '${docker_registry}')
+        string(name: 'REPOSITORY_NAME', description: 'Docker repository name', defaultValue: '${psama_docker_repository_name}')
     }
 
     environment {
