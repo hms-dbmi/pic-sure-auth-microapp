@@ -1212,8 +1212,8 @@ public class FENCEAuthenticationService {
 
     private RequestConfig getFenceRequestConfig() {
         RequestConfig.Builder requestConfigBuilder = RequestConfig.custom();
-        requestConfigBuilder.setConnectTimeout(5000);
-        requestConfigBuilder.setConnectionRequestTimeout(5000);
+        requestConfigBuilder.setConnectTimeout(3000);
+        requestConfigBuilder.setConnectionRequestTimeout(3000);
         requestConfigBuilder.setSocketTimeout(5000);
         return requestConfigBuilder.build();
     }
