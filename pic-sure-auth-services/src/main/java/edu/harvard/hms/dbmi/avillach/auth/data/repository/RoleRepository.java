@@ -21,19 +21,19 @@ public class RoleRepository extends BaseRepository<Role, UUID> {
 
     /**
      * Persists all roles in the list to the database. This method is used to batch insert roles.
-     * @param newRoles the list of roles to be inserted
+     * @param roles the list of roles to be inserted
      */
-    public void persistAll(ArrayList<Role> newRoles) {
-        // batch insert
-        int batchSize = 50;
-        for (int i = 0; i < newRoles.size(); i += batchSize) {
-            int end = Math.min(newRoles.size(), i + batchSize);
-            for (int j = i; j < end; j++) {
-                em.persist(newRoles.get(j));
+    public void persistAll(Collection<Role> roles) {
+        int batchSize = 20; // Adjust batch size as necessary
+        int i = 0;
+        for (Role role : roles) {
+            em.persist(role);
+            if (i % batchSize == 0 && i > 0) {
+                em.flush();
             }
-            em.flush();
-            em.clear();
+            i++;
         }
+        em.flush(); // Ensure the remaining entities are persisted
     }
 
     public Set<Role> getRolesByNames(Set<String> rolesThatExist) {

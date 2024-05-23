@@ -270,26 +270,13 @@ public class FENCEAuthenticationService {
                 // remove the set of role names from the project_access_set
                 Set<String> rolesThatExistNames = rolesThatExist.stream().map(Role::getName).collect(Collectors.toSet());
                 project_access_set.removeAll(rolesThatExistNames);
+
+                ArrayList<Role> roles = createRoles(project_access_set, current_user);
+                logger.info("getFENCEProfile() created {} new roles", roles.size());
+                logger.info("getFENCEProfile() adding {} new roles to user", roles.size());
+                current_user.getRoles().addAll(roles);
             } else {
                 logger.info("getFENCEProfile() none of the following roles exist in the database: {}", project_access_set);
-            }
-
-            // Given the set of all access role names that do not exist in the database we can now create them
-            ArrayList<Role> newRoles = new ArrayList<>();
-            for (String access_role_name : project_access_set) {
-                newRoles.add(createRole(access_role_name, current_user));
-            }
-
-            if (!newRoles.isEmpty()) {
-                // Persist the new roles
-                logger.info("getFENCEProfile() persisting {} new roles", newRoles.size());
-                roleRepo.persistAll(newRoles);
-
-                // Assign the new roles to the user
-                logger.info("getFENCEProfile() assigning {} new roles to the user", newRoles.size());
-                current_user.getRoles().addAll(newRoles);
-            } else {
-                logger.info("getFENCEProfile() no new roles to persist");
             }
         } else {
             logger.info("getFENCEProfile() no roles to assign user has all necessary roles");
@@ -317,6 +304,25 @@ public class FENCEAuthenticationService {
         logger.debug("getFENCEProfile() UserProfile response object has been generated");
         logger.debug("getFENCEToken() finished");
         return PICSUREResponse.success(responseMap);
+    }
+
+    private ArrayList<Role> createRoles(Set<String> project_access_set, User current_user) {
+        // Given the set of all access role names that do not exist in the database we can now create them
+        ArrayList<Role> newRoles = new ArrayList<>();
+        for (String access_role_name : project_access_set) {
+            newRoles.add(createRole(access_role_name, current_user));
+        }
+
+        if (!newRoles.isEmpty()) {
+            // Persist the new roles
+            logger.info("getFENCEProfile() persisting {} new roles", newRoles.size());
+            roleRepo.persistAll(newRoles);
+
+        } else {
+            logger.info("getFENCEProfile() no new roles to persist");
+        }
+
+        return newRoles;
     }
 
     private Set<String> getProjectAccessNames(JsonNode fence_user_profile) {
