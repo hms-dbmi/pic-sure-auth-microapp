@@ -489,7 +489,7 @@ public class FENCEAuthenticationService {
         // OK... so, we need to do this for the query Template and scopes, but should NOT do this for the rules.
         //
         // NOTE: I'm leaving this in here for now and removing the escaped values later.  TODO: fix me!
-        //
+
         if (concept_path != null) {
             concept_path = concept_path.replaceAll("\\\\", "\\\\\\\\");
         }
@@ -569,7 +569,7 @@ public class FENCEAuthenticationService {
         String privilegeName = (consent_group != null && consent_group != "") ? "PRIV_FENCE_" + studyIdentifier + "_" + consent_group + (isHarmonized ? "_HARMONIZED" : "") : "PRIV_FENCE_" + studyIdentifier + (isHarmonized ? "_HARMONIZED" : "");
         Privilege priv = privilegeRepo.getUniqueResultByColumn("name", privilegeName);
         if (priv != null) {
-            logger.info("upsertClinicalPrivilege() " + privilegeName + " already exists");
+            logger.info("upsertClinicalPrivilege() {} already exists", privilegeName);
             return priv;
         }
 
@@ -865,7 +865,6 @@ public class FENCEAuthenticationService {
     }
 
     private AccessRule createPhenotypeSubRule(String conceptPath, String alias, String rule, int ruleType, String label, boolean useMapKey) {
-
         //remove double escape sequence from path evaluation expression
         if (conceptPath != null && conceptPath.contains("\\\\")) {
             //replaceall regex needs to be double escaped (again)
@@ -1066,7 +1065,6 @@ public class FENCEAuthenticationService {
             return ar;
         }
 
-
         logger.info("upsertConsentAccessRule() Creating new access rule " + ar_name);
         ar = new AccessRule();
         ar.setName(ar_name);
@@ -1162,24 +1160,28 @@ public class FENCEAuthenticationService {
      * return an existing gate named GATE_{gateName}_(PRESENT|MISSING) if it exists.
      */
     private AccessRule upsertConsentGate(String gateName, String rule, boolean is_present, String description) {
-
         gateName = "GATE_" + gateName + "_" + (is_present ? "PRESENT" : "MISSING");
-
         AccessRule gate = accessruleRepo.getUniqueResultByColumn("name", gateName);
+
+        // jws will not parse the json if the rule contains a single backslash
+        if (!rule.contains("\\\\")) {
+            //these have to be escaped again so that jaxson can convert it correctly
+            rule = rule.replaceAll("\\\\", "\\\\\\\\");
+            logger.debug("upsertConsentGate(): escaped rule {}", rule);
+        }
+
         if (gate != null) {
-            logger.info("upsertConsentGate() AccessRule " + gateName + " already exists.");
+            logger.info("upsertConsentGate() AccessRule {} already exists.", gateName);
             return gate;
         }
 
-        logger.info("upsertClinicalGate() Creating new access rule " + gateName);
+        logger.info("upsertClinicalGate() Creating new access rule {}", gateName);
         gate = new AccessRule();
         gate.setName(gateName);
         gate.setDescription("FENCE GATE for " + description + " consent " + (is_present ? "present" : "missing"));
         gate.setRule(rule);
-        // TODO: This seems to be a bug. There is never a case where this should be set to IS_NOT_EMPTY.
-        // If the rule is not empty, then there should be a value that is expected.
-        gate.setType(AccessRule.TypeNaming.IS_EMPTY);
-        gate.setValue(null);
+        gate.setType(is_present ? AccessRule.TypeNaming.IS_NOT_EMPTY : AccessRule.TypeNaming.IS_EMPTY);
+        gate.setValue(is_present ? null : "");
         gate.setCheckMapKeyOnly(false);
         gate.setCheckMapNode(false);
         gate.setEvaluateOnlyByGates(false);
