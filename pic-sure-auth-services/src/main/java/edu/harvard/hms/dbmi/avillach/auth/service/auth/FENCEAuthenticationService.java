@@ -280,9 +280,7 @@ public class FENCEAuthenticationService {
         ArrayList<Role> roles = createRoles(project_access_set, current_user);
         logger.info("getFENCEProfile() created {} new roles", roles.size());
         logger.info("getFENCEProfile() adding {} new roles to user", roles.size());
-        if (current_user.getRoles().isEmpty()) {
-            current_user.getRoles().addAll(roles);
-        }
+        current_user.getRoles().addAll(roles);
 
         final String idp = extractIdp(current_user);
         if (current_user.getRoles() != null && openAccessIdpValues.contains(idp)) {
