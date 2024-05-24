@@ -489,8 +489,9 @@ public class FENCEAuthenticationService {
         // OK... so, we need to do this for the query Template and scopes, but should NOT do this for the rules.
         //
         // NOTE: I'm leaving this in here for now and removing the escaped values later.  TODO: fix me!
-
         if (concept_path != null) {
+            // This shouldn't be necessary, but it is.  The double escape is necessary for the regex to work.
+            concept_path = concept_path.replace("\\", "\\\\");
             concept_path = concept_path.replaceAll("\\\\", "\\\\\\\\");
         }
 
