@@ -33,7 +33,8 @@ public class RoleRepository extends BaseRepository<Role, UUID> {
             }
             i++;
         }
-        em.flush(); // Ensure the remaining entities are persisted
+
+        em.flush();
     }
 
     public Set<Role> getRolesByNames(Set<String> rolesThatExist) {

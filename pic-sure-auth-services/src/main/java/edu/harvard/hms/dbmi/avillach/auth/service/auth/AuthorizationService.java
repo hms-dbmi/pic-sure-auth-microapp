@@ -208,7 +208,7 @@ public class AuthorizationService {
 					//since we are caching these objects, we need to detach them from hibernate
 			    	Set<AccessRule> detachedMergedRules = new HashSet<AccessRule>();
 			    	for(AccessRule rule : preProcessAccessRules(privileges)) {
-			    		detachedMergedRules.add( objectMapper.readValue(objectMapper.writeValueAsString(rule), AccessRule.class));
+			    		detachedMergedRules.add(objectMapper.readValue(objectMapper.writeValueAsString(rule), AccessRule.class));
 			    	}
 			    		
 			        return detachedMergedRules;
