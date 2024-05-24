@@ -280,7 +280,9 @@ public class FENCEAuthenticationService {
         ArrayList<Role> roles = createRoles(project_access_set, current_user);
         logger.info("getFENCEProfile() created {} new roles", roles.size());
         logger.info("getFENCEProfile() adding {} new roles to user", roles.size());
-        current_user.getRoles().addAll(roles);
+        if (current_user.getRoles().isEmpty()) {
+            current_user.getRoles().addAll(roles);
+        }
 
         final String idp = extractIdp(current_user);
         if (current_user.getRoles() != null && openAccessIdpValues.contains(idp)) {
@@ -293,8 +295,7 @@ public class FENCEAuthenticationService {
         }
 
         // Persist the user with the updated roles
-        userRepo.save(current_user);
-
+        current_user = userRepo.changeRole(current_user, current_user.getRoles());
         HashMap<String, Object> claims = new HashMap<String,Object>();
         claims.put("name", fence_user_profile.get("name"));
         claims.put("email", current_user.getEmail());
@@ -318,6 +319,13 @@ public class FENCEAuthenticationService {
             roleRepo.persistAll(newRoles);
         } else {
             logger.info("getFENCEProfile() no new roles to persist");
+        }
+
+        // display first element of the list so we can see the role uuid
+        if (!newRoles.isEmpty()) {
+            logger.info("getFENCEProfile() new role uuid: {}", newRoles.get(0).getUuid());
+        } else {
+            logger.info("getFENCEProfile() no new roles created");
         }
 
         return newRoles;

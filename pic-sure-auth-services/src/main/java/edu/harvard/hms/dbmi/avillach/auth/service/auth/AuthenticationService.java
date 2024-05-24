@@ -98,7 +98,7 @@ public class AuthenticationService {
             }
         }
 
-        HashMap<String, Object> claims = new HashMap<String,Object>();
+        HashMap<String, Object> claims = new HashMap<>();
         claims.put("sub", userId);
         claims.put("name", user.getName());
         claims.put("email", user.getEmail());
