@@ -1015,7 +1015,6 @@ public class FENCEAuthenticationService {
                     //if this is a new rule, we need to populate it
                     if (ar.getGates() == null) {
                         ar.setGates(new HashSet<AccessRule>());
-//                      	ar.getGates().addAll(getGates(true, true, false));
                         ar.getGates().add(upsertConsentGate("HARMONIZED_CONSENT", "$.query.query.categoryFilters." + fence_harmonized_consent_group_concept_path + "[*]", true, "harmonized data"));
 
                         if (ar.getSubAccessRule() == null) {
@@ -1027,26 +1026,6 @@ public class FENCEAuthenticationService {
                         accessruleRepo.merge(ar);
                     }
                     accessrules.add(ar);
-
-
-//                	ar = upsertHarmonizedAccessRule(studyIdentifier, consent_group, "TOPMED+HARMONIZED+PARENT");
-//
-//                    //if this is a new rule, we need to populate it
-//                	 if(ar.getGates() == null) {
-//                       	ar.setGates(new HashSet<AccessRule>());
-//                       	ar.getGates().addAll(getGates(true, true, true));
-//
-//                      	if(ar.getSubAccessRule() == null) {
-//                      		ar.setSubAccessRule(new HashSet<AccessRule>());
-//                      	}
-//                      	ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
-//                    	ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, parentConceptPath,  projectAlias));
-//                		ar.getSubAccessRule().addAll(getHarmonizedSubRules());
-//                		ar.getSubAccessRule().add(createPhenotypeSubRule(fence_topmed_consent_group_concept_path, "ALLOW_TOPMED_CONSENT", "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
-//
-//                		accessruleRepo.merge(ar);
-//                    }
-//                    accessrules.add(ar);
                 }
 
             }
@@ -1197,7 +1176,9 @@ public class FENCEAuthenticationService {
         gate.setName(gateName);
         gate.setDescription("FENCE GATE for " + description + " consent " + (is_present ? "present" : "missing"));
         gate.setRule(rule);
-        gate.setType(is_present ? AccessRule.TypeNaming.IS_NOT_EMPTY : AccessRule.TypeNaming.IS_EMPTY);
+        // TODO: This seems to be a bug. There is never a case where this should be set to IS_NOT_EMPTY.
+        // If the rule is not empty, then there should be a value that is expected.
+        gate.setType(AccessRule.TypeNaming.IS_EMPTY);
         gate.setValue(null);
         gate.setCheckMapKeyOnly(false);
         gate.setCheckMapNode(false);
