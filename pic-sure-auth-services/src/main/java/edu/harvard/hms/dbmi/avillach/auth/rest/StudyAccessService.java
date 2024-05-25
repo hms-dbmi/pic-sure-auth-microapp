@@ -53,9 +53,9 @@ public class StudyAccessService {
             return Response.status(Response.Status.BAD_REQUEST).entity("Study identifier cannot be blank").build();
         }
 
-        StudyMetaData fenceMappingForStudy;
+        Map fenceMappingForStudy;
         try {
-            Map<String, StudyMetaData> fenceMapping = fenceMappingUtility.getFENCEMapping();
+            Map<String, Map> fenceMapping = fenceMappingUtility.getFENCEMapping();
             if (fenceMapping == null) {
                 throw new Exception("Fence mapping is null");
             }
@@ -70,8 +70,8 @@ public class StudyAccessService {
             return Response.status(Response.Status.BAD_REQUEST).entity("Could not find study with the provided identifier").build();
         }
 
-        String projectId = fenceMappingForStudy.getStudy_identifier();
-        String consentCode = fenceMappingForStudy.getConsent_group_code();
+        String projectId = (String) fenceMappingForStudy.get("study_identifier");
+        String consentCode = (String) fenceMappingForStudy.get("consent_group_code");
         String newRoleName = StringUtils.isNotBlank(consentCode) ? MANUAL+projectId+"_"+consentCode : MANUAL+projectId;
 
         logger.debug("addStudyAccess - New manual PSAMA role name: {}", newRoleName);

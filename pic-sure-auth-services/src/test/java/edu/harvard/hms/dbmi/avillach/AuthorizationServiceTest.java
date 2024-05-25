@@ -466,4 +466,27 @@ public class AuthorizationServiceTest extends AuthorizationService{
 
     }
 
+    /*
+    I want to add a specific test case to attempt to reproduce a bug.
+    The bug happens when a gate access rule is assigned the following data:
+
+    4a472dfe-6634-466c-9724-799f22ea55de ___ GATE_PARENT_CONSENT_PRESENT ___ FENCE GATE for parent study data consent present ___ $.query.query.categoryFilters.\_consents\[*] ___ 14 ___ null
+
+     It is expected to be either able to parse the data or be set to AccessRule.NamingType.IS_EMPTY.
+
+     But this is set to AccessRule.NamingType.IS_NOT_EMPTY, which is either a bug or an issue parsing the $.query.query.categoryFilters.\_consents\[*] data value.
+
+        I will attempt to reproduce this bug by creating a test case that uses the same data value.
+     */
+
+    @Test
+    public void testGateAccessRuleWithConsentPresent() throws IOException {
+        AccessRule gateAccessRule = new AccessRule();
+        gateAccessRule.setUuid(UUID.randomUUID());
+        gateAccessRule.setRule("$.query.query.categoryFilters._consents[*]");
+        gateAccessRule.setType(AccessRule.TypeNaming.IS_EMPTY);
+        Assert.assertTrue(evaluateAccessRule(mapper.readValue(sample_matchGate, Map.class), gateAccessRule));
+    }
+
+
 }

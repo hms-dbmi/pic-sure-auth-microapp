@@ -2,7 +2,6 @@ package edu.harvard.hms.dbmi.avillach.auth.utils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.harvard.hms.dbmi.avillach.auth.model.StudyMetaData;
-import edu.harvard.hms.dbmi.avillach.auth.model.FenceMapping;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,8 +20,8 @@ import java.util.*;
 public class FenceMappingUtility {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
-    private Map<String, StudyMetaData> fenceMappingByConsent;
-    private Map<String, StudyMetaData> fenceMappingByAuthZ;
+    private Map<String, Map> fenceMappingByConsent;
+    private Map<String, Map> fenceMappingByAuthZ;
     private static String templatePath;
     private ObjectMapper objectMapper;
 
@@ -43,43 +42,43 @@ public class FenceMappingUtility {
     }
 
     private void initializeFENCEMapping() throws IOException {
-        ArrayList<StudyMetaData> studies = loadBioDataCatalystFenceMappingData();
+        ArrayList<Map> studies = loadBioDataCatalystFenceMappingData();
         fenceMappingByConsent = new HashMap<>(studies.size());
-        for (StudyMetaData study : studies) {
-            String consentVal = (study.getConsent_group_code() != null && !study.getConsent_group_code().isEmpty()) ?
-                    study.getStudy_identifier() + "." + study.getConsent_group_code() :
-                    study.getStudy_identifier();
+        for (Map study : studies) {
+            String consentVal = (study.get("consent_group_code") != null && study.get("consent_group_code") != "") ?
+                    "" + study.get("study_identifier") + "." + study.get("consent_group_code") :
+                    "" + study.get("study_identifier");
             fenceMappingByConsent.put(consentVal, study);
         }
     }
 
     private void initializeFenceMappingByAuthZ() throws IOException {
-        ArrayList<StudyMetaData> studies = loadBioDataCatalystFenceMappingData();
+        ArrayList<Map> studies = loadBioDataCatalystFenceMappingData();
         fenceMappingByAuthZ = new HashMap<>(studies.size());
-        for (StudyMetaData study : studies) {
-            fenceMappingByAuthZ.put(study.getAuthZ().replace("\\/", "/"), study);
+        for (Map study : studies) {
+            fenceMappingByAuthZ.put(((String) study.get("authZ")).replace("\\/", "/"), study);
         }
     }
 
-    public Map<String, StudyMetaData> getFENCEMapping() {
+    public Map<String, Map> getFENCEMapping() {
         return fenceMappingByConsent;
     }
 
-    public Map<String, StudyMetaData> getFenceMappingByAuthZ() {
+    public Map<String, Map> getFenceMappingByAuthZ() {
         return fenceMappingByAuthZ;
     }
 
-    private ArrayList<StudyMetaData> loadBioDataCatalystFenceMappingData() {
-        FenceMapping fenceMapping;
-        ArrayList<StudyMetaData> studies;
+    private ArrayList<Map> loadBioDataCatalystFenceMappingData() {
+        Map fenceMapping;
+        ArrayList<Map> studies;
         try {
             logger.debug("getFENCEMapping: loading FENCE mapping from {}", templatePath);
             fenceMapping = objectMapper.readValue(
                     new File(String.join(File.separator,
                             new String[]{templatePath, "fence_mapping.json"}))
-                    , FenceMapping.class);
+                    , Map.class);
 
-            studies = fenceMapping.getBio_data_catalyst();
+            studies = (ArrayList<Map>) fenceMapping.get("bio_data_catalyst");
             logger.debug("getFENCEMapping: found FENCE mapping with {} entries", studies.size());
         } catch (Exception e) {
             logger.error("loadFenceMappingData: Non-fatal error parsing fence_mapping.json: {}", templatePath, e);

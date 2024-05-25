@@ -44,9 +44,10 @@ public class StudyAccessServiceTest {
     @Test
     public void testAddStudyAccess() {
         String studyIdentifier = "testStudy";
-        StudyMetaData bioDataCatalyst = new StudyMetaData();
-        bioDataCatalyst.setStudy_identifier("testStudy");
-        bioDataCatalyst.setConsent_group_code("");
+//        StudyMetaData bioDataCatalyst = new StudyMetaData();
+//        bioDataCatalyst.setStudy_identifier("testStudy");
+//        bioDataCatalyst.setConsent_group_code("");
+        Map<String, String> bioDataCatalyst = Map.of("study_identifier", "testStudy", "consent_group_code", "");
         when(fenceMappingUtility.getFENCEMapping()).thenReturn(Map.of(studyIdentifier, bioDataCatalyst));
         when(fenceAuthenticationService.upsertRole(null, "MANUAL_testStudy", "MANUAL_ role MANUAL_testStudy")).thenReturn(true);
 
@@ -58,9 +59,10 @@ public class StudyAccessServiceTest {
     @Test
     public void testAddStudyAccessWithConsent() {
         String studyIdentifier = "testStudy2.c2";
-        StudyMetaData bioDataCatalyst = new StudyMetaData();
-        bioDataCatalyst.setStudy_identifier("testStudy2");
-        bioDataCatalyst.setConsent_group_code("c2");
+//        StudyMetaData bioDataCatalyst = new StudyMetaData();
+//        bioDataCatalyst.setStudy_identifier("testStudy2");
+//        bioDataCatalyst.setConsent_group_code("c2");
+        Map<String, String> bioDataCatalyst = Map.of("study_identifier", "testStudy2", "consent_group_code", "c2");
 
         when(fenceMappingUtility.getFENCEMapping()).thenReturn(Map.of(studyIdentifier, bioDataCatalyst));
         when(fenceAuthenticationService.upsertRole(null, "MANUAL_testStudy2_c2", "MANUAL_ role MANUAL_testStudy2_c2")).thenReturn(true);

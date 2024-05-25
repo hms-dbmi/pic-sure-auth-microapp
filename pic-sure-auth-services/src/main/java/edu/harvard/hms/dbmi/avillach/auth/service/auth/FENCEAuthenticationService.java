@@ -330,15 +330,16 @@ public class FENCEAuthenticationService {
         // Loop over the project access names and convert them to database fence role names
         while (project_access_names.hasNext()) {
             String access_role_name = project_access_names.next();
-            StudyMetaData studyMetadata = fenceMappingUtility.getFenceMappingByAuthZ().get(access_role_name);
+            Map studyMetadata = fenceMappingUtility.getFenceMappingByAuthZ().get(access_role_name);
 
             if (studyMetadata == null) {
                 logger.info("getFENCEProfile() -> Could not find study in FENCE mapping SKIPPING: {}", access_role_name);
                 continue;
             }
 
-            String projectId = studyMetadata.getStudy_identifier();
-            String consentCode = studyMetadata.getConsent_group_code();
+            String projectId = (String) studyMetadata.get("study_identifier");
+            String consentCode = (String) studyMetadata.get("consent_group_code");
+
             String newRoleName = StringUtils.isNotBlank(consentCode) ? "FENCE_" + projectId + "_" + consentCode : "FENCE_" + projectId;
 
             project_access_set.add(newRoleName);
@@ -470,7 +471,7 @@ public class FENCEAuthenticationService {
         logger.info("addFENCEPrivileges() project name: " + project_name + " consent group: " + consent_group);
 
         // Look up the metadata by consent group.
-        StudyMetaData studyMetadata = getFENCEMappingforProjectAndConsent(project_name, consent_group);
+        Map studyMetadata = getFENCEMappingforProjectAndConsent(project_name, consent_group);
         if (studyMetadata == null) {
             //no privileges means no access to this project.  just return existing set of privs.
             logger.warn("No metadata available for project {}.{}", project_name, consent_group);
@@ -479,10 +480,10 @@ public class FENCEAuthenticationService {
 
         logger.info("addPrivileges() This is a new privilege");
 
-        String dataType = studyMetadata.getData_type();
-        Boolean isHarmonized = "Y".equals(studyMetadata.getIs_harmonized());
-        String concept_path = studyMetadata.getTop_level_path();
-        String projectAlias = studyMetadata.getAbbreviated_name();
+        String dataType = (String) studyMetadata.get("data_type");
+        Boolean isHarmonized = "Y".equals(studyMetadata.get("is_harmonized"));
+        String concept_path = (String) studyMetadata.get("top_level_path");
+        String projectAlias = (String) studyMetadata.get("abbreviated_name");
 
         //we need to add escape sequence back in to the path for parsing later (also need to double escape the regex)
         //
@@ -490,8 +491,7 @@ public class FENCEAuthenticationService {
         //
         // NOTE: I'm leaving this in here for now and removing the escaped values later.  TODO: fix me!
         if (concept_path != null) {
-            // This shouldn't be necessary, but it is.  The double escape is necessary for the regex to work.
-            concept_path = concept_path.replace("\\", "\\\\");
+            // This shouldn't be necessary, but it is. The double escape is necessary for the regex to work.
             concept_path = concept_path.replaceAll("\\\\", "\\\\\\\\");
         }
 
@@ -1163,14 +1163,6 @@ public class FENCEAuthenticationService {
     private AccessRule upsertConsentGate(String gateName, String rule, boolean is_present, String description) {
         gateName = "GATE_" + gateName + "_" + (is_present ? "PRESENT" : "MISSING");
         AccessRule gate = accessruleRepo.getUniqueResultByColumn("name", gateName);
-
-        // jws will not parse the json if the rule contains a single backslash
-        if (!rule.contains("\\\\")) {
-            //these have to be escaped again so that jaxson can convert it correctly
-            rule = rule.replaceAll("\\\\", "\\\\\\\\");
-            logger.debug("upsertConsentGate(): escaped rule {}", rule);
-        }
-
         if (gate != null) {
             logger.info("upsertConsentGate() AccessRule {} already exists.", gateName);
             return gate;
@@ -1192,12 +1184,12 @@ public class FENCEAuthenticationService {
         return gate;
     }
 
-    private StudyMetaData getFENCEMappingforProjectAndConsent(String projectId, String consent_group) {
+    private Map getFENCEMappingforProjectAndConsent(String projectId, String consent_group) {
         String consentVal = (consent_group != null && !consent_group.isEmpty()) ? projectId + "." + consent_group : projectId;
         logger.info("getFENCEMappingforProjectAndConsent() looking up {}", consentVal);
 
-        StudyMetaData studyMetadata = fenceMappingUtility.getFENCEMapping().get(consentVal);
-        if (studyMetadata != null) {
+        Map studyMetadata = fenceMappingUtility.getFENCEMapping().get(consentVal);
+        if (studyMetadata instanceof Map) {
             return studyMetadata;
         } else {
             logger.info("getFENCEMappingforProjectAndConsent() no mapping found for {}", consentVal);
