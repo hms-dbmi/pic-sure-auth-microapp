@@ -204,6 +204,8 @@ public class FENCEAuthenticationService {
             throw new NotAuthorizedException("The user details could not be persisted. Please contact the administrator.");
         }
 
+        getFENCEMapping();
+
         // Update the user's roles (or create them if none exists)
         //Set<Role> actual_user_roles = u.getRoles();
         Iterator<String> project_access_names = fence_user_profile.get("authz").fieldNames();
