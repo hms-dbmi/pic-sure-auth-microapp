@@ -102,7 +102,7 @@ public class FENCEAuthenticationService {
         List<Header> headers = new ArrayList<>();
         headers.add(new BasicHeader("Authorization", "Bearer " + access_token));
 
-        logger.debug("getFENCEUserProfile() getting user profile from uri:"+JAXRSConfiguration.idp_provider_uri+"/user/user");
+        logger.debug("getFENCEUserProfile() getting user profile from uri:{}/user/user", JAXRSConfiguration.idp_provider_uri);
         JsonNode fence_user_profile_response = HttpClientUtil.simpleGet(
                 JAXRSConfiguration.idp_provider_uri+"/user/user",
                 JAXRSConfiguration.client,
@@ -182,6 +182,8 @@ public class FENCEAuthenticationService {
                     "from the Gen3 authentication provider."+ex.getMessage());
         }
 
+        // Time performance of user login.
+        long startTime = System.currentTimeMillis();
         User current_user = null;
         try {
             // Create or retrieve the user profile from our database, based on the the key
@@ -235,6 +237,8 @@ public class FENCEAuthenticationService {
         logger.info("LOGIN SUCCESS ___ " + current_user.getEmail() + ":" + current_user.getUuid().toString() + ":" + current_user.getSubject() + " ___ Authorization will expire at  ___ " + responseMap.get("expirationDate") + "___");
         logger.debug("getFENCEProfile() UserProfile response object has been generated");
         logger.debug("getFENCEToken() finished");
+
+        System.out.println("User login took: " + (System.currentTimeMillis() - startTime) + "ms");
         return PICSUREResponse.success(responseMap);
     }
 
