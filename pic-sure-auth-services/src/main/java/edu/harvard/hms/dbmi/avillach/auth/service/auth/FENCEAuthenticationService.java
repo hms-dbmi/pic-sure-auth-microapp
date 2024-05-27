@@ -1072,7 +1072,7 @@ public class FENCEAuthenticationService {
         });
     }
 
-    private static String extractProject(String roleName) {
+    private String extractProject(String roleName) {
         String projectPattern = "FENCE_(.*?)(?:_c\\d+)?$";
         if (roleName.startsWith("MANUAL_")) {
             projectPattern = "MANUAL_(.*?)(?:_c\\d+)?$";
@@ -1091,7 +1091,7 @@ public class FENCEAuthenticationService {
         return project;
     }
 
-    private static String extractConsentGroup(String roleName) {
+    private String extractConsentGroup(String roleName) {
         String consentPattern = "FENCE_.*?_c(\\d+)$";
         if (roleName.startsWith("MANUAL_")) {
             consentPattern = "MANUAL_.*?_c(\\d+)$";
