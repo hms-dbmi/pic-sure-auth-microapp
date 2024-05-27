@@ -281,7 +281,7 @@ public class FENCEAuthenticationService {
 
         Role r = null;
         // Create the Role in the repository, if it does not exist. Otherwise, add it.
-        Role existing_role = roleRepo.getUniqueResultByColumn("name", roleName);
+        Role existing_role = roleRepo.getUniqueResultByColumn("name", newRoleName);
         if (existing_role != null) {
             // Role already exists
             logger.info("upsertRole() role already exists");
@@ -289,7 +289,7 @@ public class FENCEAuthenticationService {
         } else {
             // This is a new Role
             r = new Role();
-            r.setName(roleName);
+            r.setName(newRoleName);
             r.setDescription(roleDescription);
             // Since this is a new Role, we need to ensure that the
             // corresponding Privilege (with gates) and AccessRule is added.
@@ -300,13 +300,12 @@ public class FENCEAuthenticationService {
         return r;
     }
 
-    private String extractIdp(User current_user) {
+    private static String extractIdp(User current_user) {
         try {
             final ObjectNode node;
             node = new ObjectMapper().readValue(current_user.getGeneralMetadata(), ObjectNode.class);
             return node.get("idp").asText();
         } catch (JsonProcessingException e) {
-            logger.warn("Error parsing idp value from medatada", e);
             return "";
         }
     }
@@ -1083,6 +1082,7 @@ public class FENCEAuthenticationService {
         if (projectMatcher.find()) {
             project = projectMatcher.group(1).trim();
         } else {
+            logger.info("extractProject() Could not extract project from role name: {}", roleName);
             String[] parts = roleName.split("_", 1);
             if (parts.length > 0) {
                 project = parts[1];
@@ -1091,7 +1091,7 @@ public class FENCEAuthenticationService {
         return project;
     }
 
-    private String extractConsentGroup(String roleName) {
+    private static String extractConsentGroup(String roleName) {
         String consentPattern = "FENCE_.*?_c(\\d+)$";
         if (roleName.startsWith("MANUAL_")) {
             consentPattern = "MANUAL_.*?_c(\\d+)$";
