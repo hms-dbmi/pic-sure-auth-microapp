@@ -237,20 +237,22 @@ public class FENCEAuthenticationService {
                 .filter(role -> !roleNames.contains(role.getName()) && !role.getName().equals(fence_open_access_role_name) && !role.getName().startsWith("MANUAL_") && !role.getName().equals("PIC-SURE Top Admin") && !role.getName().equals("Admin"))
                 .collect(Collectors.toSet());
 
+        if (!rolesToRemove.isEmpty()) {
+            current_user.getRoles().removeAll(rolesToRemove);
+            logger.debug("upsertRole() removed {} roles from user", rolesToRemove.size());
+            logger.debug("User roles after removal: {}", current_user.getRoles().size());
+        }
+
+        // find roles that are in the project_access_names but not in the user's roles. These are the roles that need to be added.
         List<Role> newRoles = roleNames.parallelStream()
                 .map(roleName -> createRole(roleName, "FENCE role " + roleName))
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
 
-        if (!rolesToRemove.isEmpty()) {
-            current_user.getRoles().removeAll(rolesToRemove);
-        }
-
         if (!newRoles.isEmpty()) {
             roleRepo.persistAll(newRoles);
             current_user.getRoles().addAll(newRoles);
         }
-
 
         final String idp = extractIdp(current_user);
         if (current_user.getRoles() != null && (!current_user.getRoles().isEmpty() || openAccessIdpValues.contains(idp))) {
@@ -287,13 +289,8 @@ public class FENCEAuthenticationService {
             logger.error("createRole() roleName is empty");
             return null;
         }
-
-        logger.debug("createAndUpsertRole() starting...");
-
-
         logger.info("getFENCEProfile() New PSAMA role name:{}", roleName);
-
-        Role r = null;
+        Role r;
         // Create the Role in the repository, if it does not exist. Otherwise, add it.
         Role existing_role = roleRepo.getUniqueResultByColumn("name", roleName);
         if (existing_role != null) {
