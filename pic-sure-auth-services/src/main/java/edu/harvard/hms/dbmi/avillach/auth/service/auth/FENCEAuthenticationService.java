@@ -215,22 +215,48 @@ public class FENCEAuthenticationService {
 
         // I want to parallelize this, but I'm not sure if it's safe to do so.
         Set<String> roleNames = new HashSet<>();
-        project_access_names.forEachRemaining(roleNames::add);
+        project_access_names.forEachRemaining(roleName -> {
+            // We need to add/remove the users roles based on what is in the project_access_names list
+            Map projectMetadata = this.fenceMappingUtility.getFenceMappingByAuthZ().get(roleName);
+
+            if (projectMetadata == null) {
+                logger.error("getFENCEProfile() -> createAndUpsertRole could not find study in FENCE mapping SKIPPING: {}", roleName);
+                return;
+            }
+
+            String projectId = (String) projectMetadata.get("study_identifier");
+            String consentCode = (String) projectMetadata.get("consent_group_code");
+            String newRoleName = StringUtils.isNotBlank(consentCode) ? "FENCE_"+projectId+"_"+consentCode : "FENCE_"+projectId;
+
+            roleNames.add(newRoleName);
+        });
+
+        // find roles that are not in the user's roles. These are the roles that need to be added.
+        roleNames.removeAll(current_user.getRoles().parallelStream().map(Role::getName).collect(Collectors.toSet()));
+
+        // find roles that are in the user's roles but not in the project_access_names. These are the roles that need to be removed.
+        // exclude userRole -> "PIC-SURE Top Admin".equals(userRole.getName()) || "Admin".equals(userRole.getName()) || userRole.getName().startsWith("MANUAL_")
+        Set<Role> rolesToRemove = current_user.getRoles().parallelStream()
+                .filter(role -> !roleNames.contains(role.getName()) && !role.getName().equals(fence_open_access_role_name) && !role.getName().startsWith("MANUAL_") && !role.getName().equals("PIC-SURE Top Admin") && !role.getName().equals("Admin"))
+                .collect(Collectors.toSet());
 
         List<Role> newRoles = roleNames.parallelStream()
                 .map(roleName -> createRole(roleName, "FENCE role " + roleName))
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
 
-        roleRepo.persistAll(newRoles);
-
-        if (current_user.getRoles() == null) {
-            current_user.setRoles(new HashSet<>());
+        if (!rolesToRemove.isEmpty()) {
+            current_user.getRoles().removeAll(rolesToRemove);
         }
-        current_user.getRoles().addAll(newRoles);
+
+        if (!newRoles.isEmpty()) {
+            roleRepo.persistAll(newRoles);
+            current_user.getRoles().addAll(newRoles);
+        }
+
 
         final String idp = extractIdp(current_user);
-        if (current_user.getRoles() != null && (current_user.getRoles().size() > 0 || openAccessIdpValues.contains(idp))) {
+        if (current_user.getRoles() != null && (!current_user.getRoles().isEmpty() || openAccessIdpValues.contains(idp))) {
 	        Role openAccessRole = roleRepo.getUniqueResultByColumn("name", fence_open_access_role_name);
 	        if (openAccessRole != null) {
 	        	current_user.getRoles().add(openAccessRole);
@@ -266,22 +292,13 @@ public class FENCEAuthenticationService {
         }
 
         logger.debug("createAndUpsertRole() starting...");
-        Map projectMetadata = this.fenceMappingUtility.getFenceMappingByAuthZ().get(roleName);
 
-        if (projectMetadata == null) {
-            logger.error("getFENCEProfile() -> createAndUpsertRole could not find study in FENCE mapping SKIPPING: {}", roleName);
-            return null;
-        }
 
-        String projectId = (String) projectMetadata.get("study_identifier");
-        String consentCode = (String) projectMetadata.get("consent_group_code");
-        String newRoleName = StringUtils.isNotBlank(consentCode) ? "FENCE_"+projectId+"_"+consentCode : "FENCE_"+projectId;
-
-        logger.info("getFENCEProfile() New PSAMA role name:{}", newRoleName);
+        logger.info("getFENCEProfile() New PSAMA role name:{}", roleName);
 
         Role r = null;
         // Create the Role in the repository, if it does not exist. Otherwise, add it.
-        Role existing_role = roleRepo.getUniqueResultByColumn("name", newRoleName);
+        Role existing_role = roleRepo.getUniqueResultByColumn("name", roleName);
         if (existing_role != null) {
             // Role already exists
             logger.info("upsertRole() role already exists");
@@ -289,7 +306,7 @@ public class FENCEAuthenticationService {
         } else {
             // This is a new Role
             r = new Role();
-            r.setName(newRoleName);
+            r.setName(roleName);
             r.setDescription(roleDescription);
             // Since this is a new Role, we need to ensure that the
             // corresponding Privilege (with gates) and AccessRule is added.
@@ -332,20 +349,16 @@ public class FENCEAuthenticationService {
         logger.debug("createUserFromFENCEProfile() finished setting fields");
 
         User actual_user = userRepo.findOrCreate(new_user);
-
-        Set<Role> roles = new HashSet<>();
-        if (actual_user != null && !CollectionUtils.isEmpty(actual_user.getRoles()))  {
-            roles = actual_user.getRoles().stream()
-                .filter(userRole -> "PIC-SURE Top Admin".equals(userRole.getName()) || "Admin".equals(userRole.getName()) || userRole.getName().startsWith("MANUAL_"))
-                .collect(Collectors.toSet());
+        if (actual_user.getRoles() == null) {
+            actual_user.setRoles(new HashSet<>());
         }
 
-        // Clear current set of roles every time we create or retrieve a user but persist admin status
-        actual_user.setRoles(roles);
+//                .filter(userRole -> "PIC-SURE Top Admin".equals(userRole.getName()) || "Admin".equals(userRole.getName()) || userRole.getName().startsWith("MANUAL_"))
+//                .collect(Collectors.toSet());
 
         logger.debug("createUserFromFENCEProfile() cleared roles");
 
-        userRepo.persist(actual_user);
+//        userRepo.persist(actual_user);
         logger.debug("createUserFromFENCEProfile() finished, user record inserted");
         return actual_user;
     }
