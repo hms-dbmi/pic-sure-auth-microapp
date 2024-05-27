@@ -349,7 +349,7 @@ public class FENCEAuthenticationService {
                 r.setDescription(roleDescription);
                 // Since this is a new Role, we need to ensure that the
                 // corresponding Privilege (with gates) and AccessRule is added.
-                r.setPrivileges(addFENCEPrivileges(u, r));
+                r.setPrivileges(addFENCEPrivileges(r));
                 roleRepo.persist(r);
                 logger.info("upsertRole() created new role");
             }
@@ -366,7 +366,7 @@ public class FENCEAuthenticationService {
         return status;
     }
 
-    private Set<Privilege> addFENCEPrivileges(User u, Role r) {
+    private Set<Privilege> addFENCEPrivileges(Role r) {
         String roleName = r.getName();
         logger.info("addFENCEPrivileges() starting, adding privilege(s) to role {}", roleName);
 
