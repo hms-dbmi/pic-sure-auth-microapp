@@ -11,10 +11,10 @@ import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Singleton
 @Startup
@@ -34,23 +34,27 @@ public class FenceMappingUtility {
             objectMapper = new ObjectMapper();
 
             initializeFENCEMappings();
-        } catch (IOException e) {
-            logger.error("Error initializing FENCE mappings", e);
         } catch (NamingException e) {
             throw new RuntimeException(e);
         }
     }
 
-    private void initializeFENCEMappings() throws IOException {
-        ArrayList<Map> studies = loadBioDataCatalystFenceMappingData();
-        fenceMappingByConsent = new HashMap<>(studies.size());
-        fenceMappingByAuthZ = new HashMap<>(studies.size());
-        for (Map study : studies) {
-            String consentVal = (study.get("consent_group_code") != null && study.get("consent_group_code") != "") ?
-                    "" + study.get("study_identifier") + "." + study.get("consent_group_code") :
-                    "" + study.get("study_identifier");
-            fenceMappingByConsent.put(consentVal, study);
-            fenceMappingByAuthZ.put(study.get("authZ").toString().replace("\\/", "/"), study);
+    private synchronized void initializeFENCEMappings() {
+        if (fenceMappingByConsent == null || fenceMappingByAuthZ == null) {
+            ArrayList<Map> studies = loadBioDataCatalystFenceMappingData();
+            ConcurrentHashMap<String, Map> tempFenceMappingByConsent = new ConcurrentHashMap<>();
+            ConcurrentHashMap<String, Map> tempFenceMappingByAuthZ = new ConcurrentHashMap<>();
+
+            studies.parallelStream().forEach(study -> {
+                String consentVal = (study.get("consent_group_code") != null && !study.get("consent_group_code").toString().isEmpty()) ?
+                        study.get("study_identifier") + "." + study.get("consent_group_code") :
+                        study.get("study_identifier").toString();
+                tempFenceMappingByConsent.put(consentVal, study);
+                tempFenceMappingByAuthZ.put(study.get("authZ").toString().replace("\\/", "/"), study);
+            });
+
+            fenceMappingByConsent = Collections.unmodifiableMap(tempFenceMappingByConsent);
+            fenceMappingByAuthZ = Collections.unmodifiableMap(tempFenceMappingByAuthZ);
         }
     }
 
