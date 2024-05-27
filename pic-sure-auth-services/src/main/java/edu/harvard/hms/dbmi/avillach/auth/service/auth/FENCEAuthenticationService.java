@@ -571,11 +571,11 @@ public class FENCEAuthenticationService {
     }
 
     private Set<AccessRule> getAllowedQueryTypeRules() {
-    	if (allowQueryTypeRules == null) {
-    		allowQueryTypeRules = loadAllowedQueryTypeRules();
-    	}
+        if (allowQueryTypeRules == null) {
+            allowQueryTypeRules = loadAllowedQueryTypeRules();
+        }
 
-    	return allowQueryTypeRules;
+        return allowQueryTypeRules;
     }
 
     /**
@@ -594,19 +594,8 @@ public class FENCEAuthenticationService {
             // Construct the AccessRule name
             String ar_name = "AR_ALLOW_" + queryType;
 
-            // Check if the AccessRule already exists
-            AccessRule ar = accessruleRepo.getUniqueResultByColumn("name", ar_name);
-            if (ar != null) {
-                // Log and add the existing rule to the set
-                logger.debug("Found existing rule: {}", ar.getName());
-                rules.add(ar);
-                continue;
-            }
-
             // Log the creation of a new AccessRule
-            logger.info("Creating new access rule {}", ar_name);
-            // Create the AccessRule using the createAccessRule method
-            ar = getOrCreateAccessRule(
+            AccessRule ar = getOrCreateAccessRule(
                     ar_name,
                     "FENCE SUB AR to allow " + queryType + " Queries",
                     "$.query.query.expectedResultType",
@@ -652,7 +641,6 @@ public class FENCEAuthenticationService {
         }
 
         // Log the creation of a new AccessRule
-        logger.info("Creating new access rule {}", ar_name);
         // Create the AccessRule using the createAccessRule method
         return getOrCreateAccessRule(
                 ar_name,
@@ -878,7 +866,15 @@ public class FENCEAuthenticationService {
         accessruleRepo.merge(rule);
     }
 
+    // A set of standard access rules that are added to all privileges
+    // to cache the standard access rules
+    private Set<AccessRule> standardAccessRules;
+
+
     private void addStandardAccessRules(Set<AccessRule> accessRules) {
+        if (!standardAccessRules.isEmpty()) {
+            accessRules.addAll(standardAccessRules);
+        }
         for (String arName : fence_standard_access_rules.split(",")) {
             if (arName.startsWith("AR_")) {
                 logger.info("Adding AccessRule {} to privilege", arName);
@@ -906,7 +902,6 @@ public class FENCEAuthenticationService {
      */
     private AccessRule createConsentAccessRule(String studyIdentifier, String consent_group, String label, String consent_path) {
         String ar_name = (consent_group != null && !consent_group.isEmpty()) ? "AR_CONSENT_" + studyIdentifier + "_" + consent_group + "_" + label : "AR_CONSENT_" + studyIdentifier;
-        logger.info("Creating new access rule {}", ar_name);
         String description = (consent_group != null && !consent_group.isEmpty()) ? "FENCE AR for " + studyIdentifier + "." + consent_group + " clinical concepts" : "FENCE AR for " + studyIdentifier + " clinical concepts";
         String ruleText = "$.query.query.categoryFilters." + consent_path + "[*]";
         String arValue = (consent_group != null && !consent_group.isEmpty()) ? studyIdentifier + "." + consent_group : studyIdentifier;
@@ -934,7 +929,6 @@ public class FENCEAuthenticationService {
      */
     private AccessRule upsertTopmedAccessRule(String project_name, String consent_group, String label) {
         String ar_name = (consent_group != null && !consent_group.isEmpty()) ? "AR_TOPMED_" + project_name + "_" + consent_group + "_" + label : "AR_TOPMED_" + project_name + "_" + label;
-        logger.info("Creating new access rule {}", ar_name);
         String description = "FENCE AR for " + project_name + "." + consent_group + " Topmed data";
         String ruleText = "$.query.query.categoryFilters." + fence_topmed_consent_group_concept_path + "[*]";
         String arValue = (consent_group != null && !consent_group.isEmpty()) ? project_name + "." + consent_group : project_name;
@@ -994,7 +988,6 @@ public class FENCEAuthenticationService {
      */
     private AccessRule upsertConsentGate(String gateName, String rule, boolean is_present, String description) {
         gateName = "GATE_" + gateName + "_" + (is_present ? "PRESENT" : "MISSING");
-        logger.info("Creating new access rule {}", gateName);
         return getOrCreateAccessRule(
                 gateName,
                 "FENCE GATE for " + description + " consent " + (is_present ? "present" : "missing"),
@@ -1041,6 +1034,7 @@ public class FENCEAuthenticationService {
                 ar.setGateAnyRelation(gateAnyRelation);
                 accessruleRepo.persist(ar);
             }
+
             return ar;
         });
     }
