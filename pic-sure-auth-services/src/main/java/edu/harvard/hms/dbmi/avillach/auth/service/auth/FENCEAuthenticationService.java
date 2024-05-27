@@ -260,6 +260,11 @@ public class FENCEAuthenticationService {
     }
 
     private Role createRole(String roleName, String roleDescription) {
+        if (roleName.isEmpty()) {
+            logger.error("createRole() roleName is empty");
+            return null;
+        }
+
         logger.debug("createAndUpsertRole() starting...");
         Map projectMetadata = this.fenceMappingUtility.getFenceMappingByAuthZ().get(roleName);
 
