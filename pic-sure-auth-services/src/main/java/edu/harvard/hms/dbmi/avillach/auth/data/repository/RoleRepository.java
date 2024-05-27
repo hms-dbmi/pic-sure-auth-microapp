@@ -21,6 +21,12 @@ public class RoleRepository extends BaseRepository<Role, UUID> {
     }
 
     public void persistAll(List<Role> newRoles) {
-        newRoles.forEach(this::persist);
+        for (Role newRole : newRoles) {
+            if (newRole.getUuid() == null) {
+                em.persist(newRole);
+            } else {
+                em.merge(newRole);
+            }
+        }
     }
 }
