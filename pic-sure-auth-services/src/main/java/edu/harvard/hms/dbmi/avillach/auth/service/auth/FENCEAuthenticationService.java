@@ -870,21 +870,24 @@ public class FENCEAuthenticationService {
     // to cache the standard access rules
     private Set<AccessRule> standardAccessRules;
 
-
     private void addStandardAccessRules(Set<AccessRule> accessRules) {
-        if (!standardAccessRules.isEmpty()) {
+        if (standardAccessRules != null && !standardAccessRules.isEmpty()) {
             accessRules.addAll(standardAccessRules);
-        }
-        for (String arName : fence_standard_access_rules.split(",")) {
-            if (arName.startsWith("AR_")) {
-                logger.info("Adding AccessRule {} to privilege", arName);
-                AccessRule ar = accessruleRepo.getUniqueResultByColumn("name", arName);
-                if (ar != null) {
-                    accessRules.add(ar);
-                } else {
-                    logger.warn("Unable to find an access rule with name {}", arName);
+        } else {
+            standardAccessRules = new HashSet<>();
+            for (String arName : fence_standard_access_rules.split(",")) {
+                if (arName.startsWith("AR_")) {
+                    logger.info("Adding AccessRule {} to privilege", arName);
+                    AccessRule ar = accessruleRepo.getUniqueResultByColumn("name", arName);
+                    if (ar != null) {
+                        standardAccessRules.add(ar);
+                    } else {
+                        logger.warn("Unable to find an access rule with name {}", arName);
+                    }
                 }
             }
+
+            accessRules.addAll(standardAccessRules);
         }
     }
 
