@@ -212,10 +212,21 @@ public class FENCEAuthenticationService {
         // Update the user's roles (or create them if none exists)
         //Set<Role> actual_user_roles = u.getRoles();
         Iterator<String> project_access_names = fence_user_profile.get("authz").fieldNames();
-        while (project_access_names.hasNext()) {
-            String access_role_name = project_access_names.next();
-            createAndUpsertRole(access_role_name, current_user);
+
+        // I want to parallelize this, but I'm not sure if it's safe to do so.
+        Set<String> roleNames = new HashSet<>();
+        project_access_names.forEachRemaining(roleNames::add);
+
+        ArrayList<Role> newRoles = new ArrayList<>();
+        roleNames.parallelStream().forEach(roleName -> {
+            newRoles.add(createRole(roleName, "FENCE role "+roleName));
+        });
+        roleRepo.persistAll(newRoles);
+
+        if (current_user.getRoles() == null) {
+            current_user.setRoles(new HashSet<>());
         }
+        current_user.getRoles().addAll(newRoles);
 
         final String idp = extractIdp(current_user);
         if (current_user.getRoles() != null && (current_user.getRoles().size() > 0 || openAccessIdpValues.contains(idp))) {
@@ -247,13 +258,13 @@ public class FENCEAuthenticationService {
         return PICSUREResponse.success(responseMap);
     }
 
-    private void createAndUpsertRole(String access_role_name, User current_user) {
+    private Role createRole(String roleName, String roleDescription) {
         logger.debug("createAndUpsertRole() starting...");
-        Map projectMetadata = this.fenceMappingUtility.getFenceMappingByAuthZ().get(access_role_name);
+        Map projectMetadata = this.fenceMappingUtility.getFenceMappingByAuthZ().get(roleName);
 
         if (projectMetadata == null) {
-            logger.error("getFENCEProfile() -> createAndUpsertRole could not find study in FENCE mapping SKIPPING: {}", access_role_name);
-            return;
+            logger.error("getFENCEProfile() -> createAndUpsertRole could not find study in FENCE mapping SKIPPING: {}", roleName);
+            return null;
         }
 
         String projectId = (String) projectMetadata.get("study_identifier");
@@ -262,11 +273,25 @@ public class FENCEAuthenticationService {
 
         logger.info("getFENCEProfile() New PSAMA role name:{}", newRoleName);
 
-        if (upsertRole(current_user, newRoleName, "FENCE role "+newRoleName)) {
-            logger.info("getFENCEProfile() Updated user role. Now it includes `{}`", newRoleName);
+        Role r = null;
+        // Create the Role in the repository, if it does not exist. Otherwise, add it.
+        Role existing_role = roleRepo.getUniqueResultByColumn("name", roleName);
+        if (existing_role != null) {
+            // Role already exists
+            logger.info("upsertRole() role already exists");
+            r = existing_role;
         } else {
-            logger.error("getFENCEProfile() could not add roles to user's profile");
+            // This is a new Role
+            r = new Role();
+            r.setName(roleName);
+            r.setDescription(roleDescription);
+            // Since this is a new Role, we need to ensure that the
+            // corresponding Privilege (with gates) and AccessRule is added.
+            r.setPrivileges(addFENCEPrivileges(r));
+            logger.info("upsertRole() created new role");
         }
+
+        return r;
     }
 
     private String extractIdp(User current_user) {
