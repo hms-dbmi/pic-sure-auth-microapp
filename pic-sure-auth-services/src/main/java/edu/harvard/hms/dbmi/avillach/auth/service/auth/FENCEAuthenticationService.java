@@ -230,16 +230,16 @@ public class FENCEAuthenticationService {
 
         try {
             userRepo.changeRole(current_user, current_user.getRoles());
-            logger.debug("upsertRole() updated user, who now has "+current_user.getRoles().size()+" roles.");
+            logger.debug("upsertRole() updated user, who now has {} roles.", current_user.getRoles().size());
         } catch (Exception ex) {
-            logger.error("upsertRole() Could not add roles to user, because "+ex.getMessage());
+            logger.error("upsertRole() Could not add roles to user, because {}", ex.getMessage());
         }
         HashMap<String, Object> claims = new HashMap<String,Object>();
         claims.put("name", fence_user_profile.get("name"));
         claims.put("email", current_user.getEmail());
         claims.put("sub", current_user.getSubject());
         HashMap<String, String> responseMap = authUtil.getUserProfileResponse(claims);
-        logger.info("LOGIN SUCCESS ___ " + current_user.getEmail() + ":" + current_user.getUuid().toString() + ":" + current_user.getSubject() + " ___ Authorization will expire at  ___ " + responseMap.get("expirationDate") + "___");
+        logger.info("LOGIN SUCCESS ___ {}:{}:{} ___ Authorization will expire at  ___ {}___", current_user.getEmail(), current_user.getUuid().toString(), current_user.getSubject(), responseMap.get("expirationDate"));
         logger.debug("getFENCEProfile() UserProfile response object has been generated");
         logger.debug("getFENCEToken() finished");
 
