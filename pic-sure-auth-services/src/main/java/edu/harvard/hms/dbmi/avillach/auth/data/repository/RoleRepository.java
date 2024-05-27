@@ -5,7 +5,7 @@ import edu.harvard.hms.dbmi.avillach.auth.data.entity.Role;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.transaction.Transactional;
-import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -20,7 +20,7 @@ public class RoleRepository extends BaseRepository<Role, UUID> {
         super(Role.class);
     }
 
-    public void persistAll(ArrayList<Role> newRoles) {
+    public void persistAll(List<Role> newRoles) {
         newRoles.forEach(this::persist);
     }
 }

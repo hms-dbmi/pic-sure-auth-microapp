@@ -217,10 +217,11 @@ public class FENCEAuthenticationService {
         Set<String> roleNames = new HashSet<>();
         project_access_names.forEachRemaining(roleNames::add);
 
-        ArrayList<Role> newRoles = new ArrayList<>();
-        roleNames.parallelStream().forEach(roleName -> {
-            newRoles.add(createRole(roleName, "FENCE role "+roleName));
-        });
+        List<Role> newRoles = roleNames.parallelStream()
+                .map(roleName -> createRole(roleName, "FENCE role " + roleName))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+
         roleRepo.persistAll(newRoles);
 
         if (current_user.getRoles() == null) {
