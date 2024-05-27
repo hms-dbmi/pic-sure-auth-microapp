@@ -231,9 +231,6 @@ public class FENCEAuthenticationService {
             roleNames.add(newRoleName);
         });
 
-        // find roles that are not in the user's roles. These are the roles that need to be added.
-        roleNames.removeAll(current_user.getRoles().parallelStream().map(Role::getName).collect(Collectors.toSet()));
-
         // find roles that are in the user's roles but not in the project_access_names. These are the roles that need to be removed.
         // exclude userRole -> "PIC-SURE Top Admin".equals(userRole.getName()) || "Admin".equals(userRole.getName()) || userRole.getName().startsWith("MANUAL_")
         Set<Role> rolesToRemove = current_user.getRoles().parallelStream()
