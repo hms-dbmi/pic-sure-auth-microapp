@@ -82,7 +82,6 @@ public class AccessRuleService {
                 .flatMap(privilege -> privilege.getAccessRules().stream())
                 .collect(Collectors.toSet());
 
-        // TODO: Determine if hibernate has an issue with this. It may wants use to create a new object so it is no longer tracking it.
         return preProcessARBySortedKeys(accessRules);
     }
 
