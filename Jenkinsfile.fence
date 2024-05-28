@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     parameters {
-        string(name: 'DOCKER_REGISTRY', description: 'Docker registry URL (e.g., ECR URL)', defaultValue: '${docker_registry}')
-        string(name: 'REPOSITORY_NAME', description: 'Docker repository name', defaultValue: '${psama_docker_repository_name}')
+        string(name: 'DOCKER_REGISTRY', description: 'Docker registry URL (e.g., ECR URL)', defaultValue: 'hms-dbmi')
+        string(name: 'REPOSITORY_NAME', description: 'Docker repository name', defaultValue: 'psama')
     }
 
     environment {
@@ -28,8 +28,6 @@ pipeline {
         stage('push') {
             steps {
                 sh "aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${params.DOCKER_REGISTRY}"
-                sh "docker push ${params.DOCKER_REGISTRY}/${params.REPOSITORY_NAME}:${IMAGE_TAG}"
-                sh "docker push ${params.DOCKER_REGISTRY}/${params.REPOSITORY_NAME}:${LATEST_TAG}"
             }
         }
         stage('deploy') {
