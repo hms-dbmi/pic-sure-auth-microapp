@@ -186,8 +186,6 @@ public class FENCEAuthenticationService {
                     "from the Gen3 authentication provider."+ex.getMessage());
         }
 
-        // Time performance of user login.
-        long startTime = System.currentTimeMillis();
         User current_user = null;
         try {
             // Create or retrieve the user profile from our database, based on the the key
@@ -280,7 +278,6 @@ public class FENCEAuthenticationService {
         logger.debug("getFENCEProfile() UserProfile response object has been generated");
         logger.debug("getFENCEToken() finished");
 
-        System.out.println("User login took: " + (System.currentTimeMillis() - startTime) + "ms or " + (System.currentTimeMillis() - startTime) / 1000 + "s");
         return PICSUREResponse.success(responseMap);
     }
 
