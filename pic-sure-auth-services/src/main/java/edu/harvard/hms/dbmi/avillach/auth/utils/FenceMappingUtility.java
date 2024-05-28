@@ -39,7 +39,7 @@ public class FenceMappingUtility {
         }
     }
 
-    private synchronized void initializeFENCEMappings() {
+    private void initializeFENCEMappings() {
         if (fenceMappingByConsent == null || fenceMappingByAuthZ == null) {
             ArrayList<Map> studies = loadBioDataCatalystFenceMappingData();
             ConcurrentHashMap<String, Map> tempFenceMappingByConsent = new ConcurrentHashMap<>();
