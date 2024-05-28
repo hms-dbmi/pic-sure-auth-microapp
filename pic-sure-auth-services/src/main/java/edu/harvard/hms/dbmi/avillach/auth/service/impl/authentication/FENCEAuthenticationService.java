@@ -12,7 +12,7 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.exceptions.NotAuthorizedException;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.*;
-import edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization.AccessRuleService;
+import edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization.FenceAccessRuleService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.RestClientUtil;
 import jakarta.annotation.PostConstruct;
 import org.apache.commons.lang3.StringUtils;
@@ -43,7 +43,7 @@ public class FENCEAuthenticationService {
 
     private final ConnectionWebService connectionService; // We will need to investigate if the ConnectionWebService will need to be versioned as well.
 
-    private final AccessRuleService accessruleService;
+    private final FenceAccessRuleService fenceAccessRuleService;
 
     private final ApplicationService applicationService;
 
@@ -101,7 +101,7 @@ public class FENCEAuthenticationService {
     public FENCEAuthenticationService(UserService userService,
                                       RoleService roleService,
                                       ConnectionWebService connectionService,
-                                      AccessRuleService accessruleService,
+                                      FenceAccessRuleService fenceAccessRuleService,
                                       ApplicationService applicationService,
                                       PrivilegeService privilegeService,
                                       RestClientUtil restClientUtil,
@@ -116,7 +116,7 @@ public class FENCEAuthenticationService {
         this.userService = userService;
         this.roleService = roleService;
         this.connectionService = connectionService;
-        this.accessruleService = accessruleService;
+        this.fenceAccessRuleService = fenceAccessRuleService;
         this.applicationService = applicationService;
         this.privilegeService = privilegeService;
         this.idp_provider_uri = idpProviderUri;
@@ -601,7 +601,7 @@ public class FENCEAuthenticationService {
                 ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
                 ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, conceptPath, projectAlias));
                 ar.getSubAccessRule().addAll(getTopmedRestrictedSubRules());
-                accessruleService.save(ar);
+                fenceAccessRuleService.save(ar);
             }
 
             accessrules.add(ar);
@@ -622,7 +622,7 @@ public class FENCEAuthenticationService {
                 //this is added in the 'getPhenotypeRestrictedSubRules()' which is not called in this path
                 ar.getSubAccessRule().add(createPhenotypeSubRule(fence_topmed_consent_group_concept_path, "ALLOW_TOPMED_CONSENT", "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
 
-                accessruleService.save(ar);
+                fenceAccessRuleService.save(ar);
             }
             accessrules.add(ar);
 
@@ -641,7 +641,7 @@ public class FENCEAuthenticationService {
                     ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
                     ar.getSubAccessRule().addAll(getHarmonizedSubRules());
                     ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, conceptPath, projectAlias));
-                    accessruleService.save(ar);
+                    fenceAccessRuleService.save(ar);
                 }
                 accessrules.add(ar);
             }
@@ -650,7 +650,7 @@ public class FENCEAuthenticationService {
             for(String arName: this.fence_standard_access_rules.split(",")) {
                 if (arName.startsWith("AR_")) {
                     logger.info("upsertClinicalPrivilege() Adding AccessRule {} to privilege {}", arName, priv.getName());
-                    ar = accessruleService.getAccessRuleByName(arName);
+                    ar = fenceAccessRuleService.getAccessRuleByName(arName);
                     if(ar != null) {
                         accessrules.add(ar);
                     }
@@ -678,7 +678,7 @@ public class FENCEAuthenticationService {
 
             String ar_name = "AR_ALLOW_" + queryType ;
 
-            AccessRule ar = accessruleService.getAccessRuleByName(ar_name);
+            AccessRule ar = fenceAccessRuleService.getAccessRuleByName(ar_name);
             if(ar != null) {
                 logger.debug("createTopmedRestrictedSubRule() Found existing rule: {}", ar.getName());
                 rules.add(ar);
@@ -697,7 +697,7 @@ public class FENCEAuthenticationService {
             ar.setEvaluateOnlyByGates(false);
             ar.setGateAnyRelation(false);
 
-            accessruleService.save(ar);
+            fenceAccessRuleService.save(ar);
             rules.add(ar);
 
         }
@@ -716,7 +716,7 @@ public class FENCEAuthenticationService {
     private AccessRule upsertTopmedRestrictedSubRule(String type, String rule) {
         String ar_name = "AR_TOPMED_RESTRICTED_" + type;
 
-        AccessRule ar = accessruleService.getAccessRuleByName(ar_name);
+        AccessRule ar = fenceAccessRuleService.getAccessRuleByName(ar_name);
         if(ar != null) {
             logger.debug("createTopmedRestrictedSubRule() Found existing rule: {}", ar.getName());
             return ar;
@@ -733,7 +733,7 @@ public class FENCEAuthenticationService {
         ar.setCheckMapNode(false);
         ar.setEvaluateOnlyByGates(false);
         ar.setGateAnyRelation(false);
-        accessruleService.save(ar);
+        fenceAccessRuleService.save(ar);
 
         return ar;
     }
@@ -838,7 +838,7 @@ public class FENCEAuthenticationService {
 
         String ar_name = "AR_PHENO_"+alias + "_" + label;
 
-        AccessRule ar = accessruleService.getAccessRuleByName(ar_name);
+        AccessRule ar = fenceAccessRuleService.getAccessRuleByName(ar_name);
         if(ar != null) {
             logger.debug("createPhenotypeSubRule() Found existing rule: {}", ar.getName());
             return ar;
@@ -855,7 +855,7 @@ public class FENCEAuthenticationService {
         ar.setCheckMapNode(useMapKey);
         ar.setEvaluateOnlyByGates(false);
         ar.setGateAnyRelation(false);
-        accessruleService.save(ar);
+        fenceAccessRuleService.save(ar);
 
         return ar;
     }
@@ -946,7 +946,7 @@ public class FENCEAuthenticationService {
                 }
                 ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
                 ar.getSubAccessRule().addAll(getPhenotypeRestrictedSubRules(studyIdentifier, consent_group, projectAlias));
-                accessruleService.save(ar);
+                fenceAccessRuleService.save(ar);
             }
             accessrules.add(ar);
 
@@ -966,7 +966,7 @@ public class FENCEAuthenticationService {
                     //this is added in the 'getPhenotypeRestrictedSubRules()' which is not called in this path
                     ar.getSubAccessRule().add(createPhenotypeSubRule(fence_topmed_consent_group_concept_path, "ALLOW_TOPMED_CONSENT", "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
 
-                    accessruleService.save(ar);
+                    fenceAccessRuleService.save(ar);
                 }
                 accessrules.add(ar);
 
@@ -986,7 +986,7 @@ public class FENCEAuthenticationService {
                         ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
                         ar.getSubAccessRule().addAll(getHarmonizedSubRules());
                         ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, parentConceptPath, projectAlias));
-                        accessruleService.save(ar);
+                        fenceAccessRuleService.save(ar);
                     }
                     accessrules.add(ar);
                 }
@@ -997,7 +997,7 @@ public class FENCEAuthenticationService {
             for(String arName: fence_standard_access_rules.split(",")) {
                 if (arName.startsWith("AR_")) {
                     logger.info("upsertTopmedPrivilege() Adding AccessRule {} to privilege {}", arName, priv.getName());
-                    ar = accessruleService.getAccessRuleByName(arName);
+                    ar = fenceAccessRuleService.getAccessRuleByName(arName);
                     if(ar != null) {
                         accessrules.add(ar);
                     }
@@ -1023,7 +1023,7 @@ public class FENCEAuthenticationService {
         logger.debug("upsertConsentAccessRule() starting");
         String ar_name = (consent_group != null && !consent_group.isEmpty()) ? "AR_CONSENT_" + studyIdentifier+"_"+consent_group+ "_" +label : "AR_CONSENT_" + studyIdentifier;
 
-        AccessRule ar = accessruleService.getAccessRuleByName(ar_name);
+        AccessRule ar = fenceAccessRuleService.getAccessRuleByName(ar_name);
         if(ar != null) {
             logger.debug("upsertConsentAccessRule() Found existing rule: {}", ar.getName());
             return ar;
@@ -1048,7 +1048,7 @@ public class FENCEAuthenticationService {
         ar.setEvaluateOnlyByGates(false);
         ar.setGateAnyRelation(false);
 
-        accessruleService.save(ar);
+        fenceAccessRuleService.save(ar);
 
         logger.debug("upsertConsentAccessRule() finished");
         return ar;
@@ -1058,7 +1058,7 @@ public class FENCEAuthenticationService {
     private AccessRule upsertTopmedAccessRule(String project_name, String consent_group, String label ) {
         logger.debug("upsertTopmedAccessRule() starting");
         String ar_name = (consent_group != null && !consent_group.isEmpty()) ? "AR_TOPMED_"+project_name+"_"+consent_group + "_" + label : "AR_TOPMED_"+project_name+"_"+label;
-        AccessRule ar = accessruleService.getAccessRuleByName(ar_name);
+        AccessRule ar = fenceAccessRuleService.getAccessRuleByName(ar_name);
         if (ar != null) {
             logger.info("upsertTopmedAccessRule() AccessRule {} already exists.", ar_name);
             return ar;
@@ -1081,7 +1081,7 @@ public class FENCEAuthenticationService {
         ar.setEvaluateOnlyByGates(false);
         ar.setGateAnyRelation(false);
 
-        accessruleService.save(ar);
+        fenceAccessRuleService.save(ar);
 
         logger.debug("upsertTopmedAccessRule() finished");
         return ar;
@@ -1092,7 +1092,7 @@ public class FENCEAuthenticationService {
     private AccessRule upsertHarmonizedAccessRule(String project_name, String consent_group, String label ) {
         logger.debug("upsertTopmedAccessRule() starting");
         String ar_name = "AR_TOPMED_"+project_name+"_"+consent_group + "_" + label;
-        AccessRule ar = accessruleService.getAccessRuleByName(ar_name);
+        AccessRule ar = fenceAccessRuleService.getAccessRuleByName(ar_name);
         if (ar != null) {
             logger.info("upsertTopmedAccessRule() AccessRule {} already exists.", ar_name);
             return ar;
@@ -1114,7 +1114,7 @@ public class FENCEAuthenticationService {
         ar.setEvaluateOnlyByGates(false);
         ar.setGateAnyRelation(false);
 
-        accessruleService.save(ar);
+        fenceAccessRuleService.save(ar);
 
         logger.debug("upsertTopmedAccessRule() finished");
         return ar;
@@ -1128,7 +1128,7 @@ public class FENCEAuthenticationService {
 
         gateName = "GATE_" + gateName + "_" + (is_present ? "PRESENT": "MISSING");
 
-        AccessRule gate = accessruleService.getAccessRuleByName(gateName);
+        AccessRule gate = fenceAccessRuleService.getAccessRuleByName(gateName);
         if (gate != null) {
             logger.info("upsertConsentGate() AccessRule {} already exists.", gateName);
             return gate;
@@ -1146,7 +1146,7 @@ public class FENCEAuthenticationService {
         gate.setEvaluateOnlyByGates(false);
         gate.setGateAnyRelation(false);
 
-        accessruleService.save(gate);
+        fenceAccessRuleService.save(gate);
         return gate;
     }
 
