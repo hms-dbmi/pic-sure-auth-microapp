@@ -2,9 +2,13 @@ package edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.harvard.hms.dbmi.avillach.auth.entity.AccessRule;
+import edu.harvard.hms.dbmi.avillach.auth.repository.AccessRuleRepository;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.Mock;
+import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -410,6 +414,12 @@ public class AuthorizationServiceTestByUseCases extends AuthorizationService {
         initialTestCaseD();
         initialTestCaseE();
         initialTestCaseF();
+    }
+
+    @Before
+    public void setUp() {
+        AccessRuleRepository accessRuleRepository = Mockito.mock(AccessRuleRepository.class);
+        accessRuleService = new MergedAccessRuleService(accessRuleRepository);
     }
 
     @Test

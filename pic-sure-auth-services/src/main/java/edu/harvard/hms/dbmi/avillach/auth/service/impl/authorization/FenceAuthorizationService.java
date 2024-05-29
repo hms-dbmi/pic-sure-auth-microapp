@@ -18,10 +18,10 @@ public class FenceAuthorizationService {
 
     private final Logger logger = LoggerFactory.getLogger(AuthorizationService.class);
 
-    private final FenceAccessRuleService fenceAccessRuleService;
+    private final MergedAccessRuleService fenceAccessRuleService;
 
     @Autowired
-    public FenceAuthorizationService(FenceAccessRuleService fenceAccessRuleService) {
+    public FenceAuthorizationService(MergedAccessRuleService fenceAccessRuleService) {
         this.fenceAccessRuleService = fenceAccessRuleService;
     }
 
@@ -103,7 +103,7 @@ public class FenceAuthorizationService {
             return false;
         }
 
-        Set<AccessRule> accessRules = this.fenceAccessRuleService.getFenceAccessRulesForUserAndApp(user, application);
+        Set<AccessRule> accessRules = this.fenceAccessRuleService.getAccessRulesForUserAndApp(user, application);
         if(accessRules == null || accessRules.isEmpty()) {
             logger.info("ACCESS_LOG ___ {},{},{} ___ has been denied access to execute query ___ {} ___ in application ___ {} ___  resource ___ {} ___ targetService ___ {} ___ NO ACCESS RULES EVALUATED", user.getUuid().toString(), user.getEmail(), user.getName(), formattedQuery, applicationName, resourceId, targetService);
             return false;

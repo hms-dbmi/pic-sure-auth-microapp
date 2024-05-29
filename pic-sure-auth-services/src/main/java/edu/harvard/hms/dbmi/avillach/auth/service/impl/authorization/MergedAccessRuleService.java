@@ -242,7 +242,7 @@ public class MergedAccessRuleService {
         return true;
     }
 
-    private boolean extractAndCheckRule(AccessRule accessRule, Object parsedRequestBody) {
+    boolean extractAndCheckRule(AccessRule accessRule, Object parsedRequestBody) {
         logger.debug("extractAndCheckRule() starting");
         String rule = accessRule.getRule();
 
@@ -370,7 +370,7 @@ public class MergedAccessRuleService {
         return true;
     }
 
-    private boolean decisionMaker(AccessRule accessRule, String requestBodyValue) {
+    boolean decisionMaker(AccessRule accessRule, String requestBodyValue) {
         if (accessRule.getMergedValues().isEmpty()) {
             String value = accessRule.getValue();
             if (value == null) {

@@ -33,7 +33,7 @@ public class AuthorizationServiceTest {
 
     private AuthorizationService authorizationService;
 
-    private AccessRuleService accessRuleService;
+    private MergedAccessRuleService accessRuleService;
 
     @Mock
     private AccessRuleRepository accessRuleRepository;
@@ -315,7 +315,7 @@ public class AuthorizationServiceTest {
         MockitoAnnotations.initMocks(this);
         SecurityContextHolder.setContext(securityContext);
 
-        accessRuleService = new AccessRuleService(accessRuleRepository);
+        accessRuleService = new MergedAccessRuleService(accessRuleRepository);
         authorizationService = new AuthorizationService(accessRuleService);
     }
 

@@ -40,13 +40,13 @@ public class AuthorizationService {
 
     private final Logger logger = LoggerFactory.getLogger(AuthorizationService.class);
 
-    protected AccessRuleService accessRuleService;
+    protected MergedAccessRuleService accessRuleService;
 
     public AuthorizationService() {
     }
 
     @Autowired
-    public AuthorizationService(AccessRuleService accessRuleService) {
+    public AuthorizationService(MergedAccessRuleService accessRuleService) {
         this.accessRuleService = accessRuleService;
     }
 
