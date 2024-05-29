@@ -176,6 +176,9 @@ public class RoleServiceTest {
         Role role = new Role();
         role.setUuid(roleId);
 
+        User user = createTestUserWithoutPrivileges();
+        configureUserSecurityContext(user);
+
         when(roleRepository.findById(roleId)).thenReturn(Optional.of(role));
 
         Optional<List<Role>> result = roleService.removeRoleById(roleId.toString());
@@ -225,6 +228,7 @@ public class RoleServiceTest {
 
     private void configureUserSecurityContext(User user) {
         CustomUserDetails customUserDetails = new CustomUserDetails(user);
+
         // configure security context
         UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(customUserDetails, null, customUserDetails.getAuthorities());
         when(securityContext.getAuthentication()).thenReturn(authentication);
@@ -240,5 +244,24 @@ public class RoleServiceTest {
         user.setActive(true);
 
         return user;
+    }
+
+    private User createTestUserWithoutPrivileges() {
+        User user = new User();
+        user.setUuid(UUID.randomUUID());
+        user.setRoles(new HashSet<>());
+        user.setSubject("TEST_SUBJECT");
+        user.setEmail("test@email.com");
+        user.setAcceptedTOS(new Date());
+        user.setActive(true);
+        return user;
+    }
+
+    private Role createTopAdminRoleWithoutPrivs() {
+        Role role = new Role();
+        role.setName(SecurityRoles.PIC_SURE_TOP_ADMIN.getRole());
+        role.setUuid(UUID.randomUUID());
+        role.setPrivileges(Collections.emptySet());
+        return role;
     }
 }
