@@ -5,6 +5,7 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization.AccessRuleService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.RoleService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.UserService;
+import edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization.MergedAccessRuleService;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,10 +22,10 @@ public class OpenAuthenticationService {
 
     private final UserService userService;
     private final RoleService roleService;
-    private final AccessRuleService accessRuleService;
+    private final MergedAccessRuleService accessRuleService;
 
     @Autowired
-    public OpenAuthenticationService(UserService userService, RoleService roleService, AccessRuleService accessRuleService) {
+    public OpenAuthenticationService(UserService userService, RoleService roleService, MergedAccessRuleService accessRuleService) {
         this.userService = userService;
         this.roleService = roleService;
         this.accessRuleService = accessRuleService;

@@ -2,8 +2,6 @@ package edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jayway.jsonpath.JsonPath;
-import com.jayway.jsonpath.PathNotFoundException;
 import edu.harvard.hms.dbmi.avillach.auth.entity.AccessRule;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Application;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
@@ -12,6 +10,7 @@ import edu.harvard.hms.dbmi.avillach.auth.rest.TokenController;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -42,12 +41,21 @@ public class AuthorizationService {
 
     protected MergedAccessRuleService accessRuleService;
 
+    /**
+     * Applications that have strict access control. If the application is strict a user must have both privileges and access rules.
+     * If the application is not strict, the user only needs privileges. Access rules are optional.
+     */
+    private final Set<String> strictConnections = new HashSet<>();
+
     public AuthorizationService() {
     }
 
     @Autowired
-    public AuthorizationService(MergedAccessRuleService accessRuleService) {
+    public AuthorizationService(MergedAccessRuleService accessRuleService, @Value("${strict.authorization.applications.connections}") String strictConnections) {
         this.accessRuleService = accessRuleService;
+        if (strictConnections != null && !strictConnections.isEmpty()) {
+            this.strictConnections.addAll(Arrays.asList(strictConnections.split(",")));
+        }
     }
 
     /**
@@ -80,14 +88,11 @@ public class AuthorizationService {
         String applicationName = application.getName();
         //in some cases, we don't go through the evaluation
         if (requestBody == null) {
-            logger.info("ACCESS_LOG ___ " + user.getUuid().toString() + "," + user.getEmail() + "," + user.getName() +
-                    " ___ has been granted access to application ___ " + applicationName + " ___ NO REQUEST BODY FORWARDED BY APPLICATION");
+            logger.info("ACCESS_LOG ___ {},{},{} ___ has been granted access to application ___ {} ___ NO REQUEST BODY FORWARDED BY APPLICATION", user.getUuid().toString(), user.getEmail(), user.getName(), applicationName);
             return true;
         }
 
-        // start to process the jsonpath checking
-
-        String formattedQuery = null;
+        String formattedQuery;
         try {
             formattedQuery = (String) ((Map)requestBody).get("formattedQuery");
 
@@ -97,44 +102,38 @@ public class AuthorizationService {
             }
 
         } catch (ClassCastException | JsonProcessingException e1) {
-            // TODO Auto-generated catch block
-            e1.printStackTrace();
-            logger.info("ACCESS_LOG ___ " + user.getUuid().toString() + "," + user.getEmail() + "," + user.getName() +
-                    " ___ has been denied access to execute query ___ " + requestBody + " ___ in application ___ " + applicationName
-                    + " ___ UNABLE TO PARSE REQUEST");
+            logger.info("ACCESS_LOG ___ {},{},{} ___ has been denied access to execute query ___ {} ___ in application ___ {} ___ UNABLE TO PARSE REQUEST", user.getUuid().toString(), user.getEmail(), user.getName(), requestBody, applicationName);
+            logger.info("isAuthorized() Stack Trace: ", e1);
             return false;
         }
 
-        Set<Privilege> privileges = user.getPrivilegesByApplication(application);
+        Set<AccessRule> accessRules;
+        String label = user.getConnection().getLabel();
+        if (!this.strictConnections.contains(label)) {
+            Set<Privilege> privileges = user.getPrivilegesByApplication(application);
+            if (privileges == null || privileges.isEmpty()) {
+                logger.info("ACCESS_LOG ___ {},{},{} ___ has been denied access to execute query ___ {} ___ in application ___ {} __ USER HAS NO PRIVILEGES ASSOCIATED TO THE APPLICATION, BUT APPLICATION HAS PRIVILEGES", user.getUuid().toString(), user.getEmail(), user.getName(), formattedQuery, applicationName);
+                return false;
+            }
 
-        // If the user doesn't have any privileges associated to the application,
-        // it will return false. The logic is if there are any privileges associated with the application,
-        // a user needs to have at least one privilege under the same application,
-        // or be denied.
-        // The check if the application has privileges or not should be outside this function.
-        // Here we assume that the application has at least one privilege
-        if (privileges == null || privileges.isEmpty()) {
-            logger.info("ACCESS_LOG ___ " + user.getUuid().toString() + "," + user.getEmail() + "," + user.getName() +
-                    " ___ has been denied access to execute query ___ " + formattedQuery + " ___ in application ___ " + applicationName
-                    + " __ USER HAS NO PRIVILEGES ASSOCIATED TO THE APPLICATION, BUT APPLICATION HAS PRIVILEGES");
-            return false;
+            accessRules = this.accessRuleService.preProcessAccessRules(privileges);
+            if (accessRules == null || accessRules.isEmpty()) {
+                logger.info("ACCESS_LOG ___ {},{},{} ___ has been granted access to execute query ___ {} ___ in application ___ {} ___ NO ACCESS RULES EVALUATED", user.getUuid().toString(), user.getEmail(), user.getName(), formattedQuery, applicationName);
+                return true;
+            }
+        } else {
+            accessRules = this.accessRuleService.getAccessRulesForUserAndApp(user, application);
+            if (accessRules == null || accessRules.isEmpty()) {
+                logger.info("ACCESS_LOG ___ {},{},{} ___ has been denied access to execute query ___ {} ___ in application ___ {} ___ NO ACCESS RULES EVALUATED", user.getUuid().toString(), user.getEmail(), user.getName(), formattedQuery, applicationName);
+                return false;
+            }
         }
 
-        Set<AccessRule> accessRules = this.accessRuleService.preProcessAccessRules(privileges);
-        if (accessRules == null || accessRules.isEmpty()) {
-            logger.info("ACCESS_LOG ___ " + user.getUuid().toString() + "," + user.getEmail() + "," + user.getName() +
-                    " ___ has been granted access to execute query ___ " + formattedQuery + " ___ in application ___ " + applicationName
-                    + " ___ NO ACCESS RULES EVALUATED");
-            return true;
-        }
-
-        // loop through all accessRules
         // Current logic here is: among all accessRules, they are OR relationship
         Set<AccessRule> failedRules = new HashSet<>();
         AccessRule passByRule = null;
         boolean result = false;
         for (AccessRule accessRule : accessRules) {
-
             if (this.accessRuleService.evaluateAccessRule(requestBody, accessRule)) {
                 result = true;
                 passByRule = accessRule;
@@ -145,7 +144,6 @@ public class AuthorizationService {
         }
 
         String passRuleName = null;
-
         if (passByRule != null) {
             if (passByRule.getMergedName().isEmpty())
                 passRuleName = passByRule.getName();

@@ -140,7 +140,7 @@ public class MergedAccessRuleService {
             keys.add(evaluateOnlyByGates == null ? "null" : Boolean.toString(evaluateOnlyByGates));
             keys.add(gateAnyRelation == null ? "null" : Boolean.toString(gateAnyRelation));
 
-            String key = keys.stream().collect(Collectors.joining());
+            String key = String.join("", keys);
             if (accessRuleMap.containsKey(key)) {
                 accessRuleMap.get(key).add(accessRule);
             } else {

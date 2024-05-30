@@ -2,7 +2,7 @@ package edu.harvard.hms.dbmi.avillach.auth.rest;
 
 import edu.harvard.hms.dbmi.avillach.auth.entity.AccessRule;
 import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
-import edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization.AccessRuleService;
+import edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization.MergedAccessRuleService;
 import io.swagger.v3.oas.annotations.*;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.security.RolesAllowed;
@@ -31,10 +31,10 @@ import static edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming.AuthRoleNaming
 @RequestMapping(value = "/accessRule")
 public class AccessRuleController {
 
-    private final AccessRuleService accessRuleService;
+    private final MergedAccessRuleService accessRuleService;
 
     @Autowired
-    public AccessRuleController(AccessRuleService accessRuleService) {
+    public AccessRuleController(MergedAccessRuleService accessRuleService) {
         this.accessRuleService = accessRuleService;
     }
 

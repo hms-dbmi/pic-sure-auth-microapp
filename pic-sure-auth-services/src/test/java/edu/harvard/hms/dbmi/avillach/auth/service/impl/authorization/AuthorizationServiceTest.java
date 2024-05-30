@@ -1,11 +1,7 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import edu.harvard.hms.dbmi.avillach.auth.entity.AccessRule;
-import edu.harvard.hms.dbmi.avillach.auth.entity.Application;
-import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
-import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
-import edu.harvard.hms.dbmi.avillach.auth.entity.User;
+import edu.harvard.hms.dbmi.avillach.auth.entity.*;
 import edu.harvard.hms.dbmi.avillach.auth.enums.SecurityRoles;
 import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
 import edu.harvard.hms.dbmi.avillach.auth.repository.AccessRuleRepository;
@@ -316,7 +312,7 @@ public class AuthorizationServiceTest {
         SecurityContextHolder.setContext(securityContext);
 
         accessRuleService = new MergedAccessRuleService(accessRuleRepository);
-        authorizationService = new AuthorizationService(accessRuleService);
+        authorizationService = new AuthorizationService(accessRuleService, "fence,okta");
     }
 
     @Test
@@ -337,7 +333,7 @@ public class AuthorizationServiceTest {
             privilege1.setApplication(application);
         }
         configureUserSecurityContext(user);
-
+        user.setConnection(createFenceTestConnection());
 
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("test", "value");
@@ -352,6 +348,7 @@ public class AuthorizationServiceTest {
         Application application = createTestApplication();
         User user = createTestUser();
         configureUserSecurityContext(user);
+        user.setConnection(createFenceTestConnection());
 
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("test", "differentValue");
@@ -359,6 +356,29 @@ public class AuthorizationServiceTest {
         boolean result = authorizationService.isAuthorized(application, requestBody, user);
 
         assertFalse(result);
+    }
+
+    @Test
+    public void testIsAuthorized_AccessRuleFailed_strict() {
+        Application application = createTestApplication();
+        User user = createTestUser();
+        configureUserSecurityContext(user);
+        user.setConnection(createFenceTestConnection());
+
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("test", "differentValue");
+
+        boolean result = authorizationService.isAuthorized(application, requestBody, user);
+
+        assertFalse(result);
+    }
+
+    private Connection createFenceTestConnection() {
+        Connection connection = new Connection();
+        connection.setUuid(UUID.randomUUID());
+        connection.setLabel("FENCE");
+        connection.setSubPrefix("fence|");
+        return connection;
     }
 
     @Test
@@ -459,6 +479,7 @@ public class AuthorizationServiceTest {
     public void testIsAuthorized_NoPrivileges() {
         Application application = createTestApplication();
         User user = createTestUser();
+        user.setConnection(createFenceTestConnection());
 
         user.getRoles().iterator().next().setPrivileges(Collections.emptySet());
         boolean result = authorizationService.isAuthorized(application, new HashMap<>(), user);
