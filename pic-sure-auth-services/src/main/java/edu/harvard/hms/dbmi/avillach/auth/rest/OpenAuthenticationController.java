@@ -39,16 +39,11 @@ public class OpenAuthenticationController {
     @PostMapping(value = "/authentication", consumes = "application/json", produces = "application/json")
     public ResponseEntity<?> authentication(@Parameter(required = true, description = "A json object that includes all Oauth authentication needs, for example, access_token and redirectURI") Map<String, String> authRequest) {
         logger.debug("authentication() starting...");
-
-        // idp_provider also has default value of "default" if not set in the config file
-        // This is a temporary solution to ensure that a user cannot authenticate against fence using the open endpoint
-        // TODO: This is no longer valid because there are many other IDP providers that are not fence
         if (!this.idp_provider.equalsIgnoreCase("fence")) {
             Map<String, String> authenticate = openAuthenticationService.authenticate(authRequest);
             return PICSUREResponse.success(authenticate);
         }
 
-        // Fence authentication is not supported by the open endpoint
         return PICSUREResponse.unauthorizedError("Not authorized.");
     }
 
