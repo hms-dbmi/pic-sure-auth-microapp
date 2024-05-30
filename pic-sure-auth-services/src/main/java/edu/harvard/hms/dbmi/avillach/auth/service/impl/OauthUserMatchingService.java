@@ -1,10 +1,8 @@
-package edu.harvard.hms.dbmi.avillach.auth.service.impl.authentication;
+package edu.harvard.hms.dbmi.avillach.auth.service.impl;
 
 import java.util.List;
 import java.util.Optional;
 
-import edu.harvard.hms.dbmi.avillach.auth.service.impl.UserMetadataMappingService;
-import edu.harvard.hms.dbmi.avillach.auth.service.impl.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

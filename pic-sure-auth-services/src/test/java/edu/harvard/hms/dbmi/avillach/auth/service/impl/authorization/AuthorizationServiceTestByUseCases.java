@@ -7,7 +7,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.mockito.Mock;
 import org.mockito.Mockito;
 
 import java.io.IOException;
@@ -419,7 +418,7 @@ public class AuthorizationServiceTestByUseCases extends AuthorizationService {
     @Before
     public void setUp() {
         AccessRuleRepository accessRuleRepository = Mockito.mock(AccessRuleRepository.class);
-        accessRuleService = new MergedAccessRuleService(accessRuleRepository);
+        accessRuleService = new AccessRuleService(accessRuleRepository);
     }
 
     @Test

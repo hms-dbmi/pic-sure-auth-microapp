@@ -17,17 +17,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
-public class MergedAccessRuleService {
+public class AccessRuleService {
 
     private final AccessRuleRepository accessRuleRepo;
-    private final Logger logger = LoggerFactory.getLogger(MergedAccessRuleService.class);
+    private final Logger logger = LoggerFactory.getLogger(AccessRuleService.class);
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Autowired
-    public MergedAccessRuleService(AccessRuleRepository accessRuleRepo) {
+    public AccessRuleService(AccessRuleRepository accessRuleRepo) {
         this.accessRuleRepo = accessRuleRepo;
     }
 

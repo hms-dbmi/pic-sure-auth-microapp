@@ -4,7 +4,7 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.RoleService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.UserService;
-import edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization.MergedAccessRuleService;
+import edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization.AccessRuleService;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.InjectMocks;
@@ -27,7 +27,7 @@ public class OpenAuthenticationServiceTest {
     private RoleService roleService;
 
     @Mock
-    private MergedAccessRuleService accessRuleService;
+    private AccessRuleService accessRuleService;
 
     @InjectMocks
     private OpenAuthenticationService openAuthenticationService;

@@ -12,7 +12,7 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.exceptions.NotAuthorizedException;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.*;
-import edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization.MergedAccessRuleService;
+import edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization.AccessRuleService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.RestClientUtil;
 import jakarta.annotation.PostConstruct;
 import org.apache.commons.lang3.StringUtils;
@@ -43,7 +43,7 @@ public class FENCEAuthenticationService {
 
     private final ConnectionWebService connectionService; // We will need to investigate if the ConnectionWebService will need to be versioned as well.
 
-    private final MergedAccessRuleService fenceAccessRuleService;
+    private final AccessRuleService fenceAccessRuleService;
 
     private final ApplicationService applicationService;
 
@@ -101,7 +101,7 @@ public class FENCEAuthenticationService {
     public FENCEAuthenticationService(UserService userService,
                                       RoleService roleService,
                                       ConnectionWebService connectionService,
-                                      MergedAccessRuleService fenceAccessRuleService,
+                                      AccessRuleService fenceAccessRuleService,
                                       ApplicationService applicationService,
                                       PrivilegeService privilegeService,
                                       RestClientUtil restClientUtil,

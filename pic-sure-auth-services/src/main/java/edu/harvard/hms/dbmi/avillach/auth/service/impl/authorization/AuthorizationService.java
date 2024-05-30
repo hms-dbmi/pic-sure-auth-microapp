@@ -39,7 +39,7 @@ public class AuthorizationService {
 
     private final Logger logger = LoggerFactory.getLogger(AuthorizationService.class);
 
-    protected MergedAccessRuleService accessRuleService;
+    protected AccessRuleService accessRuleService;
 
     /**
      * Applications that have strict access control. If the application is strict a user must have both privileges and access rules.
@@ -51,7 +51,7 @@ public class AuthorizationService {
     }
 
     @Autowired
-    public AuthorizationService(MergedAccessRuleService accessRuleService, @Value("${strict.authorization.applications.connections}") String strictConnections) {
+    public AuthorizationService(AccessRuleService accessRuleService, @Value("${strict.authorization.applications.connections}") String strictConnections) {
         this.accessRuleService = accessRuleService;
         if (strictConnections != null && !strictConnections.isEmpty()) {
             this.strictConnections.addAll(Arrays.asList(strictConnections.split(",")));
