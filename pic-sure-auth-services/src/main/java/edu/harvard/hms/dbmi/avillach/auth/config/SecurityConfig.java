@@ -35,7 +35,7 @@ public class SecurityConfig {
                 .sessionManagement((session) -> session.sessionCreationPolicy(STATELESS))
                 .authenticationProvider(authenticationProvider)
                 .authorizeHttpRequests((authorizeRequests) ->
-                    authorizeRequests.requestMatchers("/actuator/health", "/actuator/info", "/authentication/**", "/swagger.yaml", "/swagger.json","/authentication").permitAll()
+                    authorizeRequests.requestMatchers("/actuator/health", "/actuator/info", "/authentication/**", "/swagger.yaml", "/swagger.json","/authentication", "/auth/okta/authentication", "/auth/open/authentication").permitAll()
                             .anyRequest().authenticated()
                 )
                 .httpBasic(AbstractHttpConfigurer::disable)
