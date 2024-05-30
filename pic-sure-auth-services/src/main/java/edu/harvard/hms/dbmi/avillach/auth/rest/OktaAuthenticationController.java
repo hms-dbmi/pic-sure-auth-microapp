@@ -36,9 +36,7 @@ public class OktaAuthenticationController {
     @PostMapping("/authentication")
     public ResponseEntity<?> authenticate(@RequestBody Map<String, String> authRequest, HttpServletRequest request) {
         logger.info("OKTA LOGIN ATTEMPT ___ {} ___", authRequest.get("code"));
-        String host = request.getRemoteHost();
-
-        // Spring REST controller get headers and uriInfo from the request object
+        String host = request.getServerName();
 
         String idp_provider = this.idp_provider;
         if (idp_provider.equalsIgnoreCase("okta")) {
