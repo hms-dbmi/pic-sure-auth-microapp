@@ -197,7 +197,7 @@ public class OktaOAuthAuthenticationService {
     private JsonNode introspectToken(JsonNode userToken) {
         JsonNode accessTokenNode = userToken.get("access_token");
         if (accessTokenNode == null) {
-            logger.info("USER TOKEN DOES NOT HAVE ACCESS TOKEN ___ " + userToken);
+            logger.info("USER TOKEN DOES NOT HAVE ACCESS TOKEN ___ {}", userToken);
             return null;
         }
 
@@ -243,6 +243,9 @@ public class OktaOAuthAuthenticationService {
         ResponseEntity<?> resp;
         JsonNode response = null;
         try {
+            logger.info("Calling OKTA token endpoint: {}", requestUrl);
+            logger.info("Request params: {}", requestParams);
+
             resp = RestClientUtil.retrievePostResponseWithParams(requestUrl, headers, requestParams);
             response = new ObjectMapper().readTree(Objects.requireNonNull(resp.getBody()).toString());
         } catch (Exception ex) {
