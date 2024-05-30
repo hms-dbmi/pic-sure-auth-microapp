@@ -44,7 +44,7 @@ public class OktaOAuthAuthenticationService {
      */
     @Autowired
     public OktaOAuthAuthenticationService(UserService userService, RoleService roleService,
-                                          @Value("${application.idp.provider}") String idp_provider_uri,
+                                          @Value("${application.idp.provider.uri}") String idp_provider_uri,
                                           @Value("${okta.connection.id}") String connectionId,
                                           @Value("${okta.client.id}") String clientId,
                                           @Value("${okta.client.secret}") String spClientSecret) {

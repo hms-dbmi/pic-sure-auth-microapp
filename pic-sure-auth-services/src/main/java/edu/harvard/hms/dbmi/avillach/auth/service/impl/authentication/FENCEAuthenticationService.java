@@ -105,7 +105,7 @@ public class FENCEAuthenticationService {
                                       ApplicationService applicationService,
                                       PrivilegeService privilegeService,
                                       RestClientUtil restClientUtil,
-                                      @Value("${idp.provider.uri}") String idpProviderUri,
+                                      @Value("${application.idp.provider.uri}") String idpProviderUri,
                                       @Value("${fence.client.id}") String fenceClientId,
                                       @Value("${fence.client.secret}") String fenceClientSecret,
                                       @Value("${application.idp.provider}") String idpProvider,
