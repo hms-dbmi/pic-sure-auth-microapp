@@ -23,7 +23,7 @@ public class AccessRuleServiceTest {
     private AccessRuleRepository accessRuleRepo;
 
     @InjectMocks
-    private AccessRuleService accessRuleService;
+    private MergedAccessRuleService accessRuleService;
 
     @Before
     public void setUp() {

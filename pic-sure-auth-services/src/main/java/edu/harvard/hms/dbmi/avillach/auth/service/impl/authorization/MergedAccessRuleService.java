@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 public class MergedAccessRuleService {
 
     private final AccessRuleRepository accessRuleRepo;
-    private final Logger logger = LoggerFactory.getLogger(AccessRuleService.class);
+    private final Logger logger = LoggerFactory.getLogger(MergedAccessRuleService.class);
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Autowired
