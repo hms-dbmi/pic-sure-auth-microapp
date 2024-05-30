@@ -54,7 +54,7 @@ public class AuthController {
             @Parameter(required = true, description = "A json object that includes all Oauth authentication needs, for example, access_token and redirectURI")
             @RequestBody Map<String, String> authRequest, HttpServletRequest request) throws IOException {
         logger.debug("authentication() starting...");
-        String requestHost = request.getRemoteHost();
+        String requestHost = request.getServerName();
         logger.debug("authentication() requestHost: {}", requestHost);
 
         if(authRequest == null) {
