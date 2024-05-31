@@ -136,6 +136,16 @@ public class FENCEAuthenticationService {
     public void initializeFenceService() {
         picSureApp = applicationService.getApplicationByName("PICSURE");
         fenceConnection = connectionService.getConnectionByLabel("FENCE");
+
+        // log all the properties
+        logger.info("idp_provider_uri: {}", idp_provider_uri);
+        logger.info("fence_client_id: {}", fence_client_id);
+        logger.info("fence_client_secret: {}", fence_client_secret);
+        logger.info("idp_provider: {}", idp_provider);
+        logger.info("fence_standard_access_rules: {}", fence_standard_access_rules);
+        logger.info("fence_allowed_query_types: {}", fence_allowed_query_types);
+        logger.info("variantAnnotationColumns: {}", variantAnnotationColumns);
+        logger.info("templatePath: {}", templatePath);
     }
 
     public HashMap<String, String> getFENCEProfile(String callback_url, Map<String, String> authRequest){
@@ -530,7 +540,6 @@ public class FENCEAuthenticationService {
      * @return the created privilege
      */
     private Privilege upsertClinicalPrivilege(String studyIdentifier, String projectAlias, String consent_group, String conceptPath, boolean isHarmonized) {
-
         String privilegeName = (consent_group != null && consent_group != "") ? "PRIV_FENCE_"+studyIdentifier+"_"+consent_group+(isHarmonized?"_HARMONIZED":"") : "PRIV_FENCE_"+studyIdentifier+(isHarmonized?"_HARMONIZED":"") ;
         Privilege priv = privilegeService.findByName(privilegeName);
         if(priv !=  null) {
@@ -544,18 +553,22 @@ public class FENCEAuthenticationService {
             priv.setApplication(picSureApp);
             priv.setName(privilegeName);
 
+            logger.info("fence_parent_consent_group_concept_path: {}", fence_parent_consent_group_concept_path);
+            logger.info("fence_harmonized_consent_group_concept_path: {}", fence_harmonized_consent_group_concept_path);
+
             String consent_concept_path = isHarmonized ? fence_harmonized_consent_group_concept_path : fence_parent_consent_group_concept_path;
             logger.debug("upsertClinicalPrivilege() consent concept path: {}", consent_concept_path);
             if(!consent_concept_path.contains("\\\\")){
                 //these have to be escaped again so that jaxson can convert it correctly
                 consent_concept_path = consent_concept_path.replaceAll("\\\\", "\\\\\\\\");
             }
+
+            logger.info("fence_harmonized_concept_path: {}", fence_harmonized_concept_path);
             if(fence_harmonized_concept_path != null && !fence_harmonized_concept_path.contains("\\\\")){
                 //these have to be escaped again so that jaxson can convert it correctly
                 fence_harmonized_concept_path = fence_harmonized_concept_path.replaceAll("\\\\", "\\\\\\\\");
                 logger.debug("upsertTopmedPrivilege(): escaped harmonized consent path" + fence_harmonized_concept_path);
             }
-
 
             // TOOD: Change this to a mustache template
             String studyIdentifierField = (consent_group != null && consent_group != "") ? studyIdentifier+"."+consent_group: studyIdentifier;
