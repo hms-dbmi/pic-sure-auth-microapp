@@ -3,6 +3,7 @@ package edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.PathNotFoundException;
+import com.mysql.cj.xdevapi.JsonArray;
 import edu.harvard.hms.dbmi.avillach.auth.entity.AccessRule;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Application;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
@@ -114,8 +115,15 @@ public class AccessRuleService {
         Map<String, Set<AccessRule>> accessRuleMap = new HashMap<>();
 
         for (AccessRule accessRule : accessRules) {
+
+            // 1st generate the key by grabbing all related string and put them together in order
+            // we use a treeSet here to put orderly combine Strings together
             Set<String> keys = new TreeSet<>();
+
+            // the current accessRule rule
             keys.add(accessRule.getRule());
+
+            // all gates' UUID as strings
             keys.add(accessRule.getType().toString());
 
             if (accessRule.getGates() != null) {
@@ -124,6 +132,7 @@ public class AccessRuleService {
                 }
             }
 
+            // all sub accessRule rules
             if (accessRule.getSubAccessRule() != null) {
                 for (AccessRule subAccessRule : accessRule.getSubAccessRule()) {
                     keys.add(subAccessRule.getRule());
@@ -195,16 +204,26 @@ public class AccessRuleService {
         Set<AccessRule> gates = accessRule.getGates();
         boolean gatesPassed = true;
 
+        // depends on the flag getGateAnyRelation is true or false,
+        // the logic of checking if apply gate will be changed
+        // the following cases are gate passed:
+        // 1. if gates are null or empty
+        // 2. if getGateAnyRelation is false, all gates passed
+        // 3. if getGateAnyRelation is true, one of the gate passed
         if (gates != null && !gates.isEmpty()) {
             if (accessRule.getGateAnyRelation() == null || !accessRule.getGateAnyRelation()) {
+                // All gates are AND relationship
+                // means one fails all fail
                 for (AccessRule gate : gates) {
                     if (!evaluateAccessRule(parsedRequestBody, gate)) {
-                        logger.error("evaluateAccessRule() gate {} failed ", gate.getName());
+                        logger.error("evaluateAccessRule() gate {} failed: {} ____ {}", gate.getName(), gate.getRule(), gate.getValue());
                         gatesPassed = false;
                         break;
                     }
                 }
             } else {
+                // All gates are OR relationship
+                // means one passes all pass
                 gatesPassed = false;
                 for (AccessRule gate : gates) {
                     if (evaluateAccessRule(parsedRequestBody, gate)) {
@@ -212,6 +231,10 @@ public class AccessRuleService {
                         gatesPassed = true;
                         break;
                     }
+                }
+
+                if (!gatesPassed) {
+                    logger.debug("all OR gates failed");
                 }
             }
         }
@@ -223,13 +246,16 @@ public class AccessRuleService {
 
         if (gatesPassed) {
             logger.debug("evaluateAccessRule() gates passed");
-            if (!extractAndCheckRule(accessRule, parsedRequestBody))
+            if (!extractAndCheckRule(accessRule, parsedRequestBody)) {
+                logger.debug("Query Rejected by rule(1) {} :: {} :: {}", accessRule.getRule(), accessRule.getType(), accessRule.getValue());
                 return false;
-            else {
+            } else {
                 if (accessRule.getSubAccessRule() != null) {
                     for (AccessRule subAccessRule : accessRule.getSubAccessRule()) {
-                        if (!extractAndCheckRule(subAccessRule, parsedRequestBody))
+                        if (!extractAndCheckRule(subAccessRule, parsedRequestBody)) {
+                            logger.debug("Query Rejected by rule(2) {} :: {} :: {}", subAccessRule.getRule(), subAccessRule.getType(), subAccessRule.getValue());
                             return false;
+                        }
                     }
                 }
             }
@@ -253,8 +279,15 @@ public class AccessRuleService {
 
         try {
             requestBodyValue = JsonPath.parse(parsedRequestBody).read(rule);
+
+            // Json parse will always return a list even when we want a map (to check keys)
+            if (requestBodyValue instanceof JsonArray && ((JsonArray) requestBodyValue).size() == 1) {
+                requestBodyValue = ((JsonArray) requestBodyValue).get(0);
+            }
+
         } catch (PathNotFoundException ex) {
             if (accessRuleType == AccessRule.TypeNaming.IS_EMPTY) {
+                // We could return accessRuleType == AccessRule.TypeNaming.IS_EMPTY directly, but we want to log the reason
                 logger.debug("extractAndCheckRule() -> JsonPath.parse().read() PathNotFound;  passing IS_EMPTY rule");
                 return true;
             }
@@ -278,92 +311,104 @@ public class AccessRuleService {
     }
 
     private boolean evaluateNode(Object requestBodyValue, AccessRule accessRule) {
-        logger.debug("evaluateNode() starting...");
+        logger.debug("evaluateNode() starting: {} :: {} :: {}", accessRule.getRule(), accessRule.getType(), accessRule.getMergedValues().isEmpty() ? accessRule.getValue() : ("Merged " + Arrays.deepToString(accessRule.getMergedValues().toArray())));
+        logger.trace("evaluateNode() requestBody {}  {}", requestBodyValue.getClass().getName(), requestBodyValue instanceof Collection ?
+                Arrays.deepToString(((Collection) requestBodyValue).toArray()) :
+                requestBodyValue.toString());
 
-        if (requestBodyValue instanceof String) {
-            return decisionMaker(accessRule, (String) requestBodyValue);
-        } else if (requestBodyValue instanceof Collection) {
-            switch (accessRule.getType()) {
-                case (AccessRule.TypeNaming.ANY_EQUALS):
-                case (AccessRule.TypeNaming.ANY_CONTAINS):
-                case (AccessRule.TypeNaming.ANY_REG_MATCH):
-                    for (Object item : (Collection) requestBodyValue) {
-                        if (item instanceof String) {
-                            if (decisionMaker(accessRule, (String) item)) {
-                                return true;
-                            }
-                        } else {
-                            if (evaluateNode(item, accessRule)) {
-                                return true;
-                            }
-                        }
-                    }
-                    return false;
-                default:
-                    if (((Collection) requestBodyValue).isEmpty()) {
-                        switch (accessRule.getType()) {
-                            case (AccessRule.TypeNaming.ALL_EQUALS_IGNORE_CASE):
-                            case (AccessRule.TypeNaming.ALL_EQUALS):
-                            case (AccessRule.TypeNaming.ALL_CONTAINS):
-                            case (AccessRule.TypeNaming.ALL_CONTAINS_IGNORE_CASE):
-                                return false;
-                            case (AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY):
-                            case (AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY_IGNORE_CASE):
-                            default:
-                                return true;
-                        }
-                    }
+        return switch (requestBodyValue) {
+            case String s -> decisionMaker(accessRule, s);
+            case Collection collection -> evaluateCollection(collection, accessRule);
+            case Map map when accessRule.getCheckMapNode() != null && accessRule.getCheckMapNode() ->
+                    evaluateMap(requestBodyValue, accessRule);
+            default -> true;
+        };
+    }
 
-                    for (Object item : (Collection) requestBodyValue) {
-                        if (item instanceof String) {
-                            if (!decisionMaker(accessRule, (String) item)) {
-                                return false;
-                            }
-                        } else {
-                            if (!evaluateNode(item, accessRule))
-                                return false;
-                        }
-                    }
-            }
-        } else if (accessRule.getCheckMapNode() != null && accessRule.getCheckMapNode() && requestBodyValue instanceof Map) {
-            switch (accessRule.getType()) {
-                case (AccessRule.TypeNaming.ANY_EQUALS):
-                case (AccessRule.TypeNaming.ANY_CONTAINS):
-                case (AccessRule.TypeNaming.ANY_REG_MATCH):
-                    for (Map.Entry entry : ((Map<String, Object>) requestBodyValue).entrySet()) {
-                        if (decisionMaker(accessRule, (String) entry.getKey()))
-                            return true;
+    private boolean evaluateMap(Object requestBodyValue, AccessRule accessRule) {
+        switch (accessRule.getType()) {
+            case (AccessRule.TypeNaming.ANY_EQUALS):
+            case (AccessRule.TypeNaming.ANY_CONTAINS):
+            case (AccessRule.TypeNaming.ANY_REG_MATCH):
+                for (Map.Entry entry : ((Map<String, Object>) requestBodyValue).entrySet()) {
+                    if (decisionMaker(accessRule, (String) entry.getKey()))
+                        return true;
 
-                        if ((accessRule.getCheckMapKeyOnly() == null || !accessRule.getCheckMapKeyOnly())
-                                && evaluateNode(entry.getValue(), accessRule))
+                    if ((accessRule.getCheckMapKeyOnly() == null || !accessRule.getCheckMapKeyOnly())
+                            && evaluateNode(entry.getValue(), accessRule))
+                        return true;
+                }
+                return false;
+            default:
+                if (((Map) requestBodyValue).isEmpty()) {
+                    switch (accessRule.getType()) {
+                        case (AccessRule.TypeNaming.ALL_EQUALS_IGNORE_CASE):
+                        case (AccessRule.TypeNaming.ALL_EQUALS):
+                        case (AccessRule.TypeNaming.ALL_CONTAINS):
+                        case (AccessRule.TypeNaming.ALL_CONTAINS_IGNORE_CASE):
+                            return false;
+                        case (AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY):
+                        case (AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY_IGNORE_CASE):
+                        default:
                             return true;
                     }
-                    return false;
-                default:
-                    if (((Map) requestBodyValue).isEmpty()) {
-                        switch (accessRule.getType()) {
-                            case (AccessRule.TypeNaming.ALL_EQUALS_IGNORE_CASE):
-                            case (AccessRule.TypeNaming.ALL_EQUALS):
-                            case (AccessRule.TypeNaming.ALL_CONTAINS):
-                            case (AccessRule.TypeNaming.ALL_CONTAINS_IGNORE_CASE):
-                                return false;
-                            case (AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY):
-                            case (AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY_IGNORE_CASE):
-                            default:
-                                return true;
+                }
+                for (Map.Entry entry : ((Map<String, Object>) requestBodyValue).entrySet()) {
+                    if (!decisionMaker(accessRule, (String) entry.getKey()))
+                        return false;
+
+                    if ((accessRule.getCheckMapKeyOnly() == null || !accessRule.getCheckMapKeyOnly())
+                            && !evaluateNode(entry.getValue(), accessRule))
+                        return false;
+                }
+
+        }
+
+        return true;
+    }
+
+    private Boolean evaluateCollection(Collection requestBodyValue, AccessRule accessRule) {
+        switch (accessRule.getType()) {
+            case (AccessRule.TypeNaming.ANY_EQUALS):
+            case (AccessRule.TypeNaming.ANY_CONTAINS):
+            case (AccessRule.TypeNaming.ANY_REG_MATCH):
+                for (Object item : requestBodyValue) {
+                    if (item instanceof String) {
+                        if (decisionMaker(accessRule, (String) item)) {
+                            return true;
+                        }
+                    } else {
+                        if (evaluateNode(item, accessRule)) {
+                            return true;
                         }
                     }
-                    for (Map.Entry entry : ((Map<String, Object>) requestBodyValue).entrySet()) {
-                        if (!decisionMaker(accessRule, (String) entry.getKey()))
+                }
+                return false;
+            default:
+                if (requestBodyValue.isEmpty()) {
+                    switch (accessRule.getType()) {
+                        case (AccessRule.TypeNaming.ALL_EQUALS_IGNORE_CASE):
+                        case (AccessRule.TypeNaming.ALL_EQUALS):
+                        case (AccessRule.TypeNaming.ALL_CONTAINS):
+                        case (AccessRule.TypeNaming.ALL_CONTAINS_IGNORE_CASE):
                             return false;
+                        case (AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY):
+                        case (AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY_IGNORE_CASE):
+                        default:
+                            return true;
+                    }
+                }
 
-                        if ((accessRule.getCheckMapKeyOnly() == null || !accessRule.getCheckMapKeyOnly())
-                                && !evaluateNode(entry.getValue(), accessRule))
+                for (Object item : requestBodyValue) {
+                    if (item instanceof String) {
+                        if (!decisionMaker(accessRule, (String) item)) {
+                            return false;
+                        }
+                    } else {
+                        if (!evaluateNode(item, accessRule))
                             return false;
                     }
-
-            }
-
+                }
         }
 
         return true;
