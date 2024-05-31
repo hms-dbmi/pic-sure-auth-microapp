@@ -61,21 +61,21 @@ public class FENCEAuthenticationService {
     public static final String fence_open_access_role_name = "FENCE_ROLE_OPEN_ACCESS";
 
     @Value("${fence.harmonized.consent.group.concept.path}")
-    private static String fence_harmonized_consent_group_concept_path;
+    private String fence_harmonized_consent_group_concept_path;
 
     @Value("${fence.parent.consent.group.concept.path}")
-    private static String fence_parent_consent_group_concept_path;
+    private String fence_parent_consent_group_concept_path;
 
     @Value("${fence.topmed.consent.group.concept.path}")
-    private static String fence_topmed_consent_group_concept_path;
+    private String fence_topmed_consent_group_concept_path;
 
     @Value("${fence.harmonized.concept.path}")
-    private static String fence_harmonized_concept_path;
+    private String fence_harmonized_concept_path;
 
 
     private final Set<String> openAccessIdpValues = Set.of("fence", "ras");
 
-    private static final String[] underscoreFields = new String[] {
+    private final String[] underscoreFields = new String[] {
             parentAccessionField,
             topmedAccessionField,
             fence_harmonized_consent_group_concept_path,
