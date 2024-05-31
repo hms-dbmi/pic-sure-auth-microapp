@@ -44,7 +44,7 @@ public class OktaOAuthAuthenticationService {
      */
     @Autowired
     public OktaOAuthAuthenticationService(UserService userService, RoleService roleService,
-                                          @Value("${application.idp.provider.uri}") String idp_provider_uri,
+                                          @Value("${okta.idp.provider.uri}") String idp_provider_uri,
                                           @Value("${okta.connection.id}") String connectionId,
                                           @Value("${okta.client.id}") String clientId,
                                           @Value("${okta.client.secret}") String spClientSecret) {
@@ -54,6 +54,12 @@ public class OktaOAuthAuthenticationService {
         this.connectionId = connectionId;
         this.clientId = clientId;
         this.spClientSecret = spClientSecret;
+
+        logger.info("OktaOAuthAuthenticationService initialized");
+        logger.info("idp_provider_uri: {}", idp_provider_uri);
+        logger.info("connectionId: {}", connectionId);
+        logger.info("clientId: {}", clientId);
+        logger.info("spClientSecret: {}", spClientSecret);
     }
 
     /**
@@ -143,7 +149,7 @@ public class OktaOAuthAuthenticationService {
 
             // If the user does not yet have a subject, set it to the subject from the introspect response
             if (user.getSubject() == null) {
-                user.setSubject("okta|" + introspectResponse.get("uid").asText());
+                user.setSubject(this.connectionId + "|" + introspectResponse.get("uid").asText());
             }
 
             // All users that login through OKTA should have the fence_open_access role, or they will not be able to interact with the UI
@@ -237,7 +243,6 @@ public class OktaOAuthAuthenticationService {
         HttpHeaders headers = new HttpHeaders();
         Base64.Encoder encoder = Base64.getEncoder();
         String auth_header = this.clientId + ":" + this.spClientSecret;
-        logger.info("AUTH HEADER: {}", auth_header);
         headers.add("Authorization", "Basic " + encoder.encodeToString(auth_header.getBytes()));
         headers.add("Content-type", "application/x-www-form-urlencoded");
 
@@ -246,6 +251,7 @@ public class OktaOAuthAuthenticationService {
         try {
             logger.info("Calling OKTA token endpoint: {}", requestUrl);
             logger.info("Request params: {}", requestParams);
+            logger.info("Headers: {}", headers);
 
             resp = RestClientUtil.retrievePostResponseWithParams(requestUrl, headers, requestParams);
             response = new ObjectMapper().readTree(Objects.requireNonNull(resp.getBody()).toString());
