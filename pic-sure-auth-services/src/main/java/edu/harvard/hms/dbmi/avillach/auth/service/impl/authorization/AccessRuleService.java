@@ -423,8 +423,15 @@ public class AccessRuleService {
             return _decisionMaker(accessRule, requestBodyValue, value);
         }
 
+        // recursively check the values
+        // until one of them is true
+        // if there is only one element in the merged value set
+        // the operation equals to _decisionMaker(accessRule, requestBodyValue, value)
         boolean res = false;
         for (String s : accessRule.getMergedValues()) {
+            // check the special case value is null
+            // if value is null, the check will stop here and
+            // not goes to _decisionMaker()
             if (s == null) {
                 if (requestBodyValue == null) {
                     res = true;
@@ -434,6 +441,8 @@ public class AccessRuleService {
                 }
             }
 
+            // all the merged values are OR relationship
+            // means if you pass one of them, you pass the rule
             if (_decisionMaker(accessRule, requestBodyValue, s)) {
                 res = true;
                 break;
