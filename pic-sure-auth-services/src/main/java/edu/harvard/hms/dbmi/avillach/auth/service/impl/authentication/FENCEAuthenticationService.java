@@ -48,6 +48,7 @@ public class FENCEAuthenticationService {
     private final ApplicationService applicationService;
 
     private final PrivilegeService privilegeService;
+    private final AccessRuleService accessRuleService;
 
     private Application picSureApp;
     private Connection fenceConnection;
@@ -112,7 +113,7 @@ public class FENCEAuthenticationService {
                                       @Value("${fence.standard.access.rules}") String fenceStandardAccessRules,
                                       @Value("${fence.allowed.query.types}") String fenceAllowedQueryTypes,
                                       @Value("${fence.variant.annotation.columns}") String variantAnnotationColumns,
-                                      @Value("${application.template.path}") String templatePath){
+                                      @Value("${application.template.path}") String templatePath, AccessRuleService accessRuleService){
         this.userService = userService;
         this.roleService = roleService;
         this.connectionService = connectionService;
@@ -128,6 +129,7 @@ public class FENCEAuthenticationService {
         this.variantAnnotationColumns = variantAnnotationColumns;
         this.templatePath = templatePath;
         this.restClientUtil = restClientUtil;
+        this.accessRuleService = accessRuleService;
     }
 
     @PostConstruct
@@ -179,11 +181,8 @@ public class FENCEAuthenticationService {
                     +" and subject:"
                     +current_user.getSubject());
 
-            // TODO: How do we handle caching now?
-            //clear some cache entries if we register a new login
-//            AuthorizationService.clearCache(current_user);
-//            UserService.clearCache(current_user);
-
+            accessRuleService.evictFromCache(current_user);
+            userService.evictFromCache(current_user);
         } catch (Exception ex) {
             logger.error("getFENCEToken() Could not persist the user information, because {}", ex.getMessage());
             throw new NotAuthorizedException("The user details could not be persisted. Please contact the administrator.");
