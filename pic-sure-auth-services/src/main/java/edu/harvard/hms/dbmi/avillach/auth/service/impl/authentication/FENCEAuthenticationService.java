@@ -545,11 +545,10 @@ public class FENCEAuthenticationService {
             priv.setName(privilegeName);
 
             String consent_concept_path = isHarmonized ? fence_harmonized_consent_group_concept_path : fence_parent_consent_group_concept_path;
-
+            logger.debug("upsertClinicalPrivilege() consent concept path: {}", consent_concept_path);
             if(!consent_concept_path.contains("\\\\")){
                 //these have to be escaped again so that jaxson can convert it correctly
                 consent_concept_path = consent_concept_path.replaceAll("\\\\", "\\\\\\\\");
-                logger.debug(consent_concept_path);
             }
             if(fence_harmonized_concept_path != null && !fence_harmonized_concept_path.contains("\\\\")){
                 //these have to be escaped again so that jaxson can convert it correctly
