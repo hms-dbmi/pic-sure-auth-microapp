@@ -149,7 +149,7 @@ public class OktaOAuthAuthenticationService {
 
             // If the user does not yet have a subject, set it to the subject from the introspect response
             if (user.getSubject() == null) {
-                user.setSubject(this.connectionId + "|" + introspectResponse.get("uid").asText());
+                user.setSubject("okta|" + introspectResponse.get("uid").asText());
             }
 
             // All users that login through OKTA should have the fence_open_access role, or they will not be able to interact with the UI
