@@ -237,6 +237,7 @@ public class OktaOAuthAuthenticationService {
         HttpHeaders headers = new HttpHeaders();
         Base64.Encoder encoder = Base64.getEncoder();
         String auth_header = this.clientId + ":" + this.spClientSecret;
+        logger.info("AUTH HEADER: {}", auth_header);
         headers.add("Authorization", "Basic " + encoder.encodeToString(auth_header.getBytes()));
         headers.add("Content-type", "application/x-www-form-urlencoded");
 
