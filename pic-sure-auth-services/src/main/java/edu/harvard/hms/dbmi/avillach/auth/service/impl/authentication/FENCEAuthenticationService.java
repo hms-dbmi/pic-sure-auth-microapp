@@ -60,16 +60,16 @@ public class FENCEAuthenticationService {
     private static final String topmedAccessionField = "\\\\_Topmed Study Accession with Subject ID\\\\";
     public static final String fence_open_access_role_name = "FENCE_ROLE_OPEN_ACCESS";
 
-    @Value("${fence.harmonized.consent.group.concept.path}")
+//    @Value("${fence.harmonized.consent.group.concept.path}")
     private String fence_harmonized_consent_group_concept_path;
 
-    @Value("${fence.parent.consent.group.concept.path}")
+//    @Value("${fence.parent.consent.group.concept.path}")
     private String fence_parent_consent_group_concept_path;
 
-    @Value("${fence.topmed.consent.group.concept.path}")
+//    @Value("${fence.topmed.consent.group.concept.path}")
     private String fence_topmed_consent_group_concept_path;
 
-    @Value("${fence.harmonized.concept.path}")
+//    @Value("${fence.harmonized.concept.path}")
     private String fence_harmonized_concept_path;
 
 
@@ -113,7 +113,12 @@ public class FENCEAuthenticationService {
                                       @Value("${fence.standard.access.rules}") String fenceStandardAccessRules,
                                       @Value("${fence.allowed.query.types}") String fenceAllowedQueryTypes,
                                       @Value("${fence.variant.annotation.columns}") String variantAnnotationColumns,
-                                      @Value("${application.template.path}") String templatePath, AccessRuleService accessRuleService){
+                                      @Value("${application.template.path}") String templatePath,
+                                      @Value("${fence.harmonized.consent.group.concept.path}") String fenceHarmonizedConsentGroupConceptPath,
+                                      @Value("${fence.parent.consent.group.concept.path}") String fenceParentConceptPath,
+                                      @Value("${fence.topmed.consent.group.concept.path}") String fenceTopmedConceptPath,
+                                        @Value("${fence.harmonized.concept.path}") String fenceHarmonizedConceptPath,
+                                      AccessRuleService accessRuleService){
         this.userService = userService;
         this.roleService = roleService;
         this.connectionService = connectionService;
@@ -130,6 +135,10 @@ public class FENCEAuthenticationService {
         this.templatePath = templatePath;
         this.restClientUtil = restClientUtil;
         this.accessRuleService = accessRuleService;
+        this.fence_parent_consent_group_concept_path = fenceParentConceptPath;
+        this.fence_topmed_consent_group_concept_path = fenceTopmedConceptPath;
+        this.fence_harmonized_concept_path = fenceHarmonizedConceptPath;
+        this.fence_harmonized_consent_group_concept_path = fenceHarmonizedConsentGroupConceptPath;
     }
 
     @PostConstruct
