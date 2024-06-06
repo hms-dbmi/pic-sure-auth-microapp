@@ -1,6 +1,7 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jayway.jsonpath.InvalidPathException;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.PathNotFoundException;
 import com.mysql.cj.xdevapi.JsonArray;
@@ -278,6 +279,7 @@ public class AccessRuleService {
         int accessRuleType = accessRule.getType();
 
         try {
+            logger.info("parsedRequestBody: {}", parsedRequestBody);
             requestBodyValue = JsonPath.parse(parsedRequestBody).read(rule);
 
             // Json parse will always return a list even when we want a map (to check keys)
@@ -285,7 +287,7 @@ public class AccessRuleService {
                 requestBodyValue = ((JsonArray) requestBodyValue).get(0);
             }
 
-        } catch (PathNotFoundException ex) {
+        } catch (InvalidPathException ex) {
             if (accessRuleType == AccessRule.TypeNaming.IS_EMPTY) {
                 // We could return accessRuleType == AccessRule.TypeNaming.IS_EMPTY directly, but we want to log the reason
                 logger.debug("extractAndCheckRule() -> JsonPath.parse().read() PathNotFound;  passing IS_EMPTY rule");
