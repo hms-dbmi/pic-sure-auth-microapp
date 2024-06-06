@@ -1,6 +1,7 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.impl;
 
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.authentication.FENCEAuthenticationService;
+import edu.harvard.hms.dbmi.avillach.auth.utils.FenceMappingUtility;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.InjectMocks;
@@ -21,6 +22,9 @@ public class StudyAccessServiceTest {
     @Mock
     private FENCEAuthenticationService fenceAuthenticationService;
 
+    @Mock
+    private FenceMappingUtility fenceMappingUtility;
+
     @Before
     public void init() {
         MockitoAnnotations.initMocks(this);
@@ -37,7 +41,7 @@ public class StudyAccessServiceTest {
     @Test
     public void testAddStudyAccess() {
         String studyIdentifier = "testStudy";
-        when(fenceAuthenticationService.getFENCEMapping()).thenReturn(Map.of(studyIdentifier, Map.of(StudyAccessService.STUDY_IDENTIFIER, studyIdentifier,StudyAccessService.CONSENT_GROUP_CODE, "")));
+        when(fenceMappingUtility.getFENCEMapping()).thenReturn(Map.of(studyIdentifier, Map.of(StudyAccessService.STUDY_IDENTIFIER, studyIdentifier,StudyAccessService.CONSENT_GROUP_CODE, "")));
         when(fenceAuthenticationService.upsertRole(null, "MANUAL_testStudy", "MANUAL_ role MANUAL_testStudy")).thenReturn(true);
 
         ResponseEntity<?> responseEntity = studyAccessService.addStudyAccess(studyIdentifier);
@@ -47,7 +51,7 @@ public class StudyAccessServiceTest {
     @Test
     public void testAddStudyAccessWithConsent() {
         String studyIdentifier = "testStudy2.c2";
-        when(fenceAuthenticationService.getFENCEMapping()).thenReturn(Map.of(studyIdentifier, Map.of(StudyAccessService.STUDY_IDENTIFIER, "testStudy2", StudyAccessService.CONSENT_GROUP_CODE, "c2")));
+        when(fenceMappingUtility.getFENCEMapping()).thenReturn(Map.of(studyIdentifier, Map.of(StudyAccessService.STUDY_IDENTIFIER, "testStudy2", StudyAccessService.CONSENT_GROUP_CODE, "c2")));
         when(fenceAuthenticationService.upsertRole(null, "MANUAL_testStudy2_c2", "MANUAL_ role MANUAL_testStudy2_c2")).thenReturn(true);
         ResponseEntity<?> responseEntity = studyAccessService.addStudyAccess(studyIdentifier);
         assertEquals(ResponseEntity.ok("Role 'MANUAL_testStudy2_c2' successfully created"), responseEntity);
