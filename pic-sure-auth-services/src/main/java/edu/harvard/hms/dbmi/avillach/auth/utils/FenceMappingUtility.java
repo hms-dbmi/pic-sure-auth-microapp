@@ -4,11 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import javax.naming.Context;
-import javax.naming.InitialContext;
-import javax.naming.NamingException;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -21,20 +20,18 @@ public class FenceMappingUtility {
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
     private Map<String, Map> fenceMappingByConsent;
     private Map<String, Map> fenceMappingByAuthZ;
-    private static String templatePath;
+    private final String templatePath;
     private ObjectMapper objectMapper;
+
+    @Autowired
+    public FenceMappingUtility(@Value("${application.template.path}") String templatePath) {
+        this.templatePath = templatePath;
+    }
 
     @PostConstruct
     public void init() {
-        try {
-            Context ctx = new InitialContext();
-            templatePath = (String) ctx.lookup("java:global/templatePath");
-            objectMapper = new ObjectMapper();
-
-            initializeFENCEMappings();
-        } catch (NamingException e) {
-            throw new RuntimeException(e);
-        }
+        objectMapper = new ObjectMapper();
+        initializeFENCEMappings();
     }
 
     private void initializeFENCEMappings() {
