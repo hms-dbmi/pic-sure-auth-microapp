@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
 import javax.naming.Context;
@@ -16,7 +15,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-@Component
+@Service
 public class FenceMappingUtility {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
