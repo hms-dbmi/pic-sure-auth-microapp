@@ -120,5 +120,13 @@ public class RoleService {
     public Set<Role> getRolesByIds(Set<UUID> roleUuids) {
         return this.roleRepository.findByUuidIn(roleUuids);
     }
+
+    public void persistAll(List<Role> newRoles) {
+        this.roleRepository.saveAll(newRoles);
+    }
+
+    public Role findByName(String roleName) {
+        return this.roleRepository.findByName(roleName);
+    }
 }
 
