@@ -105,7 +105,7 @@ public class FENCEAuthenticationService {
                                       @Value("${fence.harmonized.consent.group.concept.path}") String fenceHarmonizedConsentGroupConceptPath,
                                       @Value("${fence.parent.consent.group.concept.path}") String fenceParentConceptPath,
                                       @Value("${fence.topmed.consent.group.concept.path}") String fenceTopmedConceptPath,
-                                      @Value("${fence.harmonized.concept.path}") String fenceHarmonizedConceptPath,
+                                      @Value("${fence.consent.group.concept.path}") String fenceHarmonizedConceptPath,
                                       AccessRuleService accessRuleService, FenceMappingUtility fenceMappingUtility){
         this.userService = userService;
         this.roleService = roleService;
