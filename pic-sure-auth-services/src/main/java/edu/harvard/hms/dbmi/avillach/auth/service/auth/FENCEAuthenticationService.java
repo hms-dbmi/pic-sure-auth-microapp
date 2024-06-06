@@ -344,12 +344,6 @@ public class FENCEAuthenticationService {
             actual_user.setRoles(new HashSet<>());
         }
 
-//                .filter(userRole -> "PIC-SURE Top Admin".equals(userRole.getName()) || "Admin".equals(userRole.getName()) || userRole.getName().startsWith("MANUAL_"))
-//                .collect(Collectors.toSet());
-
-        logger.debug("createUserFromFENCEProfile() cleared roles");
-
-//        userRepo.persist(actual_user);
         logger.debug("createUserFromFENCEProfile() finished, user record inserted");
         return actual_user;
     }
