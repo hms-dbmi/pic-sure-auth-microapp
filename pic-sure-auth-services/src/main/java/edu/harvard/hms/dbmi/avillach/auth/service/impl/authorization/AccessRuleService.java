@@ -279,7 +279,7 @@ public class AccessRuleService {
         int accessRuleType = accessRule.getType();
 
         try {
-            logger.debug("extractAndCheckRule() -> JsonPath.parse().read() parse: {}", parsedRequestBody);
+            logger.info("extractAndCheckRule() -> JsonPath.parse().read() parse: {}", parsedRequestBody);
             logger.info("extractAndCheckRule() -> JsonPath.parse().read() rule: {}", rule);
             requestBodyValue = JsonPath.parse(parsedRequestBody).read(rule);
 
