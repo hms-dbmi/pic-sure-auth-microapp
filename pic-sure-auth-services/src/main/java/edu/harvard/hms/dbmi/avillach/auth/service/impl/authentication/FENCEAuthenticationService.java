@@ -441,13 +441,6 @@ public class FENCEAuthenticationService {
     }
 
     private Set<Privilege> addFENCEPrivileges(Role r) {
-        logger.info("fence_harmonized_concept_path: {}", fence_harmonized_concept_path);
-        if(fence_harmonized_concept_path != null && !fence_harmonized_concept_path.contains("\\\\")){
-            //these have to be escaped again so that jaxson can convert it correctly
-            fence_harmonized_concept_path = fence_harmonized_concept_path.replaceAll("\\\\", "\\\\\\\\");
-            logger.debug("upsertTopmedPrivilege(): escaped harmonized consent path{}", fence_harmonized_concept_path);
-        }
-
         String roleName = r.getName();
         logger.info("addFENCEPrivileges() starting, adding privilege(s) to role {}", roleName);
 
@@ -553,6 +546,12 @@ public class FENCEAuthenticationService {
             if (!consent_concept_path.contains("\\\\")) {
                 consent_concept_path = consent_concept_path.replaceAll("\\\\", "\\\\\\\\");
                 logger.debug("Escaped consent concept path: {}", consent_concept_path);
+            }
+
+            if(fence_harmonized_concept_path != null && !fence_harmonized_concept_path.contains("\\\\")){
+                //these have to be escaped again so that jaxson can convert it correctly
+                fence_harmonized_concept_path = fence_harmonized_concept_path.replaceAll("\\\\", "\\\\\\\\");
+                logger.debug("upsertTopmedPrivilege(): escaped harmonized consent path" + fence_harmonized_concept_path);
             }
 
 
