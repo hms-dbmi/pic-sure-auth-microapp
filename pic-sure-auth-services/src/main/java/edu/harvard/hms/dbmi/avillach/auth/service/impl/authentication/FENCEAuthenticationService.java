@@ -193,12 +193,7 @@ public class FENCEAuthenticationService {
             throw new NotAuthorizedException("The user details could not be persisted. Please contact the administrator.");
         }
 
-        logger.info("fence_harmonized_concept_path: {}", fence_harmonized_concept_path);
-        if(fence_harmonized_concept_path != null && !fence_harmonized_concept_path.contains("\\\\")){
-            //these have to be escaped again so that jaxson can convert it correctly
-            fence_harmonized_concept_path = fence_harmonized_concept_path.replaceAll("\\\\", "\\\\\\\\");
-            logger.debug("upsertTopmedPrivilege(): escaped harmonized consent path{}", fence_harmonized_concept_path);
-        }
+
 
         // Update the user's roles (or create them if none exists)
         //Set<Role> actual_user_roles = u.getRoles();
@@ -446,6 +441,13 @@ public class FENCEAuthenticationService {
     }
 
     private Set<Privilege> addFENCEPrivileges(Role r) {
+        logger.info("fence_harmonized_concept_path: {}", fence_harmonized_concept_path);
+        if(fence_harmonized_concept_path != null && !fence_harmonized_concept_path.contains("\\\\")){
+            //these have to be escaped again so that jaxson can convert it correctly
+            fence_harmonized_concept_path = fence_harmonized_concept_path.replaceAll("\\\\", "\\\\\\\\");
+            logger.debug("upsertTopmedPrivilege(): escaped harmonized consent path{}", fence_harmonized_concept_path);
+        }
+
         String roleName = r.getName();
         logger.info("addFENCEPrivileges() starting, adding privilege(s) to role {}", roleName);
 
