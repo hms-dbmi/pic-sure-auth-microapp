@@ -2,6 +2,7 @@ package edu.harvard.hms.dbmi.avillach.auth.service.impl;
 
 import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.authentication.FENCEAuthenticationService;
+import edu.harvard.hms.dbmi.avillach.auth.utils.FenceMappingUtility;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -30,6 +31,7 @@ import static edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming.AuthRoleNaming
 @Controller
 @RequestMapping("/studyAccess")
 public class StudyAccessService {
+    private final FenceMappingUtility fenceMappingUtility;
     Logger logger = LoggerFactory.getLogger(StudyAccessService.class);
 
     public static final String MANUAL = "MANUAL_";
@@ -39,8 +41,9 @@ public class StudyAccessService {
     private final FENCEAuthenticationService fenceAuthenticationService;
 
     @Autowired
-    public StudyAccessService(FENCEAuthenticationService fenceAuthenticationService) {
+    public StudyAccessService(FENCEAuthenticationService fenceAuthenticationService, FenceMappingUtility fenceMappingUtility) {
         this.fenceAuthenticationService = fenceAuthenticationService;
+        this.fenceMappingUtility = fenceMappingUtility;
     }
 
     @Operation(description = "POST a single study and it creates the role, privs, and rules for it, requires SUPER_ADMIN role")
@@ -56,7 +59,7 @@ public class StudyAccessService {
 
         Map fenceMappingForStudy;
         try {
-            Map<String, Map> fenceMapping = fenceAuthenticationService.getFENCEMapping();
+            Map<String, Map> fenceMapping = fenceMappingUtility.getFENCEMapping();
             if (fenceMapping == null) {
                 throw new Exception("Fence mapping is null");
             }
