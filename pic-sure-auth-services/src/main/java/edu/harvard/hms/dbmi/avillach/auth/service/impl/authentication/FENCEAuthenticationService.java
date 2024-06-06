@@ -38,15 +38,10 @@ public class FENCEAuthenticationService {
     private final Logger logger = LoggerFactory.getLogger(FENCEAuthenticationService.class);
 
     private final UserService userService;
-
     private final RoleService roleService;
-
     private final ConnectionWebService connectionService; // We will need to investigate if the ConnectionWebService will need to be versioned as well.
-
     private final AccessRuleService fenceAccessRuleService;
-
     private final ApplicationService applicationService;
-
     private final PrivilegeService privilegeService;
     private final AccessRuleService accessRuleService;
 
@@ -56,24 +51,24 @@ public class FENCEAuthenticationService {
     //read the fence_mapping.json into this object to improve lookup speeds
     private static Map<String, Map> _projectMap;
 
+    private final Set<String> openAccessIdpValues = Set.of("fence", "ras");
+
+    private final String idp_provider_uri;
+    private final String fence_client_id;
+    private final String fence_client_secret;
+    private final String idp_provider;
+    private final String fence_standard_access_rules;
+    private final String fence_allowed_query_types;
+    private final String variantAnnotationColumns;
+    private final String templatePath;
+    private String fence_harmonized_consent_group_concept_path;
+    private String fence_parent_consent_group_concept_path;
+    private String fence_topmed_consent_group_concept_path;
+    private String fence_harmonized_concept_path;
+
     private static final String parentAccessionField = "\\\\_Parent Study Accession with Subject ID\\\\";
     private static final String topmedAccessionField = "\\\\_Topmed Study Accession with Subject ID\\\\";
     public static final String fence_open_access_role_name = "FENCE_ROLE_OPEN_ACCESS";
-
-//    @Value("${fence.harmonized.consent.group.concept.path}")
-    private String fence_harmonized_consent_group_concept_path;
-
-//    @Value("${fence.parent.consent.group.concept.path}")
-    private String fence_parent_consent_group_concept_path;
-
-//    @Value("${fence.topmed.consent.group.concept.path}")
-    private String fence_topmed_consent_group_concept_path;
-
-//    @Value("${fence.harmonized.concept.path}")
-    private String fence_harmonized_concept_path;
-
-
-    private final Set<String> openAccessIdpValues = Set.of("fence", "ras");
 
     private final String[] underscoreFields = new String[] {
             parentAccessionField,
@@ -88,14 +83,6 @@ public class FENCEAuthenticationService {
             "\\\\_Consents\\\\"   ///old _Consents\Short Study... path no longer used, but still present in examples.
     };
 
-    private final String idp_provider_uri;
-    private final String fence_client_id;
-    private final String fence_client_secret;
-    private final String idp_provider;
-    private final String fence_standard_access_rules;
-    private final String fence_allowed_query_types;
-    private final String variantAnnotationColumns;
-    private final String templatePath;
     private final RestClientUtil restClientUtil;
 
     @Autowired
@@ -117,7 +104,7 @@ public class FENCEAuthenticationService {
                                       @Value("${fence.harmonized.consent.group.concept.path}") String fenceHarmonizedConsentGroupConceptPath,
                                       @Value("${fence.parent.consent.group.concept.path}") String fenceParentConceptPath,
                                       @Value("${fence.topmed.consent.group.concept.path}") String fenceTopmedConceptPath,
-                                        @Value("${fence.harmonized.concept.path}") String fenceHarmonizedConceptPath,
+                                      @Value("${fence.harmonized.concept.path}") String fenceHarmonizedConceptPath,
                                       AccessRuleService accessRuleService){
         this.userService = userService;
         this.roleService = roleService;
