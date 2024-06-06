@@ -1,6 +1,7 @@
 package edu.harvard.hms.dbmi.avillach.auth.utils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.common.util.StringUtils;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,8 +31,19 @@ public class FenceMappingUtility {
 
     @PostConstruct
     public void init() {
-        objectMapper = new ObjectMapper();
-        initializeFENCEMappings();
+        if (StringUtils.isNotBlank(this.templatePath) && this.templatePath.endsWith(File.separator)) {
+            // Check if file exists
+            File file = new File(this.templatePath + "fence_mapping.json");
+            if (!file.exists()) {
+                logger.error("FenceMappingUtility: fence_mapping.json not found in {}", this.templatePath);
+            } else {
+                logger.info("FenceMappingUtility: fence_mapping.json found in {}", this.templatePath);
+                objectMapper = new ObjectMapper();
+                initializeFENCEMappings();
+            }
+        } else {
+            logger.error("FenceMappingUtility: templatePath is not set or does not end with a file separator");
+        }
     }
 
     private void initializeFENCEMappings() {
