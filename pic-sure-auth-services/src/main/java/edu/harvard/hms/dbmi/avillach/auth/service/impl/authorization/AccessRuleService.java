@@ -279,7 +279,8 @@ public class AccessRuleService {
         int accessRuleType = accessRule.getType();
 
         try {
-            logger.info("parsedRequestBody: {}", parsedRequestBody);
+            logger.debug("extractAndCheckRule() -> JsonPath.parse().read() parse: {}", parsedRequestBody);
+            logger.info("extractAndCheckRule() -> JsonPath.parse().read() rule: {}", rule);
             requestBodyValue = JsonPath.parse(parsedRequestBody).read(rule);
 
             // Json parse will always return a list even when we want a map (to check keys)
@@ -287,7 +288,7 @@ public class AccessRuleService {
                 requestBodyValue = ((JsonArray) requestBodyValue).get(0);
             }
 
-        } catch (InvalidPathException ex) {
+        } catch (PathNotFoundException ex) {
             if (accessRuleType == AccessRule.TypeNaming.IS_EMPTY) {
                 // We could return accessRuleType == AccessRule.TypeNaming.IS_EMPTY directly, but we want to log the reason
                 logger.debug("extractAndCheckRule() -> JsonPath.parse().read() PathNotFound;  passing IS_EMPTY rule");
