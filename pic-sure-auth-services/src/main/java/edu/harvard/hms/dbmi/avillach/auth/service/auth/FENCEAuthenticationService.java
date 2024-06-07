@@ -202,10 +202,7 @@ public class FENCEAuthenticationService {
             throw new NotAuthorizedException("The user details could not be persisted. Please contact the administrator.");
         }
 
-        if (fence_harmonized_concept_path != null && !fence_harmonized_concept_path.contains("\\\\")) {
-            fence_harmonized_concept_path = fence_harmonized_concept_path.replaceAll("\\\\", "\\\\\\\\");
-            logger.debug("Escaped harmonized consent path: {}", fence_harmonized_concept_path);
-        }
+
 
         // Update the user's roles (or create them if none exists)
         //Set<Role> actual_user_roles = u.getRoles();
@@ -502,6 +499,10 @@ public class FENCEAuthenticationService {
                 logger.debug("Escaped consent concept path: {}", consent_concept_path);
             }
 
+            if (fence_harmonized_concept_path != null && !fence_harmonized_concept_path.contains("\\\\")) {
+                fence_harmonized_concept_path = fence_harmonized_concept_path.replaceAll("\\\\", "\\\\\\\\");
+                logger.debug("Escaped harmonized consent path: {}", fence_harmonized_concept_path);
+            }
 
             String studyIdentifierField = (consent_group != null && !consent_group.isEmpty()) ? studyIdentifier + "." + consent_group : studyIdentifier;
             String queryTemplateText = String.format(
