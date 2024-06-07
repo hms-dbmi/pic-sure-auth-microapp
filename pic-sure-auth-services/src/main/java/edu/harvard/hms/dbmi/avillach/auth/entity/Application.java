@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.persistence.*;
 
 import java.security.Principal;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
