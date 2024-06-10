@@ -1,6 +1,7 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Application;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Connection;
@@ -48,9 +49,9 @@ public class UserService {
     private final ConnectionRepository connectionRepository;
     private final ApplicationRepository applicationRepository;
     private final RoleService roleService;
+
     private final long tokenExpirationTime;
     private static final long defaultTokenExpirationTime = 1000L * 60 * 60; // 1 hour
-
     public long longTermTokenExpirationTime;
 
     private final String applicationUUID;
@@ -576,6 +577,33 @@ public class UserService {
         logger.info("createOpenAccessUser() created user, uuid: {}, subject: {}, role: {}, privilege: {}",
                 user.getUuid(), user.getSubject(), user.getRoleString(), user.getPrivilegeString());
         return user;
+    }
+
+    /**
+     * Create or update a user record, based on the FENCE user profile, which is in JSON format.
+     *
+     * @param node User profile, as it is received from Gen3 FENCE, in JSON format
+     * @return User The actual entity, as it is persisted (if no errors) in the PSAMA database
+     */
+    public User createUserFromFENCEProfile(JsonNode node, Connection fenceConnection) {
+        logger.debug("createUserFromFENCEProfile() starting...");
+
+        User new_user = new User();
+        new_user.setSubject("fence|"+node.get("user_id").asText());
+        // This is not always an email address, but it is the only attribute other than the sub claim
+        // that is guaranteed to be populated by Fence and which makes sense as a display name for a
+        // user.
+        new_user.setEmail(node.get("username").asText());
+        new_user.setGeneralMetadata(node.toString());
+        // This is a hack, but someone has to do it.
+        new_user.setAcceptedTOS(new Date());
+        new_user.setConnection(fenceConnection);
+        logger.debug("createUserFromFENCEProfile() finished setting fields");
+
+        User actual_user = findOrCreate(new_user);
+
+        logger.debug("createUserFromFENCEProfile() finished, user record inserted");
+        return actual_user;
     }
 
 }

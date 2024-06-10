@@ -1,7 +1,6 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.jayway.jsonpath.InvalidPathException;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.PathNotFoundException;
 import com.mysql.cj.xdevapi.JsonArray;
@@ -13,12 +12,14 @@ import edu.harvard.hms.dbmi.avillach.auth.repository.AccessRuleRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class AccessRuleService {
@@ -27,9 +28,49 @@ public class AccessRuleService {
     private final Logger logger = LoggerFactory.getLogger(AccessRuleService.class);
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    private String fence_harmonized_consent_group_concept_path;
+    private String fence_parent_consent_group_concept_path;
+    private String fence_topmed_consent_group_concept_path;
+    private String fence_harmonized_concept_path;
+
+    private final String fence_standard_access_rules;
+    private final String fence_allowed_query_types;
+
+    private static final String parentAccessionField = "\\\\_Parent Study Accession with Subject ID\\\\";
+    private static final String topmedAccessionField = "\\\\_Topmed Study Accession with Subject ID\\\\";
+
+    private final String[] underscoreFields = new String[] {
+            parentAccessionField,
+            topmedAccessionField,
+            fence_harmonized_consent_group_concept_path,
+            fence_parent_consent_group_concept_path,
+            fence_topmed_consent_group_concept_path,
+            "\\\\_VCF Sample Id\\\\",
+            "\\\\_studies\\\\",
+            "\\\\_studies_consents\\\\",  //used to provide consent-level counts for open access
+            "\\\\_parent_consents\\\\",  //parent consents not used for auth (use combined _consents)
+            "\\\\_Consents\\\\"   ///old _Consents\Short Study... path no longer used, but still present in examples.
+    };
+
+    private final ConcurrentHashMap<String, AccessRule> accessRuleCache = new ConcurrentHashMap<>();
+    private Set<AccessRule> allowQueryTypeRules;
+
     @Autowired
-    public AccessRuleService(AccessRuleRepository accessRuleRepo) {
+    public AccessRuleService(AccessRuleRepository accessRuleRepo,
+     @Value("${fence.harmonized.consent.group.concept.path}") String fenceHarmonizedConsentGroupConceptPath,
+     @Value("${fence.parent.consent.group.concept.path}") String fenceParentConceptPath,
+     @Value("${fence.topmed.consent.group.concept.path}") String fenceTopmedConceptPath,
+     @Value("${fence.consent.group.concept.path}") String fenceHarmonizedConceptPath,
+     @Value("${fence.standard.access.rules}") String fenceStandardAccessRules,
+     @Value("${fence.allowed.query.types}") String fenceAllowedQueryTypes
+    ) {
         this.accessRuleRepo = accessRuleRepo;
+        this.fence_parent_consent_group_concept_path = fenceParentConceptPath;
+        this.fence_topmed_consent_group_concept_path = fenceTopmedConceptPath;
+        this.fence_harmonized_concept_path = fenceHarmonizedConceptPath;
+        this.fence_harmonized_consent_group_concept_path = fenceHarmonizedConsentGroupConceptPath;
+        this.fence_standard_access_rules = fenceStandardAccessRules;
+        this.fence_allowed_query_types = fenceAllowedQueryTypes;
     }
 
     public Optional<AccessRule> getAccessRuleById(String accessRuleId) {
@@ -476,4 +517,432 @@ public class AccessRuleService {
             }
         };
     }
+
+    public void populateAccessRule(AccessRule rule, boolean includeParent, boolean includeHarmonized, boolean includeTopmed) {
+        if (rule.getGates() == null) {
+            rule.setGates(new HashSet<>(getGates(includeParent, includeHarmonized, includeTopmed)));
+        }
+
+        if (rule.getSubAccessRule() == null) {
+            rule.setSubAccessRule(new HashSet<>(getAllowedQueryTypeRules()));
+        }
+
+        this.accessRuleRepo.save(rule);
+    }
+
+    public void populateHarmonizedAccessRule(AccessRule rule, String parentConceptPath, String studyIdentifier, String projectAlias) {
+        if (rule.getGates() == null) {
+            rule.setGates(new HashSet<>(Collections.singletonList(
+                    upsertConsentGate("HARMONIZED_CONSENT", "$.query.query.categoryFilters." + fence_harmonized_consent_group_concept_path + "[*]", true, "harmonized data")
+            )));
+        }
+
+        if (rule.getSubAccessRule() == null) {
+            rule.setSubAccessRule(new HashSet<>(getAllowedQueryTypeRules()));
+            rule.getSubAccessRule().addAll(getHarmonizedSubRules());
+            rule.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, parentConceptPath, projectAlias));
+        }
+
+        this.accessRuleRepo.save(rule);
+    }
+
+    // A set of standard access rules that are added to all privileges
+    // to cache the standard access rules
+    private Set<AccessRule> standardAccessRules;
+
+    public void addStandardAccessRules(Set<AccessRule> accessRules) {
+        if (standardAccessRules != null && !standardAccessRules.isEmpty()) {
+            accessRules.addAll(standardAccessRules);
+        } else {
+            standardAccessRules = new HashSet<>();
+            for (String arName : fence_standard_access_rules.split(",")) {
+                if (arName.startsWith("AR_")) {
+                    logger.info("Adding AccessRule {} to privilege", arName);
+                    AccessRule ar = getAccessRuleByName(arName);
+                    if (ar != null) {
+                        standardAccessRules.add(ar);
+                    } else {
+                        logger.warn("Unable to find an access rule with name {}", arName);
+                    }
+                }
+            }
+
+            accessRules.addAll(standardAccessRules);
+        }
+    }
+
+
+    /**
+     * Creates and returns a consent access rule AccessRule.
+     * Generates Main rule only; gates & sub-rules attached after calling this
+     * prentRule should be null if this is the main rule, or the appropriate value if this is a sub-rule
+     *
+     * @param studyIdentifier  The study identifier.
+     * @param consent_group    The consent group.
+     * @param label            The label for the rule.
+     * @param consent_path     The consent path.
+     * @return                 The created AccessRule.
+     */
+    public AccessRule createConsentAccessRule(String studyIdentifier, String consent_group, String label, String consent_path) {
+        String ar_name = (consent_group != null && !consent_group.isEmpty()) ? "AR_CONSENT_" + studyIdentifier + "_" + consent_group + "_" + label : "AR_CONSENT_" + studyIdentifier;
+        String description = (consent_group != null && !consent_group.isEmpty()) ? "FENCE AR for " + studyIdentifier + "." + consent_group + " clinical concepts" : "FENCE AR for " + studyIdentifier + " clinical concepts";
+        String ruleText = "$.query.query.categoryFilters." + consent_path + "[*]";
+        String arValue = (consent_group != null && !consent_group.isEmpty()) ? studyIdentifier + "." + consent_group : studyIdentifier;
+
+        return getOrCreateAccessRule(
+                ar_name,
+                description,
+                ruleText,
+                AccessRule.TypeNaming.ALL_CONTAINS,
+                arValue,
+                false,
+                false,
+                false,
+                false
+        );
+    }
+
+    /**
+     * Creates and returns a Topmed access rule AccessRule.
+     * Generates Main Rule only; gates & sub-rules attached by calling method
+     * @param project_name  The name of the project.
+     * @param consent_group The consent group.
+     * @param label         The label for the rule.
+     * @return              The created AccessRule.
+     */
+    public AccessRule upsertTopmedAccessRule(String project_name, String consent_group, String label) {
+        String ar_name = (consent_group != null && !consent_group.isEmpty()) ? "AR_TOPMED_" + project_name + "_" + consent_group + "_" + label : "AR_TOPMED_" + project_name + "_" + label;
+        String description = "FENCE AR for " + project_name + "." + consent_group + " Topmed data";
+        String ruleText = "$.query.query.categoryFilters." + fence_topmed_consent_group_concept_path + "[*]";
+        String arValue = (consent_group != null && !consent_group.isEmpty()) ? project_name + "." + consent_group : project_name;
+
+        return getOrCreateAccessRule(
+                ar_name,
+                description,
+                ruleText,
+                AccessRule.TypeNaming.ALL_CONTAINS,
+                arValue,
+                false,
+                false,
+                false,
+                false
+        );
+    }
+
+    /**
+     * Creates and returns a harmonized access rule AccessRule for Topmed.
+     * Generates Main Rule only; gates & sub rules attached by calling method
+     *
+     * @param project_name  The name of the project.
+     * @param consent_group The consent group.
+     * @param label         The label for the rule.
+     * @return              The created AccessRule.
+     */
+    public AccessRule upsertHarmonizedAccessRule(String project_name, String consent_group, String label) {
+        String ar_name = "AR_TOPMED_" + project_name + "_" + consent_group + "_" + label;
+        logger.info("upsertHarmonizedAccessRule() Creating new access rule {}", ar_name);
+        String description = "FENCE AR for " + project_name + "." + consent_group + " Topmed data";
+        String ruleText = "$.query.query.categoryFilters." + fence_harmonized_consent_group_concept_path + "[*]";
+        String arValue = project_name + "." + consent_group;
+
+        return getOrCreateAccessRule(
+                ar_name,
+                description,
+                ruleText,
+                AccessRule.TypeNaming.ALL_CONTAINS,
+                arValue,
+                false,
+                false,
+                false,
+                false
+        );
+    }
+
+    /**
+     * Creates and returns a consent gate AccessRule.
+     * Insert a new gate (if it doesn't exist yet) to identify if consent values are present in the query.
+     * return an existing gate named GATE_{gateName}_(PRESENT|MISSING) if it exists.
+     *
+     * @param gateName     The name of the gate.
+     * @param rule         The rule expression.
+     * @param is_present   Whether the gate is for present or missing consent.
+     * @param description  The description of the gate.
+     * @return             The created AccessRule.
+     */
+    private AccessRule upsertConsentGate(String gateName, String rule, boolean is_present, String description) {
+        gateName = "GATE_" + gateName + "_" + (is_present ? "PRESENT" : "MISSING");
+        return getOrCreateAccessRule(
+                gateName,
+                "FENCE GATE for " + description + " consent " + (is_present ? "present" : "missing"),
+                rule,
+                is_present ? AccessRule.TypeNaming.IS_NOT_EMPTY : AccessRule.TypeNaming.IS_EMPTY,
+                null,
+                false,
+                false,
+                false,
+                false
+        );
+    }
+
+    private AccessRule createPhenotypeSubRule(String conceptPath, String alias, String rule, int ruleType, String label, boolean useMapKey) {
+        String ar_name = "AR_PHENO_" + alias + "_" + label;
+        logger.info("createPhenotypeSubRule() Creating new access rule {}", ar_name);
+        return getOrCreateAccessRule(
+                ar_name,
+                "FENCE SUB AR for " + alias + " " + label + " clinical concepts",
+                rule,
+                ruleType,
+                ruleType == AccessRule.TypeNaming.IS_NOT_EMPTY ? null : conceptPath,
+                useMapKey,
+                useMapKey,
+                false,
+                false
+        );
+    }
+
+    private AccessRule getOrCreateAccessRule(String name, String description, String rule, int type, String value, boolean checkMapKeyOnly, boolean checkMapNode, boolean evaluateOnlyByGates, boolean gateAnyRelation) {
+        return accessRuleCache.computeIfAbsent(name, key -> {
+            AccessRule ar = getAccessRuleByName(key);
+            if (ar == null) {
+                logger.info("Creating new access rule {}", key);
+                ar = new AccessRule();
+                ar.setName(name);
+                ar.setDescription(description);
+                ar.setRule(rule);
+                ar.setType(type);
+                ar.setValue(value);
+                ar.setCheckMapKeyOnly(checkMapKeyOnly);
+                ar.setCheckMapNode(checkMapNode);
+                ar.setEvaluateOnlyByGates(evaluateOnlyByGates);
+                ar.setGateAnyRelation(gateAnyRelation);
+                save(ar);
+            }
+
+            return ar;
+        });
+    }
+
+    /**
+     * Configures the AccessRule with gates and sub-rules.
+     *
+     * @param ar                The AccessRule to configure.
+     * @param studyIdentifier   The study identifier.
+     * @param consent_group     The consent group.
+     * @param conceptPath       The concept path.
+     * @param projectAlias      The project alias.
+     * @param parent            Whether to include parent gates.
+     * @param harmonized        Whether to include harmonized gates.
+     * @param topmed            Whether to include Topmed gates.
+     */
+    public void configureAccessRule(AccessRule ar, String studyIdentifier, String consent_group, String conceptPath, String projectAlias, boolean parent, boolean harmonized, boolean topmed) {
+        if (ar.getGates() == null) {
+            ar.setGates(new HashSet<>());
+            ar.getGates().addAll(getGates(parent, harmonized, topmed));
+
+            if (ar.getSubAccessRule() == null) {
+                ar.setSubAccessRule(new HashSet<>());
+            }
+            ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
+            ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, conceptPath, projectAlias));
+            ar.getSubAccessRule().addAll(getTopmedRestrictedSubRules());
+            save(ar);
+        }
+    }
+
+    /**
+     * Configures the harmonized AccessRule with gates and sub-rules.
+     *
+     * @param ar                The AccessRule to configure.
+     * @param studyIdentifier   The study identifier.
+     * @param consent_group     The consent group.
+     * @param conceptPath       The concept path.
+     * @param projectAlias      The project alias.
+     */
+    public void configureHarmonizedAccessRule(AccessRule ar, String studyIdentifier, String consent_group, String conceptPath, String projectAlias) {
+        if (ar.getGates() == null) {
+            ar.setGates(new HashSet<>());
+            ar.getGates().add(upsertConsentGate("HARMONIZED_CONSENT", "$.query.query.categoryFilters." + fence_harmonized_consent_group_concept_path + "[*]", true, "harmonized data"));
+
+            if (ar.getSubAccessRule() == null) {
+                ar.setSubAccessRule(new HashSet<>());
+            }
+            ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
+            ar.getSubAccessRule().addAll(getHarmonizedSubRules());
+            ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, conceptPath, projectAlias));
+            save(ar);
+        }
+    }
+
+    private Set<AccessRule> getAllowedQueryTypeRules() {
+        if (allowQueryTypeRules == null) {
+            allowQueryTypeRules = loadAllowedQueryTypeRules();
+        }
+
+        return allowQueryTypeRules;
+    }
+
+    /**
+     * Retrieves or creates AccessRules for allowed query types.
+     *
+     * @return A set of AccessRules for allowed query types.
+     */
+    private Set<AccessRule> loadAllowedQueryTypeRules() {
+        // Initialize a set to hold the AccessRules
+        Set<AccessRule> rules = new HashSet<>();
+        // Split the allowed query types from the configuration
+        String[] allowedTypes = this.fence_allowed_query_types.split(",");
+
+        // Iterate over each allowed query type
+        for (String queryType : allowedTypes) {
+            // Construct the AccessRule name
+            String ar_name = "AR_ALLOW_" + queryType;
+
+            // Log the creation of a new AccessRule
+            AccessRule ar = getOrCreateAccessRule(
+                    ar_name,
+                    "FENCE SUB AR to allow " + queryType + " Queries",
+                    "$.query.query.expectedResultType",
+                    AccessRule.TypeNaming.ALL_EQUALS,
+                    queryType,
+                    false,
+                    false,
+                    false,
+                    false
+            );
+
+            // Add the newly created rule to the set
+            rules.add(ar);
+        }
+        // Return the set of AccessRules
+        return rules;
+    }
+
+    private Collection<? extends AccessRule> getTopmedRestrictedSubRules() {
+        Set<AccessRule> rules = new HashSet<AccessRule>();
+        rules.add(upsertTopmedRestrictedSubRule("CATEGORICAL", "$.query.query.variantInfoFilters[*].categoryVariantInfoFilters.*"));
+        rules.add(upsertTopmedRestrictedSubRule("NUMERIC", "$.query.query.variantInfoFilters[*].numericVariantInfoFilters.*"));
+
+        return rules;
+    }
+
+    /**
+     * Creates and returns a restricted sub-rule AccessRule for Topmed.
+     * topmed restriction rules don't need much configuration.  Just deny all access.
+     * @param type  The type of the Topmed restriction.
+     * @param rule  The rule expression.
+     * @return      The created AccessRule.
+     */
+    private AccessRule upsertTopmedRestrictedSubRule(String type, String rule) {
+        // Construct the AccessRule name
+        String ar_name = "AR_TOPMED_RESTRICTED_" + type;
+        // Check if the AccessRule already exists
+        AccessRule ar = getAccessRuleByName(ar_name);
+        if (ar != null) {
+            // Log and return the existing rule
+            logger.debug("Found existing rule: {}", ar.getName());
+            return ar;
+        }
+
+        // Log the creation of a new AccessRule
+        // Create the AccessRule using the createAccessRule method
+        return getOrCreateAccessRule(
+                ar_name,
+                "FENCE SUB AR for restricting " + type + " genomic concepts",
+                rule,
+                AccessRule.TypeNaming.IS_EMPTY,
+                null,
+                false,
+                false,
+                false,
+                false
+        );
+    }
+
+    public Collection<? extends AccessRule> getPhenotypeSubRules(String studyIdentifier, String conceptPath, String alias) {
+
+        Set<AccessRule> rules = new HashSet<AccessRule>();
+        //categorical filters will always contain at least one entry (for the consent groups); it will never be empty
+        rules.add(createPhenotypeSubRule(fence_parent_consent_group_concept_path, "ALLOW_PARENT_CONSENT", "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
+
+        for(String underscorePath : underscoreFields) {
+            rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false));
+            rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true));
+            rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQ_FIELDS", false));
+        }
+
+        rules.add(createPhenotypeSubRule(conceptPath, alias+ "_" + studyIdentifier, "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true));
+        rules.add(createPhenotypeSubRule(conceptPath, alias+ "_" + studyIdentifier, "$.query.query.numericFilters", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "NUMERIC", true));
+        rules.add(createPhenotypeSubRule(conceptPath, alias+ "_" + studyIdentifier, "$.query.query.fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false));
+        rules.add(createPhenotypeSubRule(conceptPath, alias+ "_" + studyIdentifier, "$.query.query.requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQUIRED_FIELDS", false));
+
+        return rules;
+    }
+
+    /**
+     * Harmonized rules should allow the user to supply paretn and top med consent groups;  this allows a single harmonized
+     * rules instead of splitting between a topmed+harmonized and parent+harmonized
+     *
+     * @return
+     */
+    private Collection<? extends AccessRule> getHarmonizedSubRules() {
+
+        Set<AccessRule> rules = new HashSet<AccessRule>();
+        //categorical filters will always contain at least one entry (for the consent groups); it will never be empty
+        rules.add(createPhenotypeSubRule(fence_parent_consent_group_concept_path, "ALLOW_PARENT_CONSENT", "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
+        rules.add(createPhenotypeSubRule(fence_harmonized_consent_group_concept_path, "ALLOW_HARMONIZED_CONSENT", "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
+        rules.add(createPhenotypeSubRule(fence_topmed_consent_group_concept_path, "ALLOW_TOPMED_CONSENT", "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
+
+        for(String underscorePath : underscoreFields) {
+            rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false));
+            rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true));
+            rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQ_FIELDS", false));
+        }
+
+        rules.add(createPhenotypeSubRule(fence_harmonized_concept_path, "HARMONIZED", "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true));
+        rules.add(createPhenotypeSubRule(fence_harmonized_concept_path, "HARMONIZED", "$.query.query.numericFilters", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "NUMERIC", true));
+        rules.add(createPhenotypeSubRule(fence_harmonized_concept_path, "HARMONIZED", "$.query.query.fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false));
+        rules.add(createPhenotypeSubRule(fence_harmonized_concept_path, "HARMONIZED", "$.query.query.requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQUIRED_FIELDS", false));
+
+        return rules;
+    }
+
+
+    /**
+     * generate and return a set of rules that disallow access to phenotype data (only genomic filters allowed)
+     * @return
+     */
+    public Collection<? extends AccessRule> getPhenotypeRestrictedSubRules(String studyIdentifier, String consentCode, String alias) {
+        Set<AccessRule> rules = new HashSet<AccessRule>();
+        //categorical filters will always contain at least one entry (for the consent groups); it will never be empty
+        rules.add(createPhenotypeSubRule(fence_topmed_consent_group_concept_path, "ALLOW_TOPMED_CONSENT", "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
+
+        for(String underscorePath : underscoreFields ) {
+            rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false));
+            rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true));
+            rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQ_FIELDS", false));
+        }
+
+        rules.add(createPhenotypeSubRule(null, alias + "_" + studyIdentifier+ "_" + consentCode, "$.query.query.numericFilters.[*]", AccessRule.TypeNaming.IS_EMPTY, "DISALLOW_NUMERIC", false));
+        rules.add(createPhenotypeSubRule(null, alias + "_" + studyIdentifier+ "_" + consentCode, "$.query.query.requiredFields.[*]", AccessRule.TypeNaming.IS_EMPTY, "DISALLOW_REQUIRED_FIELDS", false));
+
+        return rules;
+    }
+
+    /**
+     * Return a set of gates that identify which consent values have been provided.  the boolean parameters indicate
+     * if a value in the specified consent location should allow this gate to pass.
+     * @param parent
+     * @param harmonized
+     * @param topmed
+     * @return
+     */
+    private Collection<? extends AccessRule> getGates(boolean parent, boolean harmonized, boolean topmed) {
+        Set<AccessRule> gates = new HashSet<AccessRule>();
+        gates.add(upsertConsentGate("PARENT_CONSENT", "$.query.query.categoryFilters." + fence_parent_consent_group_concept_path + "[*]", parent, "parent study data"));
+        gates.add(upsertConsentGate("HARMONIZED_CONSENT", "$.query.query.categoryFilters." + fence_harmonized_consent_group_concept_path + "[*]", harmonized, "harmonized data"));
+        gates.add(upsertConsentGate("TOPMED_CONSENT", "$.query.query.categoryFilters." + fence_topmed_consent_group_concept_path + "[*]", topmed, "Topmed data"));
+
+        return gates;
+    }
+
 }
