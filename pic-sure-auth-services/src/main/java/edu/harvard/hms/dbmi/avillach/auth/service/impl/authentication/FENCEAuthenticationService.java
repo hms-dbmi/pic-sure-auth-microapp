@@ -40,7 +40,6 @@ public class FENCEAuthenticationService {
     private final UserService userService;
     private final RoleService roleService;
     private final ConnectionWebService connectionService; // We will need to investigate if the ConnectionWebService will need to be versioned as well.
-    private final AccessRuleService fenceAccessRuleService;
     private final ApplicationService applicationService;
     private final PrivilegeService privilegeService;
     private final AccessRuleService accessRuleService;
@@ -90,7 +89,6 @@ public class FENCEAuthenticationService {
     public FENCEAuthenticationService(UserService userService,
                                       RoleService roleService,
                                       ConnectionWebService connectionService,
-                                      AccessRuleService fenceAccessRuleService,
                                       ApplicationService applicationService,
                                       PrivilegeService privilegeService,
                                       RestClientUtil restClientUtil,
@@ -110,7 +108,6 @@ public class FENCEAuthenticationService {
         this.userService = userService;
         this.roleService = roleService;
         this.connectionService = connectionService;
-        this.fenceAccessRuleService = fenceAccessRuleService;
         this.applicationService = applicationService;
         this.privilegeService = privilegeService;
         this.idp_provider_uri = idpProviderUri;
