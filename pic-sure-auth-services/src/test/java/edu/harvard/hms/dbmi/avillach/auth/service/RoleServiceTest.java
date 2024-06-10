@@ -7,6 +7,7 @@ import edu.harvard.hms.dbmi.avillach.auth.enums.SecurityRoles;
 import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
 import edu.harvard.hms.dbmi.avillach.auth.repository.PrivilegeRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.RoleRepository;
+import edu.harvard.hms.dbmi.avillach.auth.service.impl.RoleService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming;
 import org.junit.Before;
 import org.junit.Test;
@@ -171,6 +172,10 @@ public class RoleServiceTest {
 
     @Test
     public void testRemoveRoleById_InsufficientPrivileges() {
+        User user = createTestUser();
+        user.setRoles(new HashSet<>());
+        configureUserSecurityContext(user);
+
         UUID roleId = UUID.randomUUID();
         Role role = new Role();
         role.setUuid(roleId);
