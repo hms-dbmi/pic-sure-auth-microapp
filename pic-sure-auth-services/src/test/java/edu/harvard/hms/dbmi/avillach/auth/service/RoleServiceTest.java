@@ -149,7 +149,6 @@ public class RoleServiceTest {
 
         when(roleRepository.findById(roleId)).thenReturn(Optional.of(role));
         when(roleRepository.findAll()).thenReturn(Collections.singletonList(role));
-
         Optional<List<Role>> result = roleService.removeRoleById(roleId.toString());
 
         assertTrue(result.isPresent());
@@ -218,7 +217,7 @@ public class RoleServiceTest {
 
     private Privilege createSuperAdminPrivilege() {
         Privilege privilege = new Privilege();
-        privilege.setName(AuthNaming.AuthRoleNaming.SUPER_ADMIN);
+        privilege.setName(SecurityRoles.PIC_SURE_TOP_ADMIN.getRole());
         privilege.setUuid(UUID.randomUUID());
         return privilege;
     }

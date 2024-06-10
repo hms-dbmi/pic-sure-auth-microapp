@@ -268,7 +268,7 @@ public class AccessRuleService {
         return true;
     }
 
-    boolean extractAndCheckRule(AccessRule accessRule, Object parsedRequestBody) {
+    public boolean extractAndCheckRule(AccessRule accessRule, Object parsedRequestBody) {
         logger.debug("extractAndCheckRule() starting");
         String rule = accessRule.getRule();
 
@@ -417,7 +417,7 @@ public class AccessRuleService {
         return true;
     }
 
-    boolean decisionMaker(AccessRule accessRule, String requestBodyValue) {
+    public boolean decisionMaker(AccessRule accessRule, String requestBodyValue) {
         if (accessRule.getMergedValues().isEmpty()) {
             String value = accessRule.getValue();
             if (value == null) {
