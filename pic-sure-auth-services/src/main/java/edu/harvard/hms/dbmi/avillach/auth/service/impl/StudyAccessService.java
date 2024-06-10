@@ -60,10 +60,10 @@ public class StudyAccessService {
 
         if (fenceAuthenticationService.upsertRole(null, newRoleName, MANUAL + " role "+newRoleName)) {
             logger.info("addStudyAccess - Updated user role. Now it includes `{}`", newRoleName);
-            return "Error: Role '" + newRoleName + "' successfully created";
+            return "Role '" + newRoleName + "' successfully created";
         } else {
             logger.error("addStudyAccess - could not add {} role to to database", newRoleName);
-            return "Could not add role '" + newRoleName + "' to database";
+            return "Error: Could not add role '" + newRoleName + "' to database";
         }
     }
 }
