@@ -123,7 +123,7 @@ public class AuthenticationService {
         return responseMap;
     }
 
-    JsonNode retrieveUserInfo(String accessToken) throws IOException {
+    public JsonNode retrieveUserInfo(String accessToken) throws IOException {
         String auth0UserInfoURI = this.auth0host + "/userinfo";
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
