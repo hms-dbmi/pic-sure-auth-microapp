@@ -216,7 +216,6 @@ public class JWTFilter extends OncePerRequestFilter {
             }
         }
 
-        logger.info("User with email {} has roles {}.", authenticatedUser.getUser().getEmail(), userRoles != null ? userRoles.stream().map(Role::getName).collect(Collectors.joining(",")) : null);
         logger.info("User with email {} has privileges {}.", authenticatedUser.getUser().getEmail(), authenticatedUser.getUser().getTotalPrivilege().stream().map(Privilege::getName).collect(Collectors.joining(",")));
         UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(authenticatedUser, null, authenticatedUser.getAuthorities());
         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
