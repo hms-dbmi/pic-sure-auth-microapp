@@ -8,6 +8,7 @@ import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
 import edu.harvard.hms.dbmi.avillach.auth.repository.RoleRepository;
 import edu.harvard.hms.dbmi.avillach.auth.utils.FenceMappingUtility;
 import jakarta.annotation.PostConstruct;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,8 +42,23 @@ public class RoleService {
             logger.info("FenceMappingUtility is initialized properly.");
             logger.info("Starting to load roles from fence_mapping.json to database.");
 
-            //
+            // Create a list of role names
+            Set<String> roleNames = this.fenceMappingUtility.getFENCEMapping().entrySet().parallelStream().map(studyMetadata -> {
+                String projectId = (String) studyMetadata.getValue().get("study_identifier");
+                String consentCode = (String) studyMetadata.getValue().get("consent_group_code");
+                return StringUtils.isNotBlank(consentCode) ? "FENCE_"+projectId+"_"+consentCode : "FENCE_"+projectId;
+            }).collect(Collectors.toSet());
 
+            // Get the list of roles that don't exist in the database. With bulk select, we can get all roles in one query.
+            List<Role> rolesThatExist = roleRepository.findByNameIn(roleNames);
+            Set<String> existingRoleNames = rolesThatExist.parallelStream().map(Role::getName).collect(Collectors.toSet());
+            roleNames.removeAll(existingRoleNames);
+            logger.info("Roles that don't exist in the database: {}", roleNames);
+
+            // Create a list of roles that don't exist in the database
+            List<Role> newRoles = roleNames.parallelStream().map(roleName -> createRole(roleName, "FENCE role " + roleName)).toList();
+            logger.info("New roles created: {}", newRoles.size());
+            persistAll(newRoles);
         } else {
             logger.info("""
                     FenceMappingUtility is not initialized properly and likely did not find the templatePath.
