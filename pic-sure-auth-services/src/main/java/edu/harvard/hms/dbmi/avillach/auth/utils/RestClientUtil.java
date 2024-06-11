@@ -77,4 +77,14 @@ public class RestClientUtil {
         }
     }
 
+    public static ResponseEntity<String> retrievePostResponseWithParams(String uri, HttpHeaders headers, String body, Object... params) {
+        try {
+            logger.debug("HttpClientUtilSpring retrievePostResponseWithParams()");
+            HttpEntity<String> entity = new HttpEntity<>(body, headers);
+            return restTemplate.postForEntity(uri, entity, String.class, params);
+        } catch (HttpClientErrorException ex) {
+            logger.error("HttpClientErrorException: {}", ex.getMessage());
+            throw ex;
+        }
+    }
 }
