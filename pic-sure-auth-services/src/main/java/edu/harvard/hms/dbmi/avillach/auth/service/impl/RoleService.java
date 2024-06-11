@@ -239,5 +239,8 @@ public class RoleService {
         return status;
     }
 
+    public List<Role> findByNameIn(Set<String> roleNames) {
+        return this.roleRepository.findByNameIn(roleNames);
+    }
 }
 

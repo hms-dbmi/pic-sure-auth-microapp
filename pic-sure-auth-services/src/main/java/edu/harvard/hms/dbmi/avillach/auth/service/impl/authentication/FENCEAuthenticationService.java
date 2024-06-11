@@ -125,7 +125,8 @@ public class FENCEAuthenticationService {
             throw new NotAuthorizedException("The user details could not be persisted. Please contact the administrator.");
         }
 
-        updateUserRoles(fence_user_profile, current_user);
+        Iterator<String> project_access_names = fence_user_profile.get("authz").fieldNames();
+        updateUserRoles(project_access_names, current_user);
 
         final String idp = extractIdp(current_user);
         if (current_user.getRoles() != null && (!current_user.getRoles().isEmpty() || openAccessIdpValues.contains(idp))) {
@@ -155,15 +156,9 @@ public class FENCEAuthenticationService {
         return responseMap;
     }
 
-    private void updateUserRoles(JsonNode fence_user_profile, User current_user) {
-        // Update the user's roles (or create them if none exists)
-        //Set<Role> actual_user_roles = u.getRoles();
-        Iterator<String> project_access_names = fence_user_profile.get("authz").fieldNames();
-
-        // I want to parallelize this, but I'm not sure if it's safe to do so.
+    private void updateUserRoles(Iterator<String> project_access_names, User current_user) {
         Set<String> roleNames = new HashSet<>();
         project_access_names.forEachRemaining(roleName -> {
-            // We need to add/remove the users roles based on what is in the project_access_names list
             Map projectMetadata = this.fenceMappingUtility.getFenceMappingByAuthZ().get(roleName);
             if (projectMetadata == null) {
                 logger.error("getFENCEProfile() -> createAndUpsertRole could not find study in FENCE mapping SKIPPING: {}", roleName);
@@ -178,7 +173,7 @@ public class FENCEAuthenticationService {
         });
 
         // find roles that are in the user's roles but not in the project_access_names. These are the roles that need to be removed.
-        // exclude userRole -> "PIC-SURE Top Admin".equals(userRole.getName()) || "Admin".equals(userRole.getName()) || userRole.getName().startsWith("MANUAL_")
+        // Some roles are not removed, such as the open access role, the manual roles, and the admin roles.
         Set<Role> rolesToRemove = current_user.getRoles().parallelStream()
                 .filter(role -> !roleNames.contains(role.getName()) && !role.getName().equals(fence_open_access_role_name) && !role.getName().startsWith("MANUAL_") && !role.getName().equals("PIC-SURE Top Admin") && !role.getName().equals("Admin"))
                 .collect(Collectors.toSet());
@@ -189,11 +184,9 @@ public class FENCEAuthenticationService {
             logger.debug("User roles after removal: {}", current_user.getRoles().size());
         }
 
-        // find roles that are in the project_access_names but not in the user's roles. These are the roles that need to be added.
-        List<Role> newRoles = roleNames.parallelStream()
-                .map(roleName -> roleService.createRole(roleName, "FENCE role " + roleName))
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+        // All possible FENCE roles are created on startup, so we do not need to create any new roles here.
+        // If the user has a role that is not in the database we don't support the study.
+        List<Role> newRoles = roleService.findByNameIn(roleNames);
 
         if (!newRoles.isEmpty()) {
             roleService.persistAll(newRoles);
