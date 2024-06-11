@@ -19,7 +19,7 @@ public class StudyAccessServiceTest {
     private StudyAccessService studyAccessService;
 
     @Mock
-    private FENCEAuthenticationService fenceAuthenticationService;
+    private RoleService roleService;
 
     @Mock
     private FenceMappingUtility fenceMappingUtility;
@@ -41,7 +41,7 @@ public class StudyAccessServiceTest {
     public void testAddStudyAccess() {
         String studyIdentifier = "testStudy";
         when(fenceMappingUtility.getFENCEMapping()).thenReturn(Map.of(studyIdentifier, Map.of(StudyAccessService.STUDY_IDENTIFIER, studyIdentifier,StudyAccessService.CONSENT_GROUP_CODE, "")));
-        when(fenceAuthenticationService.upsertRole(null, "MANUAL_testStudy", "MANUAL_ role MANUAL_testStudy")).thenReturn(true);
+        when(roleService.upsertFenceRole(null, "MANUAL_testStudy", "MANUAL_ role MANUAL_testStudy")).thenReturn(true);
 
         String status = studyAccessService.addStudyAccess(studyIdentifier);
         assertEquals("Role 'MANUAL_testStudy' successfully created", status);
@@ -51,7 +51,7 @@ public class StudyAccessServiceTest {
     public void testAddStudyAccessWithConsent() {
         String studyIdentifier = "testStudy2.c2";
         when(fenceMappingUtility.getFENCEMapping()).thenReturn(Map.of(studyIdentifier, Map.of(StudyAccessService.STUDY_IDENTIFIER, "testStudy2", StudyAccessService.CONSENT_GROUP_CODE, "c2")));
-        when(fenceAuthenticationService.upsertRole(null, "MANUAL_testStudy2_c2", "MANUAL_ role MANUAL_testStudy2_c2")).thenReturn(true);
+        when(roleService.upsertFenceRole(null, "MANUAL_testStudy2_c2", "MANUAL_ role MANUAL_testStudy2_c2")).thenReturn(true);
         String status = studyAccessService.addStudyAccess(studyIdentifier);
         assertEquals("Role 'MANUAL_testStudy2_c2' successfully created", status);
     }

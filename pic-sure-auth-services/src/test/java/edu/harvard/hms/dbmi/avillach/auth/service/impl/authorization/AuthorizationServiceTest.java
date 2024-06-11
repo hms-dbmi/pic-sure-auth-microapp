@@ -311,7 +311,7 @@ public class AuthorizationServiceTest {
         MockitoAnnotations.initMocks(this);
         SecurityContextHolder.setContext(securityContext);
 
-        accessRuleService = new AccessRuleService(accessRuleRepository);
+        accessRuleService = new AccessRuleService(accessRuleRepository, "false", "false", "false", "false", "false", "false");
         authorizationService = new AuthorizationService(accessRuleService, "fence,okta");
     }
 

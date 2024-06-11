@@ -92,4 +92,17 @@ public class FenceMappingUtility {
         return studies;
     }
 
+    public Map getFENCEMappingforProjectAndConsent(String projectId, String consent_group) {
+        String consentVal = (consent_group != null && !consent_group.isEmpty()) ? projectId + "." + consent_group : projectId;
+        logger.info("getFENCEMappingforProjectAndConsent() looking up {}", consentVal);
+
+        Object projectMetadata = getFENCEMapping().get(consentVal);
+        if(projectMetadata instanceof Map) {
+            return (Map)projectMetadata;
+        } else if (projectMetadata != null) {
+            logger.info("getFENCEMappingforProjectAndConsent() Obj instance of {}", projectMetadata.getClass().getCanonicalName());
+        }
+        return null;
+    }
+
 }

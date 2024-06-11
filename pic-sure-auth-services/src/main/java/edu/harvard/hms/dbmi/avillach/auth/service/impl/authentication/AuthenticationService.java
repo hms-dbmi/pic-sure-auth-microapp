@@ -1,4 +1,4 @@
-package edu.harvard.hms.dbmi.avillach.auth.service.impl;
+package edu.harvard.hms.dbmi.avillach.auth.service.impl.authentication;
 
 import java.io.IOException;
 import java.util.*;
@@ -7,6 +7,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Connection;
 import edu.harvard.hms.dbmi.avillach.auth.exceptions.NotAuthorizedException;
 import edu.harvard.hms.dbmi.avillach.auth.repository.ConnectionRepository;
+import edu.harvard.hms.dbmi.avillach.auth.service.impl.BasicMailService;
+import edu.harvard.hms.dbmi.avillach.auth.service.impl.OauthUserMatchingService;
+import edu.harvard.hms.dbmi.avillach.auth.service.impl.UserService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.RestClientUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -120,7 +123,7 @@ public class AuthenticationService {
         return responseMap;
     }
 
-    JsonNode retrieveUserInfo(String accessToken) throws IOException {
+    public JsonNode retrieveUserInfo(String accessToken) throws IOException {
         String auth0UserInfoURI = this.auth0host + "/userinfo";
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
