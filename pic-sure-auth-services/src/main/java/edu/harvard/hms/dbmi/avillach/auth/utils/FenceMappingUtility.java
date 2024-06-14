@@ -1,6 +1,8 @@
 package edu.harvard.hms.dbmi.avillach.auth.utils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import edu.harvard.hms.dbmi.avillach.auth.model.fenceMapping.BioDataCatalyst;
+import edu.harvard.hms.dbmi.avillach.auth.model.fenceMapping.StudyMetaData;
 import io.micrometer.common.util.StringUtils;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
@@ -10,8 +12,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -19,8 +21,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class FenceMappingUtility {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
-    private Map<String, Map> fenceMappingByConsent;
-    private Map<String, Map> fenceMappingByAuthZ;
+    private Map<String, StudyMetaData> fenceMappingByConsent;
+    private Map<String, StudyMetaData> fenceMappingByAuthZ;
     private final String templatePath;
     private ObjectMapper objectMapper;
 
@@ -32,7 +34,6 @@ public class FenceMappingUtility {
     @PostConstruct
     public void init() {
         if (StringUtils.isNotBlank(this.templatePath) && this.templatePath.endsWith(File.separator)) {
-            // Check if file exists
             File file = new File(this.templatePath + "fence_mapping.json");
             if (!file.exists()) {
                 logger.error("FenceMappingUtility: fence_mapping.json not found in {}", this.templatePath);
@@ -48,16 +49,16 @@ public class FenceMappingUtility {
 
     private void initializeFENCEMappings() {
         if (fenceMappingByConsent == null || fenceMappingByAuthZ == null) {
-            ArrayList<Map> studies = loadBioDataCatalystFenceMappingData();
-            ConcurrentHashMap<String, Map> tempFenceMappingByConsent = new ConcurrentHashMap<>();
-            ConcurrentHashMap<String, Map> tempFenceMappingByAuthZ = new ConcurrentHashMap<>();
+            List<StudyMetaData> studies = loadBioDataCatalystFenceMappingData();
+            ConcurrentHashMap<String, StudyMetaData> tempFenceMappingByConsent = new ConcurrentHashMap<>();
+            ConcurrentHashMap<String, StudyMetaData> tempFenceMappingByAuthZ = new ConcurrentHashMap<>();
 
             studies.parallelStream().forEach(study -> {
-                String consentVal = (study.get("consent_group_code") != null && !study.get("consent_group_code").toString().isEmpty()) ?
-                        study.get("study_identifier") + "." + study.get("consent_group_code") :
-                        study.get("study_identifier").toString();
+                String consentVal = (study.getConsentGroupCode() != null && !study.getConsentGroupCode().isEmpty()) ?
+                        study.getStudyIdentifier() + "." + study.getConsentGroupCode() :
+                        study.getStudyIdentifier();
                 tempFenceMappingByConsent.put(consentVal, study);
-                tempFenceMappingByAuthZ.put(study.get("authZ").toString().replace("\\/", "/"), study);
+                tempFenceMappingByAuthZ.put(study.getAuthZ().replace("\\/", "/"), study);
             });
 
             fenceMappingByConsent = Collections.unmodifiableMap(tempFenceMappingByConsent);
@@ -65,42 +66,41 @@ public class FenceMappingUtility {
         }
     }
 
-    public Map<String, Map> getFENCEMapping() {
+    public Map<String, StudyMetaData> getFENCEMapping() {
         return fenceMappingByConsent;
     }
 
-    public Map<String, Map> getFenceMappingByAuthZ() {
+    public Map<String, StudyMetaData> getFenceMappingByAuthZ() {
         return fenceMappingByAuthZ;
     }
 
-    private ArrayList<Map> loadBioDataCatalystFenceMappingData() {
-        Map fenceMapping;
-        ArrayList<Map> studies;
+    private List<StudyMetaData> loadBioDataCatalystFenceMappingData() {
+        BioDataCatalyst fenceMapping;
+        List<StudyMetaData> studies;
         try {
             logger.debug("getFENCEMapping: loading FENCE mapping from {}", templatePath);
             fenceMapping = objectMapper.readValue(
                     new File(String.join(File.separator,
                             new String[]{templatePath, "fence_mapping.json"}))
-                    , Map.class);
+                    , BioDataCatalyst.class);
 
-            studies = (ArrayList<Map>) fenceMapping.get("bio_data_catalyst");
+            studies = fenceMapping.getStudyMetaData();
             logger.debug("getFENCEMapping: found FENCE mapping with {} entries", studies.size());
         } catch (Exception e) {
             logger.error("loadFenceMappingData: Non-fatal error parsing fence_mapping.json: {}", templatePath, e);
-            return new ArrayList<>();
+            return Collections.emptyList();
         }
         return studies;
     }
 
-    public Map getFENCEMappingforProjectAndConsent(String projectId, String consent_group) {
-        String consentVal = (consent_group != null && !consent_group.isEmpty()) ? projectId + "." + consent_group : projectId;
+    public StudyMetaData getFENCEMappingforProjectAndConsent(String projectId, String consentGroup) {
+        String consentVal = (consentGroup != null && !consentGroup.isEmpty()) ? projectId + "." + consentGroup : projectId;
         logger.info("getFENCEMappingforProjectAndConsent() looking up {}", consentVal);
 
-        Object projectMetadata = getFENCEMapping().get(consentVal);
-        if(projectMetadata instanceof Map) {
-            return (Map)projectMetadata;
-        } else if (projectMetadata != null) {
+        StudyMetaData projectMetadata = getFENCEMapping().get(consentVal);
+        if (projectMetadata != null) {
             logger.info("getFENCEMappingforProjectAndConsent() Obj instance of {}", projectMetadata.getClass().getCanonicalName());
+            return projectMetadata;
         }
         return null;
     }

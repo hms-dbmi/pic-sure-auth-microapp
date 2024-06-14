@@ -8,6 +8,7 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.Connection;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.exceptions.NotAuthorizedException;
+import edu.harvard.hms.dbmi.avillach.auth.model.fenceMapping.StudyMetaData;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.*;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization.AccessRuleService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.FenceMappingUtility;
@@ -162,14 +163,14 @@ public class FENCEAuthenticationService {
     private void updateUserRoles(Iterator<String> project_access_names, User current_user) {
         Set<String> roleNames = new HashSet<>();
         project_access_names.forEachRemaining(roleName -> {
-            Map projectMetadata = this.fenceMappingUtility.getFenceMappingByAuthZ().get(roleName);
+            StudyMetaData projectMetadata = this.fenceMappingUtility.getFenceMappingByAuthZ().get(roleName);
             if (projectMetadata == null) {
                 logger.error("getFENCEProfile() -> createAndUpsertRole could not find study in FENCE mapping SKIPPING: {}", roleName);
                 return;
             }
 
-            String projectId = (String) projectMetadata.get("study_identifier");
-            String consentCode = (String) projectMetadata.get("consent_group_code");
+            String projectId = projectMetadata.getStudyIdentifier();
+            String consentCode = projectMetadata.getStudyIdentifier();
             String newRoleName = StringUtils.isNotBlank(consentCode) ? "FENCE_"+projectId+"_"+consentCode : "FENCE_"+projectId;
 
             roleNames.add(newRoleName);

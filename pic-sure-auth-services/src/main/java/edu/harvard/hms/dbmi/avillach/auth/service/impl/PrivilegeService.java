@@ -4,6 +4,7 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.AccessRule;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Application;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
+import edu.harvard.hms.dbmi.avillach.auth.model.fenceMapping.StudyMetaData;
 import edu.harvard.hms.dbmi.avillach.auth.repository.PrivilegeRepository;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization.AccessRuleService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.FenceMappingUtility;
@@ -144,9 +145,9 @@ public class PrivilegeService {
         logger.info("addFENCEPrivileges() project name: {} consent group: {}", project_name, consent_group);
 
         // Look up the metadata by consent group.
-        Map projectMetadata = this.fenceMappingUtility.getFENCEMappingforProjectAndConsent(project_name, consent_group);
+        StudyMetaData projectMetadata = this.fenceMappingUtility.getFENCEMappingforProjectAndConsent(project_name, consent_group);
 
-        if(projectMetadata == null || projectMetadata.isEmpty()) {
+        if(projectMetadata == null) {
             //no privileges means no access to this project.  just return existing set of privs.
             logger.warn("No metadata available for project {}.{}", project_name, consent_group);
             return privs;
@@ -154,10 +155,10 @@ public class PrivilegeService {
 
         logger.info("addPrivileges() This is a new privilege");
 
-        String dataType = (String) projectMetadata.get("data_type");
-        Boolean isHarmonized = "Y".equals(projectMetadata.get("is_harmonized"));
-        String concept_path = (String) projectMetadata.get("top_level_path");
-        String projectAlias = (String) projectMetadata.get("abbreviated_name");
+        String dataType = projectMetadata.getDataType();
+        Boolean isHarmonized = projectMetadata.getIsHarmonized();
+        String concept_path = projectMetadata.getTopLevelPath();
+        String projectAlias = projectMetadata.getAbbreviatedName();
 
         //we need to add escape sequence back in to the path for parsing later (also need to double escape the regex)
         //

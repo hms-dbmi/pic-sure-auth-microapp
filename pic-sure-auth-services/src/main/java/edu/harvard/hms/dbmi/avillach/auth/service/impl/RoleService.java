@@ -44,8 +44,8 @@ public class RoleService {
 
             // Create a list of role names
             Set<String> roleNames = this.fenceMappingUtility.getFENCEMapping().entrySet().parallelStream().map(studyMetadata -> {
-                String projectId = (String) studyMetadata.getValue().get("study_identifier");
-                String consentCode = (String) studyMetadata.getValue().get("consent_group_code");
+                String projectId = studyMetadata.getValue().getStudyIdentifier();
+                String consentCode = studyMetadata.getValue().getConsentGroupCode();
                 return StringUtils.isNotBlank(consentCode) ? "FENCE_"+projectId+"_"+consentCode : "FENCE_"+projectId;
             }).collect(Collectors.toSet());
 
