@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -245,18 +246,12 @@ public class OktaOAuthAuthenticationService {
      */
     private JsonNode doOktaRequest(String requestUrl, String requestParams) {
         HttpHeaders headers = new HttpHeaders();
-        Base64.Encoder encoder = Base64.getEncoder();
-        String auth_header = this.clientId + ":" + this.spClientSecret;
-        headers.add("Authorization", "Basic " + encoder.encodeToString(auth_header.getBytes()));
-        headers.add("Content-type", "application/x-www-form-urlencoded");
+        headers.setBasicAuth(this.clientId, this.spClientSecret);
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
         ResponseEntity<?> resp;
         JsonNode response = null;
         try {
-            logger.info("Calling OKTA token endpoint: {}", requestUrl);
-            logger.info("Request params: {}", requestParams);
-            logger.info("Headers: {}", headers);
-
             resp = this.restClientUtil.retrievePostResponse(requestUrl, headers, requestParams);
             response = new ObjectMapper().readTree(Objects.requireNonNull(resp.getBody()).toString());
         } catch (Exception ex) {

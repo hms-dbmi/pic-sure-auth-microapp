@@ -9,7 +9,6 @@ import edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization.Authorizati
 import edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;

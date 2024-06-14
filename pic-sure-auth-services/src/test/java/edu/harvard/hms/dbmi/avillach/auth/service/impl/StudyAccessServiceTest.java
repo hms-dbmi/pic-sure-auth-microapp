@@ -1,7 +1,6 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.impl;
 
 import edu.harvard.hms.dbmi.avillach.auth.model.fenceMapping.StudyMetaData;
-import edu.harvard.hms.dbmi.avillach.auth.service.impl.authentication.FENCEAuthenticationService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.FenceMappingUtility;
 import org.junit.Before;
 import org.junit.Test;

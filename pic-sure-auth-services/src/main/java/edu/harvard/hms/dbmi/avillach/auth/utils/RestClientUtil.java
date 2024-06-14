@@ -9,14 +9,6 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Predicate;
-
 @Component
 public class RestClientUtil {
 
@@ -51,21 +43,6 @@ public class RestClientUtil {
         }
     }
 
-    public String composeURL(String baseURL, String pathName, String query) {
-        try {
-            URI uri = new URI(baseURL);
-            List<String> basePathComponents = Arrays.asList(uri.getPath().split("/"));
-            List<String> pathNameComponents = Arrays.asList(pathName.split("/"));
-            List<String> allPathComponents = new LinkedList<>();
-            Predicate<? super String> nonEmpty = segment -> !segment.isEmpty();
-            allPathComponents.addAll(basePathComponents.stream().filter(nonEmpty).toList());
-            allPathComponents.addAll(pathNameComponents.stream().filter(nonEmpty).toList());
-            String queryString = query == null ? uri.getQuery() : query;
-            return new URI(uri.getScheme(), uri.getUserInfo(), uri.getHost(), uri.getPort(), "/" + String.join("/", allPathComponents), queryString, uri.getFragment()).toString();
-        } catch (URISyntaxException e) {
-            throw new RuntimeException("baseURL invalid : " + baseURL, e);
-        }
-    }
 
     public ResponseEntity<String> retrievePostResponse(String uri, HttpHeaders headers, String body) {
         try {
