@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.*;
 import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
@@ -13,13 +14,14 @@ import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Predicate;
 
 @Component
 public class RestClientUtil {
 
     private static final Logger logger = LoggerFactory.getLogger(RestClientUtil.class);
-    private static final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate = new RestTemplate();
 
     public ResponseEntity<String> retrieveGetResponse(String uri, HttpHeaders headers) {
         try {
@@ -68,9 +70,17 @@ public class RestClientUtil {
     public ResponseEntity<String> retrievePostResponse(String uri, HttpHeaders headers, String body) {
         try {
             logger.debug("HttpClientUtilSpring retrievePostResponse()");
-            headers.setContentType(MediaType.APPLICATION_JSON);
             HttpEntity<String> entity = new HttpEntity<>(body, headers);
             return restTemplate.postForEntity(uri, entity, String.class);
+        } catch (HttpClientErrorException ex) {
+            logger.error("HttpClientErrorException: {}", ex.getMessage());
+            throw ex;
+        }
+    }
+
+    public ResponseEntity<String> retrievePostResponse(String uri, HttpEntity<MultiValueMap<String, String>> requestEntity) {
+        try {
+            return restTemplate.postForEntity(uri, requestEntity, String.class);
         } catch (HttpClientErrorException ex) {
             logger.error("HttpClientErrorException: {}", ex.getMessage());
             throw ex;
