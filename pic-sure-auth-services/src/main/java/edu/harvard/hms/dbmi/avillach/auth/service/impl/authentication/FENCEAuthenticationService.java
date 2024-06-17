@@ -186,15 +186,19 @@ public class FENCEAuthenticationService {
             current_user.getRoles().removeAll(rolesToRemove);
             logger.debug("upsertRole() removed {} roles from user", rolesToRemove.size());
             logger.debug("User roles after removal: {}", current_user.getRoles().size());
+        } else {
+            logger.debug("upsertRole() no roles to remove from user");
         }
 
         // All possible FENCE roles are created on startup, so we do not need to create any new roles here.
         // If the user has a role that is not in the database we don't support the study.
         List<Role> newRoles = roleService.findByNameIn(roleNames);
-
         if (!newRoles.isEmpty()) {
-            roleService.persistAll(newRoles);
+            logger.debug("upsertRole() adding {} roles to user", newRoles.size());
             current_user.getRoles().addAll(newRoles);
+            logger.debug("User roles after addition: {}", current_user.getRoles().size());
+        } else {
+            logger.debug("upsertRole() no roles to add to user");
         }
     }
 

@@ -510,7 +510,9 @@ public class UserService {
     public User changeRole(User currentUser, Set<Role> roles) {
         // set the users roles and merge the user
         currentUser.setRoles(roles);
-        return this.userRepository.save(currentUser);
+        User save = this.userRepository.save(currentUser);
+        this.userRepository.flush();
+        return save;
     }
 
     public User findBySubject(String username) {
