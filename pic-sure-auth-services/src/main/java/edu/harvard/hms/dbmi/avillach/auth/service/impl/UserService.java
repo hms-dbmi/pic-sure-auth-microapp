@@ -599,6 +599,10 @@ public class UserService {
 
         User actual_user = findOrCreate(new_user);
 
+        if (actual_user.getRoles() == null) {
+            actual_user.setRoles(new HashSet<>());
+        }
+
         logger.debug("createUserFromFENCEProfile() finished, user record inserted");
         return actual_user;
     }
