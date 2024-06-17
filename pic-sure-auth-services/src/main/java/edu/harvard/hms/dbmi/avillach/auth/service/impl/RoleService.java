@@ -160,6 +160,7 @@ public class RoleService {
 
     public void persistAll(List<Role> newRoles) {
         this.roleRepository.saveAll(newRoles);
+        this.roleRepository.flush();
     }
 
     public Role findByName(String roleName) {

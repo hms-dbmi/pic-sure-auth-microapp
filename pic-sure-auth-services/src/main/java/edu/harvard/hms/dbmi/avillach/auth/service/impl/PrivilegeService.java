@@ -192,6 +192,7 @@ public class PrivilegeService {
         }
 
         logger.info("addPrivileges() Finished");
+        this.privilegeRepository.flush();
         return privs;
     }
 

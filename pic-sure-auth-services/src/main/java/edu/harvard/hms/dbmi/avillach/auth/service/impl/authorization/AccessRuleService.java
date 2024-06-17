@@ -110,7 +110,9 @@ public class AccessRuleService {
     }
 
     public AccessRule save(AccessRule accessRule) {
-        return this.accessRuleRepo.save(accessRule);
+        AccessRule save = this.accessRuleRepo.save(accessRule);
+        this.accessRuleRepo.flush();
+        return save;
     }
 
     public AccessRule getAccessRuleByName(String arName) {
