@@ -46,7 +46,7 @@ public class RoleService {
             Set<String> roleNames = this.fenceMappingUtility.getFENCEMapping().entrySet().parallelStream().map(studyMetadata -> {
                 String projectId = studyMetadata.getValue().getStudyIdentifier();
                 String consentCode = studyMetadata.getValue().getConsentGroupCode();
-                return StringUtils.isNotBlank(consentCode) ? "FENCE_"+projectId+"_"+consentCode : "FENCE_"+projectId;
+                return StringUtils.isNotBlank(consentCode) ? "FENCE_" + projectId + "_" + consentCode : "FENCE_" + projectId;
             }).collect(Collectors.toSet());
 
             // Get the list of roles that don't exist in the database. With bulk select, we can get all roles in one query.
@@ -171,33 +171,25 @@ public class RoleService {
             logger.info("createRole() roleName is empty");
             return null;
         }
-        logger.info("createRole() New role name: " + roleName);
+
+        logger.info("createRole() New role name: {}", roleName);
         Role r;
         // Create the Role in the repository, if it does not exist. Otherwise, add it.
-        Role existing_role = findByName(roleName);
-        if (existing_role != null) {
-            // Role already exists
-            logger.info("upsertRole() role already exists");
-            r = existing_role;
-        } else {
-            // This is a new Role
-            r = new Role();
-            r.setName(roleName);
-            r.setDescription(roleDescription);
-            // Since this is a new Role, we need to ensure that the
-            // corresponding Privilege (with gates) and AccessRule is added.
-            r.setPrivileges(this.privilegeService.addFENCEPrivileges(r));
-            logger.info("upsertRole() created new role");
-        }
-
+        // This is a new Role
+        r = new Role();
+        r.setName(roleName);
+        r.setDescription(roleDescription);
+        // Since this is a new Role, we need to ensure that the
+        // corresponding Privilege (with gates) and AccessRule is added.
+        r.setPrivileges(this.privilegeService.addFENCEPrivileges(r));
         return r;
     }
 
     /**
      * Insert or Update the User object's list of Roles in the database.
      *
-     * @param u The User object the generated Role will be added to
-     * @param roleName Name of the Role
+     * @param u               The User object the generated Role will be added to
+     * @param roleName        Name of the Role
      * @param roleDescription Description of the Role
      * @return boolean Whether the Role was successfully added to the User or not
      */
