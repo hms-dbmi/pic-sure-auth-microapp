@@ -31,7 +31,7 @@ public class AccessRuleService {
     private String fence_harmonized_consent_group_concept_path;
     private String fence_parent_consent_group_concept_path;
     private String fence_topmed_consent_group_concept_path;
-    private String fence_harmonized_concept_path;
+    private final String fence_harmonized_concept_path;
 
     private final String fence_standard_access_rules;
     private final String fence_allowed_query_types;
