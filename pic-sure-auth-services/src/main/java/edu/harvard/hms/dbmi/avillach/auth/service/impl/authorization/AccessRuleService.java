@@ -40,18 +40,7 @@ public class AccessRuleService {
     private static final String parentAccessionField = "\\\\_Parent Study Accession with Subject ID\\\\";
     private static final String topmedAccessionField = "\\\\_Topmed Study Accession with Subject ID\\\\";
 
-    private final String[] underscoreFields = new String[] {
-            parentAccessionField,
-            topmedAccessionField,
-            fence_harmonized_consent_group_concept_path,
-            fence_parent_consent_group_concept_path,
-            fence_topmed_consent_group_concept_path,
-            "\\\\_VCF Sample Id\\\\",
-            "\\\\_studies\\\\",
-            "\\\\_studies_consents\\\\",  //used to provide consent-level counts for open access
-            "\\\\_parent_consents\\\\",  //parent consents not used for auth (use combined _consents)
-            "\\\\_Consents\\\\"   ///old _Consents\Short Study... path no longer used, but still present in examples.
-    };
+    private String[] underscoreFields;
 
     private final ConcurrentHashMap<String, AccessRule> accessRuleCache = new ConcurrentHashMap<>();
     private Set<AccessRule> allowQueryTypeRules;
@@ -76,6 +65,19 @@ public class AccessRuleService {
 
     @PostConstruct
     public void init() {
+        underscoreFields = new String[] {
+                parentAccessionField,
+                topmedAccessionField,
+                fence_harmonized_consent_group_concept_path,
+                fence_parent_consent_group_concept_path,
+                fence_topmed_consent_group_concept_path,
+                "\\\\_VCF Sample Id\\\\",
+                "\\\\_studies\\\\",
+                "\\\\_studies_consents\\\\",  //used to provide consent-level counts for open access
+                "\\\\_parent_consents\\\\",  //parent consents not used for auth (use combined _consents)
+                "\\\\_Consents\\\\"   ///old _Consents\Short Study... path no longer used, but still present in examples.
+        };
+
         logger.info("AccessRuleService initialized");
         logger.info("underscoreFields: {}", Arrays.toString(underscoreFields));
         logger.info("fence_harmonized_consent_group_concept_path: {}", fence_harmonized_consent_group_concept_path);
