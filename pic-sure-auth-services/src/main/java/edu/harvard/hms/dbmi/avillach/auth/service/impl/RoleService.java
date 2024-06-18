@@ -56,7 +56,7 @@ public class RoleService {
             logger.info("Roles that don't exist in the database: {}", roleNames);
 
             // Create a list of roles that don't exist in the database
-            List<Role> newRoles = roleNames.stream().map(roleName -> createRole(roleName, "FENCE role " + roleName)).toList();
+            List<Role> newRoles = roleNames.parallelStream().map(roleName -> createRole(roleName, "FENCE role " + roleName)).toList();
             logger.info("New roles created: {}", newRoles.size());
             persistAll(newRoles);
         } else {
