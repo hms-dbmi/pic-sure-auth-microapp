@@ -29,9 +29,9 @@ public class AccessRuleService {
     private final Logger logger = LoggerFactory.getLogger(AccessRuleService.class);
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    private String fence_harmonized_consent_group_concept_path;
-    private String fence_parent_consent_group_concept_path;
-    private String fence_topmed_consent_group_concept_path;
+    private final String fence_harmonized_consent_group_concept_path;
+    private final String fence_parent_consent_group_concept_path;
+    private final String fence_topmed_consent_group_concept_path;
     private final String fence_harmonized_concept_path;
 
     private final String fence_standard_access_rules;
@@ -41,7 +41,6 @@ public class AccessRuleService {
     private static final String topmedAccessionField = "\\\\_Topmed Study Accession with Subject ID\\\\";
 
     private String[] underscoreFields;
-
     private final ConcurrentHashMap<String, AccessRule> accessRuleCache = new ConcurrentHashMap<>();
     private Set<AccessRule> allowQueryTypeRules;
 

@@ -43,20 +43,24 @@ public class RoleService {
             logger.info("Starting to load roles from fence_mapping.json to database.");
 
             // Create a list of role names
-            Set<String> roleNames = this.fenceMappingUtility.getFENCEMapping().entrySet().parallelStream().map(studyMetadata -> {
-                String projectId = studyMetadata.getValue().getStudyIdentifier();
-                String consentCode = studyMetadata.getValue().getConsentGroupCode();
+            Set<String> roleNames = this.fenceMappingUtility.getFenceMappingByAuthZ().values().stream().map(studyMetaData -> {
+                String projectId = studyMetaData.getStudyIdentifier();
+                String consentCode = studyMetaData.getConsentGroupCode();
                 return StringUtils.isNotBlank(consentCode) ? "FENCE_" + projectId + "_" + consentCode : "FENCE_" + projectId;
             }).collect(Collectors.toSet());
 
+            logger.info("Total roles to be created: {}", roleNames.size());
+            logger.info("Roles to be created: {}", roleNames);
+
             // Get the list of roles that don't exist in the database. With bulk select, we can get all roles in one query.
             Set<Role> rolesThatExist = roleRepository.findByNameIn(roleNames);
-            Set<String> existingRoleNames = rolesThatExist.parallelStream().map(Role::getName).collect(Collectors.toSet());
+            Set<String> existingRoleNames = rolesThatExist.stream().map(Role::getName).collect(Collectors.toSet());
+            logger.info("Total roles that exist in the database: {}", existingRoleNames.size());
             roleNames.removeAll(existingRoleNames);
-            logger.info("Roles that don't exist in the database: {}", roleNames);
 
+            logger.info("Roles that don't exist in the database: {}", roleNames);
             // Create a list of roles that don't exist in the database
-            List<Role> newRoles = roleNames.parallelStream().map(roleName -> createRole(roleName, "FENCE role " + roleName)).toList();
+            List<Role> newRoles = roleNames.stream().map(roleName -> createRole(roleName, "FENCE role " + roleName)).toList();
             logger.info("New roles created: {}", newRoles.size());
             persistAll(newRoles);
         } else {

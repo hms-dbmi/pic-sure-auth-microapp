@@ -177,11 +177,11 @@ public class PrivilegeService {
 
         if(dataType != null && dataType.contains("P")) {
             //insert clinical privs
-            logger.info("addPrivileges() project:{} consent_group:{} concept_path:{}", project_name, consent_group, concept_path);
+            logger.info("addPrivileges() project:{} consent_group:{} concept_path:{} IsHarmonized:{}", project_name, consent_group, concept_path, isHarmonized);
             privs.add(upsertClinicalPrivilege(project_name, projectAlias, consent_group, concept_path, false));
 
             //if harmonized study, also create harmonized privileges
-            if(Boolean.TRUE.equals(isHarmonized)) {
+            if(isHarmonized) {
                 privs.add(upsertClinicalPrivilege(project_name, projectAlias, consent_group, concept_path, true));
             }
         }
