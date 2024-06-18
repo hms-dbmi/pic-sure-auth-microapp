@@ -132,22 +132,8 @@ public class FENCEAuthenticationService {
         Iterator<String> project_access_names = fence_user_profile.get("authz").fieldNames();
         updateUserRoles(project_access_names, current_user);
 
-        final String idp = extractIdp(current_user);
-        if (current_user.getRoles() != null && (!current_user.getRoles().isEmpty() || openAccessIdpValues.contains(idp))) {
-            Role openAccessRole = roleService.findByName(fence_open_access_role_name);
-            if (openAccessRole != null) {
-                current_user.getRoles().add(openAccessRole);
-            } else {
-                logger.warn("Unable to find fence OPEN ACCESS role");
-            }
-        }
 
-        try {
-            current_user = userService.changeRole(current_user, current_user.getRoles());
-            logger.debug("upsertRole() updated user, who now has {} roles.", current_user.getRoles().size());
-        } catch (Exception ex) {
-            logger.error("upsertRole() Could not add roles to user, because {}", ex.getMessage());
-        }
+
         HashMap<String, Object> claims = new HashMap<String,Object>();
         claims.put("name", fence_user_profile.get("name"));
         claims.put("email", current_user.getEmail());
@@ -176,11 +162,16 @@ public class FENCEAuthenticationService {
             roleNames.add(newRoleName);
         });
 
+        logger.debug("upsertRole() starting, user has {} roles", current_user.getRoles().size());
+        logger.debug("upsertRole() user roles: {}", current_user.getRoles().stream().map(Role::getName).collect(Collectors.toList()));
+
         // find roles that are in the user's roles but not in the project_access_names. These are the roles that need to be removed.
         // Some roles are not removed, such as the open access role, the manual roles, and the admin roles.
         Set<Role> rolesToRemove = current_user.getRoles().parallelStream()
                 .filter(role -> !roleNames.contains(role.getName()) && !role.getName().equals(fence_open_access_role_name) && !role.getName().startsWith("MANUAL_") && !role.getName().equals("PIC-SURE Top Admin") && !role.getName().equals("Admin"))
                 .collect(Collectors.toSet());
+
+        logger.debug("upsertRole() roles to remove: {}", rolesToRemove.stream().map(Role::getName).collect(Collectors.toList()));
 
         if (!rolesToRemove.isEmpty()) {
             current_user.getRoles().removeAll(rolesToRemove);
@@ -192,14 +183,20 @@ public class FENCEAuthenticationService {
 
         // All possible FENCE roles are created on startup, so we do not need to create any new roles here.
         // If the user has a role that is not in the database we don't support the study.
-        List<Role> newRoles = roleService.findByNameIn(roleNames);
-        if (!newRoles.isEmpty()) {
-            logger.debug("upsertRole() adding {} roles to user", newRoles.size());
-            current_user.getRoles().addAll(newRoles);
-            logger.debug("User roles after addition: {}", current_user.getRoles().size());
-        } else {
-            logger.debug("upsertRole() no roles to add to user");
+        Set<Role> newRoles = roleService.findByNameIn(roleNames);
+        logger.debug("upsertRole() new roles: {}", newRoles.stream().map(Role::getName).collect(Collectors.toList()));
+
+        final String idp = extractIdp(current_user);
+        if (current_user.getRoles() != null && (!current_user.getRoles().isEmpty() || openAccessIdpValues.contains(idp))) {
+            Role openAccessRole = roleService.findByName(fence_open_access_role_name);
+            if (openAccessRole != null) {
+                current_user.getRoles().add(openAccessRole);
+            } else {
+                logger.warn("Unable to find fence OPEN ACCESS role");
+            }
         }
+
+        userService.changeRole(current_user, newRoles);
     }
 
     private JsonNode getFENCEUserProfile(String access_token) {

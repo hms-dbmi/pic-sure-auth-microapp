@@ -50,7 +50,7 @@ public class RoleService {
             }).collect(Collectors.toSet());
 
             // Get the list of roles that don't exist in the database. With bulk select, we can get all roles in one query.
-            List<Role> rolesThatExist = roleRepository.findByNameIn(roleNames);
+            Set<Role> rolesThatExist = roleRepository.findByNameIn(roleNames);
             Set<String> existingRoleNames = rolesThatExist.parallelStream().map(Role::getName).collect(Collectors.toSet());
             roleNames.removeAll(existingRoleNames);
             logger.info("Roles that don't exist in the database: {}", roleNames);
@@ -232,7 +232,7 @@ public class RoleService {
         return status;
     }
 
-    public List<Role> findByNameIn(Set<String> roleNames) {
+    public Set<Role> findByNameIn(Set<String> roleNames) {
         return this.roleRepository.findByNameIn(roleNames);
     }
 }
