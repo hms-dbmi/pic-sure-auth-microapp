@@ -9,6 +9,7 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.Application;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.repository.AccessRuleRepository;
+import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -71,6 +72,18 @@ public class AccessRuleService {
         this.fence_harmonized_consent_group_concept_path = fenceHarmonizedConsentGroupConceptPath;
         this.fence_standard_access_rules = fenceStandardAccessRules;
         this.fence_allowed_query_types = fenceAllowedQueryTypes;
+    }
+
+    @PostConstruct
+    public void init() {
+        logger.info("AccessRuleService initialized");
+        logger.info("underscoreFields: {}", Arrays.toString(underscoreFields));
+        logger.info("fence_harmonized_consent_group_concept_path: {}", fence_harmonized_consent_group_concept_path);
+        logger.info("fence_parent_consent_group_concept_path: {}", fence_parent_consent_group_concept_path);
+        logger.info("fence_topmed_consent_group_concept_path: {}", fence_topmed_consent_group_concept_path);
+        logger.info("fence_harmonized_concept_path: {}", fence_harmonized_concept_path);
+        logger.info("fence_standard_access_rules: {}", fence_standard_access_rules);
+        logger.info("fence_allowed_query_types: {}", fence_allowed_query_types);
     }
 
     public Optional<AccessRule> getAccessRuleById(String accessRuleId) {
