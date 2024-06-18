@@ -12,6 +12,7 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.exceptions.NotAuthorizedException;
 import edu.harvard.hms.dbmi.avillach.auth.model.fenceMapping.StudyMetaData;
+import edu.harvard.hms.dbmi.avillach.auth.service.AuthenticationService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.*;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization.AccessRuleService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.FenceMappingUtility;
@@ -38,7 +39,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
-public class FENCEAuthenticationService {
+public class FENCEAuthenticationService implements AuthenticationService {
 
     private final Logger logger = LoggerFactory.getLogger(FENCEAuthenticationService.class);
 
@@ -55,10 +56,10 @@ public class FENCEAuthenticationService {
 
     private final Set<String> openAccessIdpValues = Set.of("fence", "ras");
 
+    private final boolean isFenceEnabled;
     private final String idp_provider_uri;
     private final String fence_client_id;
     private final String fence_client_secret;
-    private final String idp_provider;
     private final String fence_standard_access_rules;
     private final String fence_allowed_query_types;
     private final String variantAnnotationColumns;
@@ -75,7 +76,6 @@ public class FENCEAuthenticationService {
     private String[] underscoreFields;
 
     private final RestClientUtil restClientUtil;
-
     private final ConcurrentHashMap<String, AccessRule> accessRuleCache = new ConcurrentHashMap<>();
     private Set<AccessRule> allowQueryTypeRules;
 
@@ -86,10 +86,10 @@ public class FENCEAuthenticationService {
                                       ApplicationService applicationService,
                                       PrivilegeService privilegeService,
                                       RestClientUtil restClientUtil,
-                                      @Value("${application.idp.provider.uri}") String idpProviderUri,
+                                      @Value("${fence.idp.provider.is.enabled}") boolean isFenceEnabled,
+                                      @Value("${fence.idp.provider.uri}") String idpProviderUri,
                                       @Value("${fence.client.id}") String fenceClientId,
                                       @Value("${fence.client.secret}") String fenceClientSecret,
-                                      @Value("${application.idp.provider}") String idpProvider,
                                       @Value("${fence.standard.access.rules}") String fenceStandardAccessRules,
                                       @Value("${fence.allowed.query.types}") String fenceAllowedQueryTypes,
                                       @Value("${fence.variant.annotation.columns}") String variantAnnotationColumns,
@@ -98,7 +98,7 @@ public class FENCEAuthenticationService {
                                       @Value("${fence.parent.consent.group.concept.path}") String fenceParentConceptPath,
                                       @Value("${fence.topmed.consent.group.concept.path}") String fenceTopmedConceptPath,
                                       @Value("${fence.consent.group.concept.path}") String fenceHarmonizedConceptPath,
-                                      AccessRuleService accessRuleService, FenceMappingUtility fenceMappingUtility) {
+                                      AccessRuleService accessRuleService, FenceMappingUtility fenceMappingUtility) throws JsonProcessingException {
         this.userService = userService;
         this.roleService = roleService;
         this.connectionService = connectionService;
@@ -107,7 +107,6 @@ public class FENCEAuthenticationService {
         this.idp_provider_uri = idpProviderUri;
         this.fence_client_id = fenceClientId;
         this.fence_client_secret = fenceClientSecret;
-        this.idp_provider = idpProvider;
         this.fence_standard_access_rules = fenceStandardAccessRules;
         this.fence_allowed_query_types = fenceAllowedQueryTypes;
         this.variantAnnotationColumns = variantAnnotationColumns;
@@ -119,6 +118,7 @@ public class FENCEAuthenticationService {
         this.fence_harmonized_concept_path = fenceHarmonizedConceptPath;
         this.fence_harmonized_consent_group_concept_path = fenceHarmonizedConsentGroupConceptPath;
         this.fenceMappingUtility = fenceMappingUtility;
+        this.isFenceEnabled = isFenceEnabled;
     }
 
     @EventListener(ContextRefreshedEvent.class)
@@ -142,8 +142,8 @@ public class FENCEAuthenticationService {
         };
 
         // log all the properties
+        logger.info("isFenceEnabled: {}", isFenceEnabled);
         logger.info("idp_provider_uri: {}", idp_provider_uri);
-        logger.info("idp_provider: {}", idp_provider);
         logger.info("fence_standard_access_rules: {}", fence_standard_access_rules);
         logger.info("fence_allowed_query_types: {}", fence_allowed_query_types);
         logger.info("variantAnnotationColumns: {}", variantAnnotationColumns);
@@ -185,7 +185,11 @@ public class FENCEAuthenticationService {
         }
     }
 
-    public HashMap<String, String> getFENCEProfile(String callback_url, Map<String, String> authRequest) {
+
+    @Override
+    public HashMap<String, String> authenticate(Map<String, String> authRequest, String host) {
+        String callBackUrl = "https://" + host + "/psamaui/login/";
+
         logger.debug("getFENCEProfile() starting...");
         String fence_code = authRequest.get("code");
 
@@ -199,7 +203,7 @@ public class FENCEAuthenticationService {
         // Get the Gen3/FENCE user profile. It is a JsonNode object
         try {
             logger.debug("getFENCEProfile() query FENCE for user profile with code");
-            fence_user_profile = getFENCEUserProfile(getFENCEAccessToken(callback_url, fence_code).get("access_token").asText());
+            fence_user_profile = getFENCEUserProfile(getFENCEAccessToken(callBackUrl, fence_code).get("access_token").asText());
 
             if (logger.isTraceEnabled()) {
                 // create object mapper instance
@@ -301,6 +305,16 @@ public class FENCEAuthenticationService {
         logger.debug("getFENCEToken() finished");
 
         return responseMap;
+    }
+
+    @Override
+    public String getProvider() {
+        return "fence";
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return this.isFenceEnabled;
     }
 
     private Role createRole(String roleName, String roleDescription) {

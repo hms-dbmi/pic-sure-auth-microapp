@@ -29,12 +29,13 @@ public class OpenAuthenticationServiceTest {
     @Mock
     private AccessRuleService accessRuleService;
 
-    @InjectMocks
     private OpenAuthenticationService openAuthenticationService;
 
     @Before
     public void setUp() {
         MockitoAnnotations.initMocks(this);
+
+        openAuthenticationService = new OpenAuthenticationService(userService, roleService, accessRuleService, true);
     }
 
     @Test
@@ -53,7 +54,7 @@ public class OpenAuthenticationServiceTest {
         when(userService.findUserByUUID(uuid.toString())).thenReturn(user);
         when(userService.getUserProfileResponse(any(Map.class))).thenReturn(claims);
 
-        Map<String, String> authenticate = openAuthenticationService.authenticate(authRequest);
+        Map<String, String> authenticate = openAuthenticationService.authenticate(authRequest, "localhost");
         verify(userService, never()).createOpenAccessUser(any(Role.class));
         verify(userService).findUserByUUID(uuid.toString());
         verify(userService).getUserProfileResponse(any(Map.class));
@@ -75,7 +76,7 @@ public class OpenAuthenticationServiceTest {
         when(userService.createOpenAccessUser(any(Role.class))).thenReturn(createUser(UUID.randomUUID()));
         when(userService.getUserProfileResponse(any(Map.class))).thenReturn(new HashMap<>());
 
-        Map<String, String> authenticate = openAuthenticationService.authenticate(authRequest);
+        Map<String, String> authenticate = openAuthenticationService.authenticate(authRequest, "localhost");
         assertNotNull(authenticate);
         assertEquals(0, authenticate.size());
     }
@@ -88,7 +89,7 @@ public class OpenAuthenticationServiceTest {
         when(userService.createOpenAccessUser(any())).thenReturn(createUser(UUID.randomUUID()));
         when(userService.getUserProfileResponse(any(Map.class))).thenReturn(new HashMap<>());
 
-        Map<String, String> authenticate = openAuthenticationService.authenticate(authRequest);
+        Map<String, String> authenticate = openAuthenticationService.authenticate(authRequest, "localhost");
         assertNotNull(authenticate);
 
         verify(userService).createOpenAccessUser(any(Role.class));

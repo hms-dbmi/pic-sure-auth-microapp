@@ -4,6 +4,8 @@ pipeline {
     parameters {
         string(name: 'DOCKER_REGISTRY', description: 'Docker registry URL (e.g., ECR URL)', defaultValue: 'hms-dbmi')
         string(name: 'REPOSITORY_NAME', description: 'Docker repository name', defaultValue: 'psama')
+        string(name: 'INFRASTRUCTURE_GIT_REPO', description: 'BDC Infrastructure Git URL', defaultValue: '${infrastructure_git_repo}')
+        string(name: 'INFRASTRUCTURE_GIT_HASH', description: 'BDC Infrastructure Git Hash', defaultValue: 'master')
     }
 
     environment {
@@ -19,13 +21,47 @@ pipeline {
     }
 
     stages {
-        stage('build') {
+        stage('Checkout Infrastructure') {
+            steps {
+                git branch: "${params.INFRASTRUCTURE_GIT_HASH}", url: "${params.INFRASTRUCTURE_GIT_REPO}"
+            }
+        }
+        stage('Render PSAMA Configuration') {
+            steps {
+                dir('pic-sure-bdc-infrastructure/terraform_module_approach/psama-configuration-files') {
+                    sh 'terraform init'
+                    sh '''terraform apply -auto-approve \
+                        -var="datasource_username=${app_user_secret_name}" \
+                        -var="picsure_db_host=${picsure_db_host}" \
+                        -var="stack_specific_application_id=${application_id_for_base_query}" \
+                        -var="client_secret=${picsure_client_secret}" \
+                        -var="system_name=PIC-SURE BioDataCatalyst" \
+                        -var="fence_client_id=${fence_client_id}" \
+                        -var="fence_client_secret=${fence_client_secret}" \
+                        -var="fence_idp_provider_uri=${fence_idp_provider_uri}" \
+                        -var="fence_idp_provider_is_enabled=${fence_idp_provider_is_enabled}" \
+                        -var="a4_okta_client_id=${a4_okta_client_id}" \
+                        -var="a4_okta_client_secret=${a4_okta_client_secret}" \
+                        -var="a4_okta_idp_provider_uri=${a4_okta_idp_provider_uri}" \
+                        -var="a4_okta_idp_provider_is_enabled=${a4_okta_idp_provider_is_enabled}" \
+                        -var="open_idp_provider_is_enabled=${open_idp_provider_is_enabled}" \
+                        -var="auth0_idp_provider_uri=${auth0_idp_provider_uri}" \
+                        -var="auth0_host=${auth0_host}" \
+                        -var="auth0_denied_email_enabled=${auth0_denied_email_enabled}" \
+                        -var="auth0_idp_provider_is_enabled=${auth0_idp_provider_is_enabled}"'''
+                }
+            }
+        }
+        stage('Upload Rendered Files') {
+            ## TODO: Upload rendered files to S3
+        }
+        stage('Build Docker Image') {
             steps {
                 sh "docker build ${DOCKER_BUILD_ARGS} -t ${params.DOCKER_REGISTRY}/${params.REPOSITORY_NAME}:${IMAGE_TAG} ."
                 sh "docker tag ${params.DOCKER_REGISTRY}/${params.REPOSITORY_NAME}:${IMAGE_TAG} ${params.DOCKER_REGISTRY}/${params.REPOSITORY_NAME}:${LATEST_TAG}"
             }
         }
-        stage('deploy') {
+        stage('Deploy Docker Image') {
             steps {
                 sh "docker save ${params.DOCKER_REGISTRY}/${params.REPOSITORY_NAME}:${LATEST_TAG} | gzip > psama.tar.gz"
                 sh "aws s3 --sse=AES256 cp psama.tar.gz s3://$S3_BUCKET_NAME/releases/jenkins_pipeline_build_${pipeline_build_id}/psama.tar.gz"
