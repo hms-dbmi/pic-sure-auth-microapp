@@ -92,6 +92,24 @@ public class FENCEAuthenticationService {
             throw new NotAuthorizedException("The fence code is not alphanumeric");
         }
 
+        JsonNode fence_user_profile = getUserProfileFromFence(callback_url, fence_code);
+        User current_user = getFenceUserFromProfile(fence_user_profile);
+        Iterator<String> project_access_names = fence_user_profile.get("authz").fieldNames();
+        updateUserRoles(project_access_names, current_user);
+
+        HashMap<String, Object> claims = new HashMap<String,Object>();
+        claims.put("name", fence_user_profile.get("name"));
+        claims.put("email", current_user.getEmail());
+        claims.put("sub", current_user.getSubject());
+        HashMap<String, String> responseMap = userService.getUserProfileResponse(claims);
+        logger.info("LOGIN SUCCESS ___ {}:{}:{} ___ Authorization will expire at  ___ {}___", current_user.getEmail(), current_user.getUuid().toString(), current_user.getSubject(), responseMap.get("expirationDate"));
+        logger.debug("getFENCEProfile() UserProfile response object has been generated");
+        logger.debug("getFENCEToken() finished");
+
+        return responseMap;
+    }
+
+    private JsonNode getUserProfileFromFence(String callback_url, String fence_code) {
         JsonNode fence_user_profile;
         // Get the Gen3/FENCE user profile. It is a JsonNode object
         try {
@@ -114,7 +132,10 @@ public class FENCEAuthenticationService {
             throw new NotAuthorizedException("Could not get the user profile "+
                     "from the Gen3 authentication provider."+ex.getMessage());
         }
+        return fence_user_profile;
+    }
 
+    private User getFenceUserFromProfile(JsonNode fence_user_profile) {
         User current_user;
         try {
             // Create or retrieve the user profile from our database, based on the the key
@@ -128,22 +149,7 @@ public class FENCEAuthenticationService {
             logger.error("getFENCEToken() Could not persist the user information, because {}", ex.getMessage());
             throw new NotAuthorizedException("The user details could not be persisted. Please contact the administrator.");
         }
-
-        Iterator<String> project_access_names = fence_user_profile.get("authz").fieldNames();
-        updateUserRoles(project_access_names, current_user);
-
-
-
-        HashMap<String, Object> claims = new HashMap<String,Object>();
-        claims.put("name", fence_user_profile.get("name"));
-        claims.put("email", current_user.getEmail());
-        claims.put("sub", current_user.getSubject());
-        HashMap<String, String> responseMap = userService.getUserProfileResponse(claims);
-        logger.info("LOGIN SUCCESS ___ {}:{}:{} ___ Authorization will expire at  ___ {}___", current_user.getEmail(), current_user.getUuid().toString(), current_user.getSubject(), responseMap.get("expirationDate"));
-        logger.debug("getFENCEProfile() UserProfile response object has been generated");
-        logger.debug("getFENCEToken() finished");
-
-        return responseMap;
+        return current_user;
     }
 
     private void updateUserRoles(Iterator<String> project_access_names, User current_user) {
@@ -183,6 +189,7 @@ public class FENCEAuthenticationService {
 
         // All possible FENCE roles are created on startup, so we do not need to create any new roles here.
         // If the user has a role that is not in the database we don't support the study.
+        logger.info("Role names: {}", roleNames);
         Set<Role> newRoles = roleService.findByNameIn(roleNames);
         logger.info("upsertRole() new roles: {}", newRoles.stream().map(Role::getName).collect(Collectors.toList()));
 
