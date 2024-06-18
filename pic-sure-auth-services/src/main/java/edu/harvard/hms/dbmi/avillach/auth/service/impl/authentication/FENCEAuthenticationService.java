@@ -162,7 +162,7 @@ public class FENCEAuthenticationService {
             }
 
             String projectId = projectMetadata.getStudyIdentifier();
-            String consentCode = projectMetadata.getStudyIdentifier();
+            String consentCode = projectMetadata.getConsentGroupCode();
             String newRoleName = StringUtils.isNotBlank(consentCode) ? "FENCE_"+projectId+"_"+consentCode : "FENCE_"+projectId;
 
             roleNames.add(newRoleName);
