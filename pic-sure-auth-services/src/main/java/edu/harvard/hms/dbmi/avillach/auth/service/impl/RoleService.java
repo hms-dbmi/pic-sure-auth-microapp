@@ -124,6 +124,10 @@ public class RoleService {
         return this.roleRepository.saveAll(newRoles);
     }
 
+    public void persistAll(Set<Role> newRoles) {
+        this.roleRepository.saveAll(newRoles);
+    }
+
     public Role findByName(String roleName) {
         return this.roleRepository.findByName(roleName);
     }
