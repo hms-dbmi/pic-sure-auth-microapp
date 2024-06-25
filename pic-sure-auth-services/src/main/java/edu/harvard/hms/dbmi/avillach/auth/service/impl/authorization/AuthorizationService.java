@@ -7,6 +7,7 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.Application;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.rest.TokenController;
+import edu.harvard.hms.dbmi.avillach.auth.service.impl.AccessRuleService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

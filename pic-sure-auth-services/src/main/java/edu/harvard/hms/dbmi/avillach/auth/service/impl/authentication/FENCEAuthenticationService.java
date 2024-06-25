@@ -14,7 +14,7 @@ import edu.harvard.hms.dbmi.avillach.auth.exceptions.NotAuthorizedException;
 import edu.harvard.hms.dbmi.avillach.auth.model.fenceMapping.StudyMetaData;
 import edu.harvard.hms.dbmi.avillach.auth.service.AuthenticationService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.*;
-import edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization.AccessRuleService;
+import edu.harvard.hms.dbmi.avillach.auth.service.impl.AccessRuleService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.FenceMappingUtility;
 import edu.harvard.hms.dbmi.avillach.auth.utils.RestClientUtil;
 import org.apache.commons.lang3.StringUtils;
