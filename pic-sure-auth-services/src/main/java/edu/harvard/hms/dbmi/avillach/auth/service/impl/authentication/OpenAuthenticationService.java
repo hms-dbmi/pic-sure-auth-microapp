@@ -28,7 +28,7 @@ public class OpenAuthenticationService implements AuthenticationService {
 
     @Autowired
     public OpenAuthenticationService(UserService userService, RoleService roleService, AccessRuleService accessRuleService,
-                                     @Value("open.idp.provider.is.enabled") boolean isOpenEnabled) {
+                                     @Value("${open.idp.provider.is.enabled}") boolean isOpenEnabled) {
         this.userService = userService;
         this.roleService = roleService;
         this.accessRuleService = accessRuleService;
