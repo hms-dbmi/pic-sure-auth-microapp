@@ -23,10 +23,10 @@ ENV STACK_SPECIFIC_APPLICATION_ID=${application_id_for_base_query}
 COPY --from=build /app/pic-sure-auth-services/target/pic-sure-auth-services.jar /pic-sure-auth-service.jar
 
 # Copy additional bdc configuration files. Root of the project
-COPY config/bdc/bdc-additional.properties /config/bdc-additional.properties
+COPY config/bdc/psama-db-config.properties /config/psama-db-config.properties
 
 # Set SPRING_CONFIG_ADDITIONAL_LOCATION
-ENV SPRING_CONFIG_ADDITIONAL_LOCATION=file:/config/bdc-additional.properties
+ENV SPRING_CONFIG_ADDITIONAL_LOCATION=file:/config/psama-db-config.properties
 
 # Copy the AWS certificate
 COPY  pic-sure-auth-services/aws_certs/certificate.der /certificate.der
