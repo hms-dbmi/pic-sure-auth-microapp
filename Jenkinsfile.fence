@@ -32,7 +32,7 @@ pipeline {
         stage('Deploy Docker Image') {
             steps {
                 sh "docker save ${params.DOCKER_REGISTRY}/${params.REPOSITORY_NAME}:${LATEST_TAG} | gzip > psama.tar.gz"
-                sh "aws s3 --sse=AES256 cp psama.tar.gz s3://$S3_BUCKET_NAME/releases/jenkins_pipeline_build_${pipeline_build_id}/psama.tar.gz"
+                sh "aws s3 --sse=AES256 cp psama.tar.gz s3://$S3_BUCKET_NAME/releases/psama/psama.tar.gz"
             }
         }
     }
