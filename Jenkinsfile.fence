@@ -20,13 +20,15 @@ pipeline {
     stages {
         stage('Build Docker Image') {
             steps {
-                // Define the build args
-                def buildArgs = " --build-arg DATASOURCE_URL=${env.DATASOURCE_URL} " +
-                                " --build-arg DATASOURCE_USERNAME=${env.DATASOURCE_USERNAME} " +
-                                " --build-arg STACK_SPECIFIC_APPLICATION_ID=${env.STACK_SPECIFIC_APPLICATION_ID} "
+                script {
+                    // Define the build args
+                    def buildArgs = " --build-arg DATASOURCE_URL=${env.DATASOURCE_URL} " +
+                                    " --build-arg DATASOURCE_USERNAME=${env.DATASOURCE_USERNAME} " +
+                                    " --build-arg STACK_SPECIFIC_APPLICATION_ID=${env.STACK_SPECIFIC_APPLICATION_ID} "
 
-                sh "docker build ${DOCKER_BUILD_ARGS} ${buildArgs} -t ${params.DOCKER_REGISTRY}/${params.REPOSITORY_NAME}:${IMAGE_TAG} ."
-                sh "docker tag ${params.DOCKER_REGISTRY}/${params.REPOSITORY_NAME}:${IMAGE_TAG} ${params.DOCKER_REGISTRY}/${params.REPOSITORY_NAME}:${LATEST_TAG}"
+                    sh "docker build ${DOCKER_BUILD_ARGS} ${buildArgs} -t ${params.DOCKER_REGISTRY}/${params.REPOSITORY_NAME}:${IMAGE_TAG} ."
+                    sh "docker tag ${params.DOCKER_REGISTRY}/${params.REPOSITORY_NAME}:${IMAGE_TAG} ${params.DOCKER_REGISTRY}/${params.REPOSITORY_NAME}:${LATEST_TAG}"
+                }
             }
         }
         stage('Deploy Docker Image') {
