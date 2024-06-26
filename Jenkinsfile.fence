@@ -10,7 +10,7 @@ pipeline {
     }
 
     environment {
-        DOCKER_BUILD_ARGS = "-f ./pic-sure-auth-services/Dockerfile"
+        DOCKER_BUILD_ARGS = "-f ./pic-sure-auth-services/bdc.Dockerfile"
         GIT_BRANCH_SHORT = sh(script: 'echo ${GIT_BRANCH} | cut -d "/" -f 2', returnStdout: true).trim()
         GIT_COMMIT_SHORT = sh(script: 'echo ${GIT_COMMIT} | cut -c1-7', returnStdout: true).trim()
         IMAGE_TAG = "${GIT_BRANCH_SHORT}_${GIT_COMMIT_SHORT}"
