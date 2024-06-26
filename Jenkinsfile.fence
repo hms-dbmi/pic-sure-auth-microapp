@@ -6,7 +6,7 @@ pipeline {
         string(name: 'REPOSITORY_NAME', description: 'Docker repository name', defaultValue: 'psama')
         string(name: 'DATASOURCE_URL', description: 'Datasource URL', defaultValue: '${database_host_address}')
         string(name: 'DATASOURCE_USERNAME', description: 'Datasource username', defaultValue: '${database_app_user_secret_name}')
-        string(name: 'STACK_SPECIFIC_APPLICATION_ID' description: 'Application ID for base query', defaultValue: '${application_id_for_base_query}')
+        string(name: 'STACK_SPECIFIC_APPLICATION_ID', description: 'Application ID for base query', defaultValue: '${application_id_for_base_query}')
     }
 
     environment {
