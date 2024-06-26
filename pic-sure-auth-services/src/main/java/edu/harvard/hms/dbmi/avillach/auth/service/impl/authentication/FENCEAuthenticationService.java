@@ -154,7 +154,8 @@ public class FENCEAuthenticationService implements AuthenticationService {
         logger.info("fence_harmonized_concept_path: {}", fence_harmonized_concept_path);
         logger.info("underscoreFields: {}", Arrays.toString(underscoreFields));
 
-        if (!fenceMappingUtility.getFENCEMapping().isEmpty() && !fenceMappingUtility.getFenceMappingByAuthZ().isEmpty()) {
+        if (fenceMappingUtility.getFENCEMapping() != null && fenceMappingUtility.getFenceMappingByAuthZ() != null
+                && !fenceMappingUtility.getFENCEMapping().isEmpty() && !fenceMappingUtility.getFenceMappingByAuthZ().isEmpty()) {
             // Create all potential access rules using the fence mapping
             Set<Role> roles = fenceMappingUtility.getFenceMappingByAuthZ().values().parallelStream().map(projectMetadata -> {
                 if (projectMetadata == null) {
