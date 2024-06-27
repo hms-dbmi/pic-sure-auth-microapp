@@ -70,8 +70,7 @@ public class OktaOAuthAuthenticationService implements AuthenticationService {
         logger.info("OktaOAuthAuthenticationService initialized");
         logger.info("idp_provider_uri: {}", idp_provider_uri);
         logger.info("connectionId: {}", connectionId);
-        logger.info("clientId: {}", clientId);
-        logger.info("spClientSecret: {}", spClientSecret);
+
         this.accessRuleService = accessRuleService;
         this.restClientUtil = restClientUtil;
     }
