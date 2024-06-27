@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Connection;
 import edu.harvard.hms.dbmi.avillach.auth.exceptions.NotAuthorizedException;
 import edu.harvard.hms.dbmi.avillach.auth.repository.ConnectionRepository;
+import edu.harvard.hms.dbmi.avillach.auth.service.AuthenticationService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.BasicMailService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.OauthUserMatchingService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.UserService;
@@ -36,20 +37,19 @@ import org.springframework.stereotype.Service;
  */
 
 @Service
-public class Auth0AuthenticationService {
+public class Auth0AuthenticationService implements AuthenticationService {
 
     private final Logger logger = LoggerFactory.getLogger(Auth0AuthenticationService.class);
 
     private final OauthUserMatchingService matchingService;
-
     private final UserRepository userRepository;
-
     private final BasicMailService basicMailService;
-
     private final UserService userService;
-    private static final int AUTH_RETRY_LIMIT = 3;
 
-    private String deniedEmailEnabled;
+    private static final int AUTH_RETRY_LIMIT = 3;
+    private final boolean isAuth0Enabled;
+
+    private boolean deniedEmailEnabled;
 
     private final String auth0host;
 
@@ -58,8 +58,16 @@ public class Auth0AuthenticationService {
     private final RestClientUtil restClientUtil;
 
     @Autowired
-    public Auth0AuthenticationService(OauthUserMatchingService matchingService, UserRepository userRepository, BasicMailService basicMailService, UserService userService,
-                                      @Value("${application.denied.email.enabled}") String deniedEmailEnabled, @Value("${application.auth0.host}") String auth0host, ConnectionRepository connectionRepository, RestClientUtil restClientUtil) {
+    public Auth0AuthenticationService(OauthUserMatchingService matchingService,
+                                      UserRepository userRepository,
+                                      BasicMailService basicMailService,
+                                      UserService userService,
+                                      ConnectionRepository connectionRepository,
+                                      RestClientUtil restClientUtil,
+                                      @Value("${auth0.idp.provider.is.enabled}") boolean isAuth0Enabled,
+                                      @Value("${auth0.denied.email.enabled}") boolean deniedEmailEnabled,
+                                      @Value("${auth0.host}") String auth0host
+    ) {
         this.matchingService = matchingService;
         this.userRepository = userRepository;
         this.basicMailService = basicMailService;
@@ -68,9 +76,11 @@ public class Auth0AuthenticationService {
         this.auth0host = auth0host;
         this.connectionRepository = connectionRepository;
         this.restClientUtil = restClientUtil;
+        this.isAuth0Enabled = isAuth0Enabled;
     }
 
-    public HashMap<String, String> getToken(Map<String, String> authRequest) throws IOException {
+    @Override
+    public HashMap<String, String> authenticate(Map<String, String> authRequest, String requestHost) throws IOException {
         String accessToken = authRequest.get("access_token");
         String redirectURI = authRequest.get("redirectURI");
 
@@ -102,7 +112,7 @@ public class Auth0AuthenticationService {
             //Try to match
             user = matchingService.matchTokenToUser(userInfo);
             if (user == null) {
-                if (this.deniedEmailEnabled.startsWith("true")) {
+                if (this.deniedEmailEnabled) {
                     try {
                         basicMailService.sendDeniedAccessEmail(userInfo);
                     } catch (jakarta.mail.MessagingException e) {
@@ -121,6 +131,16 @@ public class Auth0AuthenticationService {
 
         logger.info("LOGIN SUCCESS ___ {}:{} ___ Authorization will expire at  ___ {}___", user.getEmail(), user.getUuid().toString(), responseMap.get("expirationDate"));
         return responseMap;
+    }
+
+    @Override
+    public String getProvider() {
+        return "auth0";
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return this.isAuth0Enabled;
     }
 
     public JsonNode retrieveUserInfo(String accessToken) throws IOException {
@@ -159,7 +179,7 @@ public class Auth0AuthenticationService {
         return requestFactory;
     }
 
-    public void setDeniedEmailEnabled(String deniedEmailEnabled) {
+    public void setDeniedEmailEnabled(boolean deniedEmailEnabled) {
         this.deniedEmailEnabled = deniedEmailEnabled;
     }
 }

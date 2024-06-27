@@ -5,6 +5,7 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.*;
 import edu.harvard.hms.dbmi.avillach.auth.enums.SecurityRoles;
 import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
 import edu.harvard.hms.dbmi.avillach.auth.repository.AccessRuleRepository;
+import edu.harvard.hms.dbmi.avillach.auth.service.impl.AccessRuleService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming;
 import org.junit.Assert;
 import org.junit.Before;

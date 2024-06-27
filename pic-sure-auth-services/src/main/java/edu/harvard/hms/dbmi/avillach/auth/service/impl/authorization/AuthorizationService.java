@@ -7,6 +7,7 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.Application;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.rest.TokenController;
+import edu.harvard.hms.dbmi.avillach.auth.service.impl.AccessRuleService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -163,7 +164,7 @@ public class AuthorizationService {
                 passRuleName = passByRule.getMergedName();
         }
 
-        logger.debug("ACCESS_LOG ___ {},{},{} ___ has been {} access to execute query ___ {} ___ in application ___ {} ___ {}", user.getUuid().toString(), user.getEmail(), user.getName(), result ? "granted" : "denied", formattedQuery, applicationName, result ? "passed by " + passRuleName : "failed by rules: ["
+        logger.info("ACCESS_LOG ___ {},{},{} ___ has been {} access to execute query ___ {} ___ in application ___ {} ___ {}", user.getUuid().toString(), user.getEmail(), user.getName(), result ? "granted" : "denied", formattedQuery, applicationName, result ? "passed by " + passRuleName : "failed by rules: ["
                 + failedRules.stream()
                 .map(ar -> (ar.getMergedName().isEmpty() ? ar.getName() : ar.getMergedName()))
                 .collect(Collectors.joining(", ")) + "]");
