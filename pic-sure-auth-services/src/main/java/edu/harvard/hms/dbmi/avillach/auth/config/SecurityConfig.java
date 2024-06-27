@@ -41,7 +41,7 @@ public class SecurityConfig {
                                     "/swagger.yaml",
                                     "/swagger.json",
                                     "/authentication",
-                                    "/authentication/auth0").permitAll()
+                                    "/authentication/auth0", "**").permitAll()
                             .anyRequest().authenticated()
                 )
                 .httpBasic(AbstractHttpConfigurer::disable)
