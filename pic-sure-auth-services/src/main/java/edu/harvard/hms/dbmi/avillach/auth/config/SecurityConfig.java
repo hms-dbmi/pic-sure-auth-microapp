@@ -35,13 +35,14 @@ public class SecurityConfig {
                 .sessionManagement((session) -> session.sessionCreationPolicy(STATELESS))
                 .authenticationProvider(authenticationProvider)
                 .authorizeHttpRequests((authorizeRequests) ->
-                    authorizeRequests.requestMatchers("/actuator/health",
+                    authorizeRequests.requestMatchers(
+                                    "/actuator/health",
                                     "/actuator/info",
+                                    "/authentication",
                                     "/authentication/**",
                                     "/swagger.yaml",
-                                    "/swagger.json",
-                                    "/authentication",
-                                    "/authentication/auth0", "**").permitAll()
+                                    "/swagger.json"
+                            ).permitAll()
                             .anyRequest().authenticated()
                 )
                 .httpBasic(AbstractHttpConfigurer::disable)
