@@ -258,9 +258,10 @@ public class FENCEAuthenticationService implements AuthenticationService {
         headers.setBearerAuth(access_token);
 
         logger.debug("getFENCEUserProfile() getting user profile from uri:{}/user/user", this.idp_provider_uri);
-        ResponseEntity<String> fence_user_profile_response = this.restClientUtil.retrieveGetResponse(
+        ResponseEntity<String> fence_user_profile_response = this.restClientUtil.retrieveGetResponseWithRequestConfiguration(
                 this.idp_provider_uri + "/user/user",
-                headers
+                headers,
+                this.restClientUtil.createRequestConfigWithCustomTimeout(10000)
         );
 
         // Map the response to a JsonNode object

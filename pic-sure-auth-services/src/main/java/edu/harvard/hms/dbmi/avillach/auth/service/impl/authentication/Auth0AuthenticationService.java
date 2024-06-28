@@ -156,7 +156,7 @@ public class Auth0AuthenticationService implements AuthenticationService {
                 ResponseEntity<String> response = this.restClientUtil.retrieveGetResponseWithRequestConfiguration(
                         auth0UserInfoURI,
                         headers,
-                        this.createRequestConfigWithCustomTimeout(2000)
+                        this.restClientUtil.createRequestConfigWithCustomTimeout(2000)
                 );
 
                 auth0Response = objectMapper.readTree(response.getBody());
