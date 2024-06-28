@@ -419,7 +419,7 @@ public class AuthorizationServiceTestByUseCases extends AuthorizationService {
     @Before
     public void setUp() {
         AccessRuleRepository accessRuleRepository = Mockito.mock(AccessRuleRepository.class);
-        accessRuleService = new AccessRuleService(accessRuleRepository);
+        accessRuleService = new AccessRuleService(accessRuleRepository, "false", "false", "false", "false","false", "false");
     }
 
     @Test
