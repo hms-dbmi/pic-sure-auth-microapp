@@ -15,6 +15,7 @@ import edu.harvard.hms.dbmi.avillach.auth.service.impl.*;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.AccessRuleService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.FenceMappingUtility;
 import edu.harvard.hms.dbmi.avillach.auth.utils.RestClientUtil;
+import jakarta.annotation.PostConstruct;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,44 +81,11 @@ public class FENCEAuthenticationService implements AuthenticationService {
         this.isFenceEnabled = isFenceEnabled;
     }
 
-    @EventListener(ContextRefreshedEvent.class)
+    @PostConstruct
     public void initializeFenceService() {
         fenceConnection = connectionService.getConnectionByLabel("FENCE");
-
-        // log all the properties
         logger.info("isFenceEnabled: {}", isFenceEnabled);
         logger.info("idp_provider_uri: {}", idp_provider_uri);
-
-        if (fenceMappingUtility.getFENCEMapping() != null && fenceMappingUtility.getFenceMappingByAuthZ() != null
-                && !fenceMappingUtility.getFENCEMapping().isEmpty() && !fenceMappingUtility.getFenceMappingByAuthZ().isEmpty()) {
-            // Create all potential access rules using the fence mapping
-            Set<Role> roles = fenceMappingUtility.getFenceMappingByAuthZ().values().parallelStream().map(projectMetadata -> {
-                if (projectMetadata == null) {
-                    logger.error("initializeFenceService() -> createAndUpsertRole could not find study in FENCE mapping SKIPPING: {}", projectMetadata);
-                    return null;
-                }
-
-                if (projectMetadata.getStudyIdentifier() == null || projectMetadata.getStudyIdentifier().isEmpty()) {
-                    logger.error("initializeFenceService() -> createAndUpsertRole could not find study identifier in FENCE mapping SKIPPING: {}", projectMetadata);
-                    return null;
-                }
-
-                if (projectMetadata.getAuthZ() == null || projectMetadata.getAuthZ().isEmpty()) {
-                    logger.error("initializeFenceService() -> createAndUpsertRole could not find authZ in FENCE mapping SKIPPING: {}", projectMetadata);
-                    return null;
-                }
-
-                String projectId = projectMetadata.getStudyIdentifier();
-                String consentCode = projectMetadata.getConsentGroupCode();
-                String newRoleName = StringUtils.isNotBlank(consentCode) ? "MANAGED_" + projectId + "_" + consentCode : "MANAGED_" + projectId;
-
-                return this.roleService.createRole(newRoleName, "MANAGEDrole " + newRoleName);
-            }).filter(Objects::nonNull).collect(Collectors.toSet());
-
-            roleService.persistAll(roles);
-        } else {
-            logger.error("initializeFenceService() -> createAndUpsertRole could not find any studies in FENCE mapping");
-        }
     }
 
     @Override
