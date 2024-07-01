@@ -66,7 +66,7 @@ public class RestClientUtil {
         }
     }
 
-    public ClientHttpRequestFactory createRequestConfigWithCustomTimeout(int timeoutMs) {
+    public static ClientHttpRequestFactory createRequestConfigWithCustomTimeout(int timeoutMs) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(timeoutMs);
         requestFactory.setReadTimeout(timeoutMs);
