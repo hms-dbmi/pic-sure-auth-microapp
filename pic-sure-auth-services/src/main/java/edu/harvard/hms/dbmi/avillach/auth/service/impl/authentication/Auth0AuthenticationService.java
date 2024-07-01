@@ -156,7 +156,7 @@ public class Auth0AuthenticationService implements AuthenticationService {
                 ResponseEntity<String> response = this.restClientUtil.retrieveGetResponseWithRequestConfiguration(
                         auth0UserInfoURI,
                         headers,
-                        this.restClientUtil.createRequestConfigWithCustomTimeout(2000)
+                        RestClientUtil.createRequestConfigWithCustomTimeout(2000)
                 );
 
                 auth0Response = objectMapper.readTree(response.getBody());
@@ -170,13 +170,6 @@ public class Auth0AuthenticationService implements AuthenticationService {
             }
         }
         return auth0Response;
-    }
-
-    public ClientHttpRequestFactory createRequestConfigWithCustomTimeout(int timeoutMs) {
-        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(timeoutMs);
-        requestFactory.setReadTimeout(timeoutMs);
-        return requestFactory;
     }
 
     public void setDeniedEmailEnabled(boolean deniedEmailEnabled) {

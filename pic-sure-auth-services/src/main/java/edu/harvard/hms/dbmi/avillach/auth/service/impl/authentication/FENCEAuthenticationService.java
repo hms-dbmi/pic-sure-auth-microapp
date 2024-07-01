@@ -229,7 +229,7 @@ public class FENCEAuthenticationService implements AuthenticationService {
         ResponseEntity<String> fence_user_profile_response = this.restClientUtil.retrieveGetResponseWithRequestConfiguration(
                 this.idp_provider_uri + "/user/user",
                 headers,
-                this.restClientUtil.createRequestConfigWithCustomTimeout(10000)
+                RestClientUtil.createRequestConfigWithCustomTimeout(10000)
         );
 
         // Map the response to a JsonNode object
