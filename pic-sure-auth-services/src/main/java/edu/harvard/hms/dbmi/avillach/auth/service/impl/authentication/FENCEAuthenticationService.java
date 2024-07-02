@@ -138,7 +138,7 @@ public class FENCEAuthenticationService implements AuthenticationService {
         try {
             logger.debug("getFENCEProfile() query FENCE for user profile with code");
             fence_user_profile = getFENCEUserProfile(getFENCEAccessToken(callBackUrl, fence_code).get("access_token").asText());
-
+            logger.info(fence_user_profile.toPrettyString());
             if (logger.isTraceEnabled()) {
                 // create object mapper instance
                 ObjectMapper mapper = new ObjectMapper();
