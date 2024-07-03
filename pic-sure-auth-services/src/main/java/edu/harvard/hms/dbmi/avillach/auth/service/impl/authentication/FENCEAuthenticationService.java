@@ -190,6 +190,10 @@ public class FENCEAuthenticationService implements AuthenticationService {
             roleNames.add(newRoleName);
         });
 
+        // convert roles to string list
+        String roles = current_user.getRoles().stream().map(Role::getName).collect(Collectors.joining(","));
+        logger.info("Current User Roles: " + roles);
+
         // find roles that are in the user's roles but not in the project_access_names. These are the roles that need to be removed.
         // exclude userRole -> "PIC-SURE Top Admin".equals(userRole.getName()) || "Admin".equals(userRole.getName()) || userRole.getName().startsWith("MANUAL_")
         Set<Role> rolesToRemove = current_user.getRoles().parallelStream()
