@@ -86,6 +86,8 @@ public class AuthorizationService {
      * @see AccessRule
      */
     public boolean isAuthorized(Application application, Object requestBody, User user) {
+        // create timer
+        long startTime = System.currentTimeMillis();
         String applicationName = application.getName();
         String resourceId = "null";
         String targetService = "null";
@@ -169,6 +171,7 @@ public class AuthorizationService {
                 .map(ar -> (ar.getMergedName().isEmpty() ? ar.getName() : ar.getMergedName()))
                 .collect(Collectors.joining(", ")) + "]");
 
+        logger.info("Login time: {}ms", System.currentTimeMillis() - startTime);
         return result;
     }
 
