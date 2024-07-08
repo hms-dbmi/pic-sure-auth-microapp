@@ -134,8 +134,9 @@ public class AccessRuleService {
     @Cacheable(value = "mergedRulesCache", key = "#user.getEmail()")
     public Set<AccessRule> getAccessRulesForUserAndApp(User user, Application application) {
         try {
+            long startTimeGetPrivs = System.currentTimeMillis();
             Set<Privilege> privileges = user.getPrivilegesByApplication(application);
-
+            logger.info("Get privs time: {}", System.currentTimeMillis() - startTimeGetPrivs);
             if (privileges == null || privileges.isEmpty()) {
                 return null;
             }
