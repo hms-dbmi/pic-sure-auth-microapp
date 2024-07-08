@@ -98,6 +98,7 @@ public class AuthorizationService {
             return true;
         }
 
+        long parseTimeFrame = System.currentTimeMillis();
         try {
             Map requestBodyMap = (Map) requestBody;
             Map queryMap = (Map) requestBodyMap.get("query");
@@ -121,7 +122,9 @@ public class AuthorizationService {
             logger.debug("isAuthorized() Stack Trace: ", e1);
             return false;
         }
+        logger.info("Parse timeframe {} ms", (System.currentTimeMillis() - parseTimeFrame));
 
+        long startTimeGetPrivs = System.currentTimeMillis();
         Set<AccessRule> accessRules;
         String label = user.getConnection().getLabel();
         if (!this.strictConnections.contains(label)) {
@@ -143,7 +146,10 @@ public class AuthorizationService {
                 return false;
             }
         }
+        logger.info("Get privs time: {}", System.currentTimeMillis() - startTimeGetPrivs);
 
+        // calc access rule eval time
+        long evalStartTime = System.currentTimeMillis();
         // Current logic here is: among all accessRules, they are OR relationship
         Set<AccessRule> failedRules = new HashSet<>();
         AccessRule passByRule = null;
@@ -165,6 +171,7 @@ public class AuthorizationService {
             else
                 passRuleName = passByRule.getMergedName();
         }
+        logger.info("Eval end time: {}ms", System.currentTimeMillis() - evalStartTime);
 
         logger.debug("ACCESS_LOG ___ {},{},{} ___ has been {} access to execute query ___ {} ___ in application ___ {} ___ {}", user.getUuid().toString(), user.getEmail(), user.getName(), result ? "granted" : "denied", formattedQuery, applicationName, result ? "passed by " + passRuleName : "failed by rules: ["
                 + failedRules.stream()
