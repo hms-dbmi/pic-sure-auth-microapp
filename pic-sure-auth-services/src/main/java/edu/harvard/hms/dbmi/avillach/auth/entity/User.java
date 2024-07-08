@@ -106,7 +106,7 @@ public class User extends BaseEntity implements Serializable, Principal {
 			return null;
 
 		Set<Privilege> privileges = new HashSet<>();
-		roles.parallelStream().forEach(r -> privileges.addAll(r.getPrivileges()));
+		roles.forEach(r -> privileges.addAll(r.getPrivileges()));
 		return privileges;
 	}
 
@@ -181,7 +181,7 @@ public class User extends BaseEntity implements Serializable, Principal {
 			return null;
 
 		Set<Privilege> privileges = new HashSet<>();
-		roles.parallelStream().forEach(r -> privileges.addAll(r.getPrivileges()
+		roles.forEach(r -> privileges.addAll(r.getPrivileges()
 						.stream()
 						.filter(p -> application.getUuid()
                                 .equals((p.getApplication()==null)?
