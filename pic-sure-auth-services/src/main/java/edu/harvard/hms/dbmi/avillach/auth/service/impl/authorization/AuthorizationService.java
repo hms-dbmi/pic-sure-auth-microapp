@@ -124,11 +124,12 @@ public class AuthorizationService {
         }
         logger.info("Parse timeframe {} ms", (System.currentTimeMillis() - parseTimeFrame));
 
-        long startTimeGetPrivs = System.currentTimeMillis();
         Set<AccessRule> accessRules;
         String label = user.getConnection().getLabel();
         if (!this.strictConnections.contains(label)) {
+            long startTimeGetPrivs = System.currentTimeMillis();
             Set<Privilege> privileges = user.getPrivilegesByApplication(application);
+            logger.info("Get privs time: {}", System.currentTimeMillis() - startTimeGetPrivs);
             if (privileges == null || privileges.isEmpty()) {
                 logger.info("ACCESS_LOG ___ {},{},{} ___ has been denied access to execute query ___ {} ___ in application ___ {} __ USER HAS NO PRIVILEGES ASSOCIATED TO THE APPLICATION, BUT APPLICATION HAS PRIVILEGES", user.getUuid().toString(), user.getEmail(), user.getName(), formattedQuery, applicationName);
                 return false;
@@ -146,7 +147,6 @@ public class AuthorizationService {
                 return false;
             }
         }
-        logger.info("Get privs time: {}", System.currentTimeMillis() - startTimeGetPrivs);
 
         // calc access rule eval time
         long evalStartTime = System.currentTimeMillis();
