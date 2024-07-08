@@ -134,7 +134,7 @@ public class AuthorizationService {
                 return false;
             }
 
-            accessRules = this.accessRuleService.preProcessAccessRules(privileges);
+            accessRules = this.accessRuleService.cachedPreProcessAccessRules(user, privileges);
             if (accessRules == null || accessRules.isEmpty()) {
                 logger.info("ACCESS_LOG ___ {},{},{} ___ has been granted access to execute query ___ {} ___ in application ___ {} ___ NO ACCESS RULES EVALUATED", user.getUuid().toString(), user.getEmail(), user.getName(), formattedQuery, applicationName);
                 return true;

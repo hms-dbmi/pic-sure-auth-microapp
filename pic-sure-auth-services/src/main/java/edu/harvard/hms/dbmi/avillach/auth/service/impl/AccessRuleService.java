@@ -153,9 +153,28 @@ public class AccessRuleService {
         return null;
     }
 
-    @CacheEvict(value = "mergedRulesCache", key = "#user.getEmail()")
+    /**
+     * Evicts the user from all AccessRule caches
+     * @param user the user to evict
+     */
     public void evictFromCache(User user) {
+        evictFromMergedAccessRuleCache(user);
+        evictFromPreProcessedAccessRules(user);
+    }
+
+    @CacheEvict(value = "mergedRulesCache", key = "#user.getEmail()")
+    public void evictFromMergedAccessRuleCache(User user) {
         // This method is used to clear the cache for a user when their privileges are updated
+    }
+
+    @Cacheable(value = "preProcessedAccessRules", key = "#user.getEmail()")
+    public Set<AccessRule> cachedPreProcessAccessRules(User user, Set<Privilege> privileges) {
+        Set<AccessRule> accessRules = new HashSet<>();
+        for (Privilege privilege : privileges) {
+            accessRules.addAll(privilege.getAccessRules());
+        }
+
+        return preProcessARBySortedKeys(accessRules);
     }
 
     public Set<AccessRule> preProcessAccessRules(Set<Privilege> privileges) {
@@ -165,6 +184,11 @@ public class AccessRuleService {
         }
 
         return preProcessARBySortedKeys(accessRules);
+    }
+
+    @CacheEvict(value = "preProcessedAccessRules", key = "#user.getEmail()")
+    public void evictFromPreProcessedAccessRules(User user) {
+        // This method is used to clear the cache for a user when their privileges are updated
     }
 
     public Set<AccessRule> preProcessARBySortedKeys(Set<AccessRule> accessRules) {
