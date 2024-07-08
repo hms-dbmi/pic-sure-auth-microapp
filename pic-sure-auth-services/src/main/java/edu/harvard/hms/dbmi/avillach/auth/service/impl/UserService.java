@@ -1,6 +1,7 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Application;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Connection;
@@ -11,12 +12,14 @@ import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
 import edu.harvard.hms.dbmi.avillach.auth.repository.ApplicationRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.ConnectionRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.UserRepository;
+import edu.harvard.hms.dbmi.avillach.auth.service.impl.authentication.FENCEAuthenticationService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming;
 import edu.harvard.hms.dbmi.avillach.auth.utils.JWTUtil;
 import edu.harvard.hms.dbmi.avillach.auth.utils.JsonUtils;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import jakarta.mail.MessagingException;
+import jakarta.persistence.NoResultException;
 import jakarta.validation.constraints.NotNull;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -573,6 +576,43 @@ public class UserService {
         logger.info("createOpenAccessUser() created user, uuid: {}, subject: {}, role: {}, privilege: {}",
                 user.getUuid(), user.getSubject(), user.getRoleString(), user.getPrivilegeString());
         return user;
+    }
+
+    /**
+     * Using the introspection token response, load the user from the database. If the user does not exist, we
+     * will reject their login attempt.
+     * Documentation: <a href="https://developer.okta.com/docs/reference/api/oidc/#response-example-success-access-token">response-example-success-access-token</a>
+     *
+     * @param introspectResponse The response from the introspect endpoint
+     * @return The user
+     */
+    public User loadUser(JsonNode introspectResponse, String connectionID, String subjectPrefix) {
+        String userEmail = introspectResponse.get("sub").asText();
+        try {
+            // connection id = RAS
+            User user = findByEmailAndConnection(userEmail, connectionID);
+
+            // If the user does not yet have a subject, set it to the subject from the introspect response
+            if (user.getSubject() == null) {
+                user.setSubject(subjectPrefix + "|" + introspectResponse.get("uid").asText());
+            }
+
+            // All users that login should have the fence_open_access role, or they will not be able to interact with the UI
+            Role fenceOpenAccessRole = roleService.getRoleByName(FENCEAuthenticationService.fence_open_access_role_name);
+            if (!user.getRoles().contains(fenceOpenAccessRole)) {
+                logger.info("Adding fence_open_access role to user: {}", user.getUuid());
+                Set<Role> roles = user.getRoles();
+                roles.add(fenceOpenAccessRole);
+                user = changeRole(user, roles);
+            }
+
+            save(user);
+            logger.info("LOGIN SUCCESS ___ USER DATA: {}", user);
+            return user;
+        } catch (NoResultException ex) {
+            logger.info("LOGIN FAILED ___ USER NOT FOUND ___ {} ___", userEmail);
+            return null;
+        }
     }
 
 }

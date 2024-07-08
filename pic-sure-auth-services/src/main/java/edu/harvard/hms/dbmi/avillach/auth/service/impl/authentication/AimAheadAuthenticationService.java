@@ -24,20 +24,16 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 
 @Service
-public class OktaOAuthAuthenticationService implements AuthenticationService {
+public class AimAheadAuthenticationService extends OktaAuthenticationService implements AuthenticationService  {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     private final UserService userService;
     private final RoleService roleService;
 
-    private final String idp_provider_uri;
     private final String connectionId;
-    private final String clientId;
-    private final String spClientSecret;
     private final boolean isOktaEnabled;
     private final AccessRuleService accessRuleService;
-    private final RestClientUtil restClientUtil;
 
     /**
      * Constructor for the OktaOAuthAuthenticationService
@@ -49,21 +45,20 @@ public class OktaOAuthAuthenticationService implements AuthenticationService {
      * @param spClientSecret The client secret
      */
     @Autowired
-    public OktaOAuthAuthenticationService(UserService userService,
-                                          RoleService roleService,
-                                          AccessRuleService accessRuleService,
-                                          RestClientUtil restClientUtil,
-                                          @Value("${a4.okta.idp.provider.is.enabled}") boolean isOktaEnabled,
-                                          @Value("${a4.okta.idp.provider.uri}") String idp_provider_uri,
-                                          @Value("${a4.okta.connection.id}") String connectionId,
-                                          @Value("${a4.okta.client.id}") String clientId,
-                                          @Value("${a4.okta.client.secret}") String spClientSecret) {
+    public AimAheadAuthenticationService(UserService userService,
+                                         RoleService roleService,
+                                         AccessRuleService accessRuleService,
+                                         RestClientUtil restClientUtil,
+                                         @Value("${a4.okta.idp.provider.is.enabled}") boolean isOktaEnabled,
+                                         @Value("${a4.okta.idp.provider.uri}") String idp_provider_uri,
+                                         @Value("${a4.okta.connection.id}") String connectionId,
+                                         @Value("${a4.okta.client.id}") String clientId,
+                                         @Value("${a4.okta.client.secret}") String spClientSecret) {
+        super(idp_provider_uri, clientId, spClientSecret, restClientUtil);
+
         this.userService = userService;
         this.roleService = roleService;
-        this.idp_provider_uri = idp_provider_uri;
         this.connectionId = connectionId;
-        this.clientId = clientId;
-        this.spClientSecret = spClientSecret;
         this.isOktaEnabled = isOktaEnabled;
 
         logger.info("OktaOAuthAuthenticationService is enabled: {}", isOktaEnabled);
@@ -72,7 +67,6 @@ public class OktaOAuthAuthenticationService implements AuthenticationService {
         logger.info("connectionId: {}", connectionId);
 
         this.accessRuleService = accessRuleService;
-        this.restClientUtil = restClientUtil;
     }
 
     /**
@@ -90,8 +84,8 @@ public class OktaOAuthAuthenticationService implements AuthenticationService {
 
         String code = authRequest.get("code");
         if (StringUtils.isNotBlank(code)) {
-            JsonNode userToken = handleCodeTokenExchange(host, code);
-            JsonNode introspectResponse = introspectToken(userToken);
+            JsonNode userToken = super.handleCodeTokenExchange(host, code);
+            JsonNode introspectResponse = super.introspectToken(userToken);
             User user = initializeUser(introspectResponse);
 
             if (user == null) {
@@ -218,67 +212,4 @@ public class OktaOAuthAuthenticationService implements AuthenticationService {
         return objectNode;
     }
 
-    /**
-     * Introspect the token to get the user's email address. This is a call to the OKTA introspect endpoint.
-     * Documentation: <a href="https://developer.okta.com/docs/reference/api/oidc/#introspect">/introspect</a>
-     *
-     * @param userToken The token to introspect
-     * @return The response from the introspect endpoint as a JsonNode
-     */
-    private JsonNode introspectToken(JsonNode userToken) {
-        JsonNode accessTokenNode = userToken.get("access_token");
-        if (accessTokenNode == null) {
-            logger.info("USER TOKEN DOES NOT HAVE ACCESS TOKEN ___ {}", userToken);
-            return null;
-        }
-
-        String accessToken = accessTokenNode.asText();
-        // get the access token string from the response
-        String oktaIntrospectUrl = "https://" + this.idp_provider_uri + "/oauth2/default/v1/introspect";
-        String payload = "token_type_hint=access_token&token=" + accessToken;
-        return doOktaRequest(oktaIntrospectUrl, payload);
-    }
-
-    /**
-     * Exchange the code for an access token. This is a call to the OKTA token endpoint.
-     * Documentation: <a href="https://developer.okta.com/docs/reference/api/oidc/#token">Token</a>
-     *
-     * @param host The UriInfo object from the JAX-RS context
-     * @param code    The code to exchange
-     * @return The response from the token endpoint as a JsonNode
-     */
-    private JsonNode handleCodeTokenExchange(String host, String code) {
-        String redirectUri = "https://" + host + "/psamaui/login";
-        String queryString = "grant_type=authorization_code" + "&code=" + code + "&redirect_uri=" + redirectUri;
-        String oktaTokenUrl = "https://" + this.idp_provider_uri + "/oauth2/default/v1/token";
-
-        return doOktaRequest(oktaTokenUrl, queryString);
-    }
-
-    /**
-     * Perform a request to the OKTA API using the provided URL and parameters. The request will be a POST request.
-     * It is using Authorization Basic authentication. The client ID and client secret are base64 encoded and sent
-     * in the Authorization header.
-     *
-     * @param requestUrl    The URL to call
-     * @param requestParams The parameters to send
-     * @return The response from the OKTA API as a JsonNode
-     */
-    private JsonNode doOktaRequest(String requestUrl, String requestParams) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBasicAuth(this.clientId, this.spClientSecret);
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-
-        ResponseEntity<?> resp;
-        JsonNode response = null;
-        try {
-            resp = this.restClientUtil.retrievePostResponse(requestUrl, headers, requestParams);
-            response = new ObjectMapper().readTree(Objects.requireNonNull(resp.getBody()).toString());
-        } catch (Exception ex) {
-            logger.error("handleCodeTokenExchange() failed to call OKTA token endpoint, {}", ex.getMessage());
-        }
-
-        logger.debug("getFENCEAccessToken() finished: {}", response);
-        return response;
-    }
 }
