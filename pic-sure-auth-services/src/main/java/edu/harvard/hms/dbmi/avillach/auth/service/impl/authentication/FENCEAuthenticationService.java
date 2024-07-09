@@ -162,8 +162,11 @@ public class FENCEAuthenticationService implements AuthenticationService {
             current_user = createUserFromFENCEProfile(fence_user_profile);
             logger.info("getFENCEProfile() saved details for user with e-mail:{} and subject:{}", current_user.getEmail(), current_user.getSubject());
 
-            accessRuleService.evictFromCache(current_user);
-            userService.evictFromCache(current_user);
+            if (!current_user.getEmail().isEmpty()) {
+                String email = current_user.getEmail();
+                accessRuleService.evictFromCache(email);
+                userService.evictFromCache(email);
+            }
         } catch (Exception ex) {
             logger.error("getFENCEToken() Could not persist the user information, because {}", ex.getMessage());
             throw new NotAuthorizedException("The user details could not be persisted. Please contact the administrator.");

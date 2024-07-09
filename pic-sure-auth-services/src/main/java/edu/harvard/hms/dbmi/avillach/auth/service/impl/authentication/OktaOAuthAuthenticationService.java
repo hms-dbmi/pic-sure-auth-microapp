@@ -154,8 +154,8 @@ public class OktaOAuthAuthenticationService implements AuthenticationService {
     }
 
     private void clearCache(User user) {
-        userService.evictFromCache(user);
-        accessRuleService.evictFromCache(user);
+        userService.evictFromCache(user.getEmail());
+        accessRuleService.evictFromCache(user.getEmail());
     }
 
     /**
