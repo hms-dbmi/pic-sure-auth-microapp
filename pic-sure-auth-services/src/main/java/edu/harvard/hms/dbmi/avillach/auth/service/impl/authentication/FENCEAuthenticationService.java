@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import edu.harvard.hms.dbmi.avillach.auth.entity.Application;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Connection;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
@@ -106,7 +105,7 @@ public class FENCEAuthenticationService implements AuthenticationService {
         try {
             logger.debug("getFENCEProfile() query FENCE for user profile with code");
             fence_user_profile = getFENCEUserProfile(getFENCEAccessToken(callBackUrl, fence_code).get("access_token").asText());
-
+            logger.info(fence_user_profile.toPrettyString());
             if (logger.isTraceEnabled()) {
                 // create object mapper instance
                 ObjectMapper mapper = new ObjectMapper();
@@ -131,8 +130,11 @@ public class FENCEAuthenticationService implements AuthenticationService {
             current_user = createUserFromFENCEProfile(fence_user_profile);
             logger.info("getFENCEProfile() saved details for user with e-mail:{} and subject:{}", current_user.getEmail(), current_user.getSubject());
 
-            accessRuleService.evictFromCache(current_user);
-            userService.evictFromCache(current_user);
+            if (!current_user.getEmail().isEmpty()) {
+                String email = current_user.getEmail();
+                accessRuleService.evictFromCache(email);
+                userService.evictFromCache(email);
+            }
         } catch (Exception ex) {
             logger.error("getFENCEToken() Could not persist the user information, because {}", ex.getMessage());
             throw new NotAuthorizedException("The user details could not be persisted. Please contact the administrator.");
@@ -157,6 +159,10 @@ public class FENCEAuthenticationService implements AuthenticationService {
 
             roleNames.add(newRoleName);
         });
+
+        // convert roles to string list
+        String roles = current_user.getRoles().stream().map(Role::getName).collect(Collectors.joining(","));
+        logger.info("Current User Roles: " + roles);
 
         // find roles that are in the user's roles but not in the project_access_names. These are the roles that need to be removed.
         // exclude userRole -> "PIC-SURE Top Admin".equals(userRole.getName()) || "Admin".equals(userRole.getName()) || userRole.getName().startsWith("MANUAL_")

@@ -131,13 +131,12 @@ public class AccessRuleService {
         return this.accessRuleRepo.findByName(arName);
     }
 
-    @Cacheable(value = "mergedRulesCache", key = "#user.getEmail()")
+    @Cacheable(value = "mergedRulesCache", keyGenerator = "customKeyGenerator")
     public Set<AccessRule> getAccessRulesForUserAndApp(User user, Application application) {
         try {
             Set<Privilege> privileges = user.getPrivilegesByApplication(application);
-
             if (privileges == null || privileges.isEmpty()) {
-                return null;
+                return new HashSet<>();
             }
 
             Set<AccessRule> detachedMergedRules = new HashSet<>();
@@ -150,12 +149,36 @@ public class AccessRuleService {
             logger.error("Error populating or retrieving data from cache: ", e);
         }
 
-        return null;
+        return new HashSet<>();
     }
 
-    @CacheEvict(value = "mergedRulesCache", key = "#user.getEmail()")
-    public void evictFromCache(User user) {
-        // This method is used to clear the cache for a user when their privileges are updated
+    /**
+     * Evicts the user from all AccessRule caches
+     * @param email the email to evict
+     */
+    public void evictFromCache(String email) {
+        logger.info("evictFromCache called for user.email: {}", email);
+        evictFromMergedAccessRuleCache(email);
+        evictFromPreProcessedAccessRules(email);
+    }
+
+    @CacheEvict(value = "mergedRulesCache")
+    public void evictFromMergedAccessRuleCache(String email) {
+        if (email == null || email.isEmpty()) {
+            logger.warn("evictFromMergedAccessRuleCache() was called with a null or empty email");
+            return;
+        }
+        logger.info("evictFromMergedAccessRuleCache() evicting cache for user: {}", email);
+    }
+
+    @Cacheable(value = "preProcessedAccessRules", keyGenerator = "customKeyGenerator")
+    public Set<AccessRule> cachedPreProcessAccessRules(User user, Set<Privilege> privileges) {
+        Set<AccessRule> accessRules = new HashSet<>();
+        for (Privilege privilege : privileges) {
+            accessRules.addAll(privilege.getAccessRules());
+        }
+
+        return preProcessARBySortedKeys(accessRules);
     }
 
     public Set<AccessRule> preProcessAccessRules(Set<Privilege> privileges) {
@@ -165,6 +188,15 @@ public class AccessRuleService {
         }
 
         return preProcessARBySortedKeys(accessRules);
+    }
+
+    @CacheEvict(value = "preProcessedAccessRules", key = "#email", condition = "#email!=null")
+    public void evictFromPreProcessedAccessRules(String email) {
+        if (email == null || email.isEmpty()) {
+            logger.warn("evictFromPreProcessedAccessRules() was called with a null or empty email");
+            return;
+        }
+        logger.info("evictFromPreProcessedAccessRules() evicting cache for user: {}", email);
     }
 
     public Set<AccessRule> preProcessARBySortedKeys(Set<AccessRule> accessRules) {

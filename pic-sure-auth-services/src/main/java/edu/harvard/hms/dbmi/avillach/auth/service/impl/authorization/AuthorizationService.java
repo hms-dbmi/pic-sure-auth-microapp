@@ -86,23 +86,26 @@ public class AuthorizationService {
      * @see AccessRule
      */
     public boolean isAuthorized(Application application, Object requestBody, User user) {
+        // create timer
+        long startTime = System.currentTimeMillis();
         String applicationName = application.getName();
         String resourceId = "null";
         String targetService = "null";
 
         //in some cases, we don't go through the evaluation
         if (requestBody == null) {
-            logger.info("ACCESS_LOG ___ {},{},{} ___ has been granted access to application ___ {} ___ NO REQUEST BODY FORWARDED BY APPLICATION", user.getUuid().toString(), user.getEmail(), user.getName(), applicationName);
+            logger.debug("ACCESS_LOG ___ {},{},{} ___ has been granted access to application ___ {} ___ NO REQUEST BODY FORWARDED BY APPLICATION", user.getUuid().toString(), user.getEmail(), user.getName(), applicationName);
             return true;
         }
 
+        long parseTimeFrame = System.currentTimeMillis();
         try {
             Map requestBodyMap = (Map) requestBody;
             Map queryMap = (Map) requestBodyMap.get("query");
             resourceId = (String) queryMap.get("resourceUUID");
             targetService = (String) queryMap.get("Target Service");
         } catch (RuntimeException e) {
-            logger.info("Error parsing resource and target service from request body.");
+            logger.debug("Error parsing resource and target service from request body.");
         }
 
         String formattedQuery;
@@ -115,10 +118,11 @@ public class AuthorizationService {
             }
 
         } catch (ClassCastException | JsonProcessingException e1) {
-            logger.info("ACCESS_LOG ___ {},{},{} ___ has been denied access to execute query ___ {} ___ in application ___ {} ___ UNABLE TO PARSE REQUEST", user.getUuid().toString(), user.getEmail(), user.getName(), requestBody, applicationName);
-            logger.info("isAuthorized() Stack Trace: ", e1);
+            logger.debug("ACCESS_LOG ___ {},{},{} ___ has been denied access to execute query ___ {} ___ in application ___ {} ___ UNABLE TO PARSE REQUEST", user.getUuid().toString(), user.getEmail(), user.getName(), requestBody, applicationName);
+            logger.debug("isAuthorized() Stack Trace: ", e1);
             return false;
         }
+        logger.info("Parse timeframe {} ms", (System.currentTimeMillis() - parseTimeFrame));
 
         Set<AccessRule> accessRules;
         String label = user.getConnection().getLabel();
@@ -129,12 +133,13 @@ public class AuthorizationService {
                 return false;
             }
 
-            accessRules = this.accessRuleService.preProcessAccessRules(privileges);
+            accessRules = this.accessRuleService.cachedPreProcessAccessRules(user, privileges);
             if (accessRules == null || accessRules.isEmpty()) {
                 logger.info("ACCESS_LOG ___ {},{},{} ___ has been granted access to execute query ___ {} ___ in application ___ {} ___ NO ACCESS RULES EVALUATED", user.getUuid().toString(), user.getEmail(), user.getName(), formattedQuery, applicationName);
                 return true;
             }
         } else {
+            logger.info("User Email: {}", user.getEmail());
             accessRules = this.accessRuleService.getAccessRulesForUserAndApp(user, application);
             if (accessRules == null || accessRules.isEmpty()) {
                 logger.info("ACCESS_LOG ___ {},{},{} ___ has been denied access to execute query ___ {} ___ in application ___ {} ___ NO ACCESS RULES EVALUATED", user.getUuid().toString(), user.getEmail(), user.getName(), formattedQuery, applicationName);
@@ -164,11 +169,12 @@ public class AuthorizationService {
                 passRuleName = passByRule.getMergedName();
         }
 
-        logger.info("ACCESS_LOG ___ {},{},{} ___ has been {} access to execute query ___ {} ___ in application ___ {} ___ {}", user.getUuid().toString(), user.getEmail(), user.getName(), result ? "granted" : "denied", formattedQuery, applicationName, result ? "passed by " + passRuleName : "failed by rules: ["
+        logger.debug("ACCESS_LOG ___ {},{},{} ___ has been {} access to execute query ___ {} ___ in application ___ {} ___ {}", user.getUuid().toString(), user.getEmail(), user.getName(), result ? "granted" : "denied", formattedQuery, applicationName, result ? "passed by " + passRuleName : "failed by rules: ["
                 + failedRules.stream()
                 .map(ar -> (ar.getMergedName().isEmpty() ? ar.getName() : ar.getMergedName()))
                 .collect(Collectors.joining(", ")) + "]");
 
+        logger.info("Login time: {}ms", System.currentTimeMillis() - startTime);
         return result;
     }
 
