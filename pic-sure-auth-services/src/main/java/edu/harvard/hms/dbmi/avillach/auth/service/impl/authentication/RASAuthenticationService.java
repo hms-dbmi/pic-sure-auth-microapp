@@ -1,8 +1,10 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.impl.authentication;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.mysql.cj.xdevapi.JsonArray;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.service.AuthenticationService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.AccessRuleService;
@@ -15,8 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class RASAuthenticationService extends OktaAuthenticationService implements AuthenticationService {
@@ -154,6 +155,32 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
         objectNode.put("email", user.getEmail());
 
         return objectNode;
+    }
+
+
+    /*
+    TODO: Implement functionality to parse a ras passport
+     */
+    protected Set<String> ga4gpPassportToStudies(JsonNode introspectResponse) throws JsonProcessingException {
+        if (introspectResponse == null) {
+            return null;
+        }
+
+        // get ga4gh passport token
+        JsonNode ga4ghPassports = introspectResponse.get("ga4gh_passport_v1");
+//        logger.info(ga4ghPassports.toPrettyString());
+
+        // extract the payload
+        String[] passports = ga4ghPassports.toString().split("\\.");
+        String base64EncodedPayload = passports[1];
+        Base64.Decoder decoder = Base64.getDecoder();
+        String payload = new String(decoder.decode(base64EncodedPayload));
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode jsonNode = mapper.readTree(payload);
+
+        logger.info(jsonNode.toPrettyString());
+
+        return new HashSet<>();
     }
 
     @Override
