@@ -131,8 +131,8 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
     }
 
     private void clearCache(User user) {
-        userService.evictFromCache(user);
-        accessRuleService.evictFromCache(user);
+        userService.evictFromCache(user.getEmail());
+        accessRuleService.evictFromCache(user.getEmail());
     }
 
     /**
