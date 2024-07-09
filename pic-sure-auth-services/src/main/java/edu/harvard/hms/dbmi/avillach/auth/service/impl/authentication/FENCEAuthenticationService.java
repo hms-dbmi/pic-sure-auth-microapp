@@ -110,7 +110,7 @@ public class FENCEAuthenticationService implements AuthenticationService {
                 String consentCode = projectMetadata.getConsentGroupCode();
                 String newRoleName = StringUtils.isNotBlank(consentCode) ? "MANAGED_" + projectId + "_" + consentCode : "MANAGED_" + projectId;
 
-                return this.roleService.createRole(newRoleName, "MANAGEDrole " + newRoleName);
+                return this.roleService.createRole(newRoleName, "MANAGED role " + newRoleName);
             }).filter(Objects::nonNull).collect(Collectors.toSet());
 
             roleService.persistAll(roles);
@@ -210,7 +210,7 @@ public class FENCEAuthenticationService implements AuthenticationService {
 
         // find roles that are in the project_access_names but not in the user's roles. These are the roles that need to be added.
         List<Role> newRoles = roleNames.parallelStream()
-                .map(roleName -> this.roleService.createRole(roleName, "MANAGEDrole " + roleName))
+                .map(roleName -> this.roleService.createRole(roleName, "MANAGED role " + roleName))
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
 
