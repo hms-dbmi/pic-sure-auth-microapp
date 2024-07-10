@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
 
+import static edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming.AuthRoleNaming.ADMIN;
 import static edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming.AuthRoleNaming.SUPER_ADMIN;
 
 /**
@@ -34,7 +35,7 @@ public class StudyAccessController {
     @Operation(description = "POST a single study and it creates the role, privs, and rules for it, requires SUPER_ADMIN role")
     @Transactional
     @PostMapping(consumes = "application/json")
-    @RolesAllowed({SUPER_ADMIN})
+    @RolesAllowed({SUPER_ADMIN, ADMIN})
     public ResponseEntity<String> addStudyAccess(@Parameter(description = "The Study Identifier of the new study from the metadata.json")
                                             @RequestBody String studyIdentifier) {
         String status = studyAccessService.addStudyAccess(studyIdentifier);
