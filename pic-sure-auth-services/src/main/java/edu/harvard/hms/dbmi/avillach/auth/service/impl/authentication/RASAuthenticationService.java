@@ -70,7 +70,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
      */
     @Override
     public HashMap<String, String> authenticate(Map<String, String> authRequest, String host) {
-        logger.info("OKTA LOGIN ATTEMPT ___ {} ___", authRequest.get("code"));
+        logger.info("RAS OKTA LOGIN ATTEMPT ___ {} ___", authRequest.get("code"));
 
         String code = authRequest.get("code");
         if (StringUtils.isNotBlank(code)) {
@@ -103,6 +103,10 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
             return null;
         }
 
+        logger.info(introspectResponse.toPrettyString());
+        logger.info(this.connectionId);
+        logger.info("ras");
+        logger.info("Load User");
         User user = userService.loadUser(introspectResponse, this.connectionId, "ras");
         if (user == null) {
             return null;
