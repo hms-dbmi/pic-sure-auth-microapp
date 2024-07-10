@@ -86,12 +86,18 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
         if (StringUtils.isNotBlank(code)) {
             JsonNode userToken = super.handleCodeTokenExchange(host, code);
             JsonNode introspectResponse = super.introspectToken(userToken);
+
+            /*
+            If OKTA is handling everything appropriately the passport should be included in the introspect endpoint.
+            If not we may need to reach out to the /openid/connect/v1.1/userinfo endpoint on our own. This
+            can be verified once development is complete.
+             */
+
             User user = initializeUser(introspectResponse);
             if (user == null) {
                 return null;
             }
 
-            // TODO: It is likely that the passport is inside of the JWT token returned from ras
             Set<RasDbgapPermission> dbgapPermissions = ga4gpPassportToRasDbgapPermissions(introspectResponse);
             Optional<Set<String>> dbgapRoleNames = this.roleService.getRoleNamesForDbgapPermissions(dbgapPermissions);
 
