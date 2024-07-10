@@ -1,24 +1,19 @@
 package edu.harvard.hms.dbmi.avillach.auth.utils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.model.fenceMapping.BioDataCatalyst;
 import edu.harvard.hms.dbmi.avillach.auth.model.fenceMapping.StudyMetaData;
-import edu.harvard.hms.dbmi.avillach.auth.service.impl.RoleService;
 import io.micrometer.common.util.StringUtils;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.event.ContextRefreshedEvent;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 @Service
 public class FenceMappingUtility {
