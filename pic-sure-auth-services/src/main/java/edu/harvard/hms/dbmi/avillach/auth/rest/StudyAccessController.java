@@ -22,7 +22,7 @@ import static edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming.AuthRoleNaming
  * rules for a given study</p>
  * <p>Note: Only users with the super admin role can access this endpoint.</p>
  */
-@Controller
+@Controller("/studyAccess")
 public class StudyAccessController {
 
     private final StudyAccessService studyAccessService;
