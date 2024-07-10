@@ -25,16 +25,13 @@ public class FenceMappingUtility {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    private final RoleService roleService;
-
     private Map<String, StudyMetaData> fenceMappingByConsent;
     private Map<String, StudyMetaData> fenceMappingByAuthZ;
     private final String templatePath;
     private ObjectMapper objectMapper;
 
     @Autowired
-    public FenceMappingUtility(RoleService roleService, @Value("${application.template.path}") String templatePath) {
-        this.roleService = roleService;
+    public FenceMappingUtility(@Value("${application.template.path}") String templatePath) {
         this.templatePath = templatePath;
     }
 
@@ -55,41 +52,6 @@ public class FenceMappingUtility {
             logger.error("FenceMappingUtility: templatePath is not set or does not end with a file separator");
         }
     }
-
-    @EventListener(ContextRefreshedEvent.class)
-    public void createPermissionsForFenceMapping() {
-        if (this.getFENCEMapping() != null && this.getFenceMappingByAuthZ() != null
-                && !this.getFENCEMapping().isEmpty() && !this.getFenceMappingByAuthZ().isEmpty()) {
-            // Create all potential access rules using the fence mapping
-            Set<Role> roles = this.getFenceMappingByAuthZ().values().parallelStream().map(projectMetadata -> {
-                if (projectMetadata == null) {
-                    logger.error("createPermissionsForFenceMapping() -> createAndUpsertRole could not find study in FENCE mapping SKIPPING: {}", projectMetadata);
-                    return null;
-                }
-
-                if (projectMetadata.getStudyIdentifier() == null || projectMetadata.getStudyIdentifier().isEmpty()) {
-                    logger.error("createPermissionsForFenceMapping() -> createAndUpsertRole could not find study identifier in FENCE mapping SKIPPING: {}", projectMetadata);
-                    return null;
-                }
-
-                if (projectMetadata.getAuthZ() == null || projectMetadata.getAuthZ().isEmpty()) {
-                    logger.error("createPermissionsForFenceMapping() -> createAndUpsertRole could not find authZ in FENCE mapping SKIPPING: {}", projectMetadata);
-                    return null;
-                }
-
-                String projectId = projectMetadata.getStudyIdentifier();
-                String consentCode = projectMetadata.getConsentGroupCode();
-                String newRoleName = org.apache.commons.lang3.StringUtils.isNotBlank(consentCode) ? "MANAGED_" + projectId + "_" + consentCode : "MANAGED_" + projectId;
-
-                return this.roleService.createRole(newRoleName, "MANAGEDrole " + newRoleName);
-            }).filter(Objects::nonNull).collect(Collectors.toSet());
-
-            roleService.persistAll(roles);
-        } else {
-            logger.error("createPermissionsForFenceMapping() -> createAndUpsertRole could not find any studies in FENCE mapping");
-        }
-    }
-
 
     private void initializeFENCEMappings() {
         if (fenceMappingByConsent == null || fenceMappingByAuthZ == null) {

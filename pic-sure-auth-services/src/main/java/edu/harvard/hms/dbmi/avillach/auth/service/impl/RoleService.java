@@ -5,11 +5,15 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.enums.SecurityRoles;
 import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
+import edu.harvard.hms.dbmi.avillach.auth.model.fenceMapping.StudyMetaData;
 import edu.harvard.hms.dbmi.avillach.auth.repository.PrivilegeRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.RoleRepository;
+import edu.harvard.hms.dbmi.avillach.auth.utils.FenceMappingUtility;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.event.ContextRefreshedEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -23,15 +27,52 @@ public class RoleService {
 
     private final Logger logger = LoggerFactory.getLogger(RoleService.class);
     private final RoleRepository roleRepository;
-
     private final PrivilegeRepository privilegeRepo;
     private final PrivilegeService privilegeService;
+    private final FenceMappingUtility fenceMappingUtility;
 
     @Autowired
-    protected RoleService(RoleRepository roleRepository, PrivilegeRepository privilegeRepo, PrivilegeService privilegeService) {
+    protected RoleService(RoleRepository roleRepository, PrivilegeRepository privilegeRepo, PrivilegeService privilegeService, FenceMappingUtility fenceMappingUtility) {
         this.roleRepository = roleRepository;
         this.privilegeRepo = privilegeRepo;
         this.privilegeService = privilegeService;
+        this.fenceMappingUtility = fenceMappingUtility;
+    }
+
+    @EventListener(ContextRefreshedEvent.class)
+    public void createPermissionsForFenceMapping() {
+        Map<String, StudyMetaData> fenceMapping = this.fenceMappingUtility.getFENCEMapping();
+        Map<String, StudyMetaData> fenceMappingByAuthZ = this.fenceMappingUtility.getFenceMappingByAuthZ();
+        if (fenceMapping != null && fenceMappingByAuthZ != null
+                && !fenceMapping.isEmpty() && !fenceMappingByAuthZ.isEmpty()) {
+            // Create all potential access rules using the fence mapping
+            Set<Role> roles = fenceMappingByAuthZ.values().parallelStream().map(projectMetadata -> {
+                if (projectMetadata == null) {
+                    logger.error("createPermissionsForFenceMapping() -> createAndUpsertRole could not find study in FENCE mapping SKIPPING: {}", projectMetadata);
+                    return null;
+                }
+
+                if (projectMetadata.getStudyIdentifier() == null || projectMetadata.getStudyIdentifier().isEmpty()) {
+                    logger.error("createPermissionsForFenceMapping() -> createAndUpsertRole could not find study identifier in FENCE mapping SKIPPING: {}", projectMetadata);
+                    return null;
+                }
+
+                if (projectMetadata.getAuthZ() == null || projectMetadata.getAuthZ().isEmpty()) {
+                    logger.error("createPermissionsForFenceMapping() -> createAndUpsertRole could not find authZ in FENCE mapping SKIPPING: {}", projectMetadata);
+                    return null;
+                }
+
+                String projectId = projectMetadata.getStudyIdentifier();
+                String consentCode = projectMetadata.getConsentGroupCode();
+                String newRoleName = org.apache.commons.lang3.StringUtils.isNotBlank(consentCode) ? "MANAGED_" + projectId + "_" + consentCode : "MANAGED_" + projectId;
+
+                return this.createRole(newRoleName, "MANAGEDrole " + newRoleName);
+            }).filter(Objects::nonNull).collect(Collectors.toSet());
+
+            persistAll(roles);
+        } else {
+            logger.error("createPermissionsForFenceMapping() -> createAndUpsertRole could not find any studies in FENCE mapping");
+        }
     }
 
     public Optional<Role> getRoleById(String roleId) {

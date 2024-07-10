@@ -126,17 +126,17 @@ public class PrivilegeService {
 
         //e.g. FENCE_phs0000xx_c2 or FENCE_tutorial-biolinc_camp
         String project_name = extractProject(roleName);
-        if (project_name.length() <= 0) {
+        if (project_name.isEmpty()) {
             logger.warn("addFENCEPrivileges() role name: {} returned an empty project name", roleName);
         }
         String consent_group = extractConsentGroup(roleName);
-        if (consent_group.length() <= 0) {
+        if (!consent_group.isEmpty()) {
             logger.warn("addFENCEPrivileges() role name: {} returned an empty consent group", roleName);
         }
         logger.info("addFENCEPrivileges() project name: {} consent group: {}", project_name, consent_group);
 
         // Look up the metadata by consent group.
-        StudyMetaData projectMetadata = getFENCEMappingforProjectAndConsent(project_name, consent_group);
+        StudyMetaData projectMetadata = getStudyMappingForProjectAndConsent(project_name, consent_group);
 
         if (projectMetadata == null) {
             //no privileges means no access to this project.  just return existing set of privs.
@@ -398,7 +398,7 @@ public class PrivilegeService {
         return consentGroup;
     }
 
-    private StudyMetaData getFENCEMappingforProjectAndConsent(String projectId, String consent_group) {
+    private StudyMetaData getStudyMappingForProjectAndConsent(String projectId, String consent_group) {
         String consentVal = (consent_group != null && !consent_group.isEmpty()) ? projectId + "." + consent_group : projectId;
         logger.info("getFENCEMappingforProjectAndConsent() looking up {}", consentVal);
 
