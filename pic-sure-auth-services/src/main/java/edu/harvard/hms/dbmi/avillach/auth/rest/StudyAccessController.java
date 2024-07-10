@@ -12,6 +12,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 
 
 import static edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming.AuthRoleNaming.ADMIN;
@@ -23,6 +24,7 @@ import static edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming.AuthRoleNaming
  * <p>Note: Only users with the super admin role can access this endpoint.</p>
  */
 @Controller
+@RequestMapping("/studyAccess")
 public class StudyAccessController {
 
     private final StudyAccessService studyAccessService;
@@ -35,7 +37,7 @@ public class StudyAccessController {
     @Operation(description = "POST a single study and it creates the role, privs, and rules for it, requires SUPER_ADMIN role")
     @Transactional
     @RolesAllowed({SUPER_ADMIN, ADMIN})
-    @PostMapping(consumes = "application/json", path = "/studyAccess")
+    @PostMapping(consumes = "application/json")
     public ResponseEntity<String> addStudyAccess(@Parameter(description = "The Study Identifier of the new study from the metadata.json")
                                             @RequestBody String studyIdentifier) {
         String status = studyAccessService.addStudyAccess(studyIdentifier);
