@@ -3,6 +3,7 @@ package edu.harvard.hms.dbmi.avillach.auth.service.impl.authentication;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import edu.harvard.hms.dbmi.avillach.auth.model.ras.RasDbgapPermission;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.AccessRuleService;
+import edu.harvard.hms.dbmi.avillach.auth.service.impl.RoleService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.UserService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.RestClientUtil;
 import junit.framework.TestCase;
@@ -26,6 +27,9 @@ public class RASAuthenticationServiceTest extends TestCase {
     @Mock
     private RestClientUtil restClientUtil;
 
+    @Mock
+    private RoleService roleService;
+
     private RASAuthenticationService rasAuthenticationService;
 
     @Before
@@ -38,7 +42,8 @@ public class RASAuthenticationServiceTest extends TestCase {
                 "false",
                 "false",
                 "false",
-                "false"
+                "false",
+                roleService
             );
 
         // convert example ras passport to JsonNode

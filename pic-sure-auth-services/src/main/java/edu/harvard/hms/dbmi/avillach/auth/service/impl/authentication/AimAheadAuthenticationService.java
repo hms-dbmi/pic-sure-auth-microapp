@@ -16,12 +16,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+
+import static edu.harvard.hms.dbmi.avillach.auth.service.impl.RoleService.managed_open_access_role_name;
 
 @Service
 public class AimAheadAuthenticationService extends OktaAuthenticationService implements AuthenticationService  {
@@ -172,7 +171,7 @@ public class AimAheadAuthenticationService extends OktaAuthenticationService imp
             }
 
             // All users that login through OKTA should have the fence_open_access role, or they will not be able to interact with the UI
-            Role fenceOpenAccessRole = roleService.getRoleByName(FENCEAuthenticationService.fence_open_access_role_name);
+            Role fenceOpenAccessRole = roleService.getRoleByName(managed_open_access_role_name);
             if (!user.getRoles().contains(fenceOpenAccessRole)) {
                 logger.info("Adding fence_open_access role to user: {}", user.getUuid());
                 Set<Role> roles = user.getRoles();

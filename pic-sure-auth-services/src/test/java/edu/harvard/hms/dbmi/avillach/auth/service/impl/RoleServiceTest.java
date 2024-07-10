@@ -264,4 +264,5 @@ public class RoleServiceTest {
         role.setPrivileges(Collections.emptySet());
         return role;
     }
+
 }

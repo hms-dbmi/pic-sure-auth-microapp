@@ -16,6 +16,8 @@ import org.springframework.stereotype.Service;
 import java.util.HashMap;
 import java.util.Map;
 
+import static edu.harvard.hms.dbmi.avillach.auth.service.impl.RoleService.managed_open_access_role_name;
+
 @Service
 public class OpenAuthenticationService implements AuthenticationService {
 
@@ -51,7 +53,7 @@ public class OpenAuthenticationService implements AuthenticationService {
 
         // If we can't find the user by UUID, create a new one
         if (current_user == null) {
-            Role openAccessRole = roleService.getRoleByName(FENCEAuthenticationService.fence_open_access_role_name);
+            Role openAccessRole = roleService.getRoleByName(managed_open_access_role_name);
             current_user = userService.createOpenAccessUser(openAccessRole);
 
             //clear some cache entries if we register a new login

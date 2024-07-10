@@ -31,6 +31,8 @@ import org.springframework.util.MultiValueMap;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static edu.harvard.hms.dbmi.avillach.auth.service.impl.RoleService.managed_open_access_role_name;
+
 @Service
 public class FENCEAuthenticationService implements AuthenticationService {
 
@@ -52,7 +54,6 @@ public class FENCEAuthenticationService implements AuthenticationService {
     private final String fence_client_secret;
 
 
-    public static final String fence_open_access_role_name = "MANAGED_ROLE_OPEN_ACCESS";
     private final RestClientUtil restClientUtil;
 
     @Autowired
@@ -165,7 +166,7 @@ public class FENCEAuthenticationService implements AuthenticationService {
         // find roles that are in the user's roles but not in the project_access_names. These are the roles that need to be removed.
         // exclude userRole -> "PIC-SURE Top Admin".equals(userRole.getName()) || "Admin".equals(userRole.getName()) || userRole.getName().startsWith("MANUAL_")
         Set<Role> rolesToRemove = current_user.getRoles().parallelStream()
-                .filter(role -> !roleNames.contains(role.getName()) && !role.getName().equals(fence_open_access_role_name) && !role.getName().startsWith("MANUAL_") && !role.getName().equals("PIC-SURE Top Admin") && !role.getName().equals("Admin"))
+                .filter(role -> !roleNames.contains(role.getName()) && !role.getName().equals(managed_open_access_role_name) && !role.getName().startsWith("MANUAL_") && !role.getName().equals("PIC-SURE Top Admin") && !role.getName().equals("Admin"))
                 .collect(Collectors.toSet());
 
         if (!rolesToRemove.isEmpty()) {
@@ -187,7 +188,7 @@ public class FENCEAuthenticationService implements AuthenticationService {
 
         final String idp = extractIdp(current_user);
         if (current_user.getRoles() != null && (!current_user.getRoles().isEmpty() || openAccessIdpValues.contains(idp))) {
-            Role openAccessRole = roleService.findByName(fence_open_access_role_name);
+            Role openAccessRole = roleService.findByName(managed_open_access_role_name);
             if (openAccessRole != null) {
                 current_user.getRoles().add(openAccessRole);
             } else {

@@ -3,11 +3,13 @@ package edu.harvard.hms.dbmi.avillach.auth.service.impl.authentication;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.model.ras.Ga4ghPassportV1;
 import edu.harvard.hms.dbmi.avillach.auth.model.ras.RasDbgapPermission;
 import edu.harvard.hms.dbmi.avillach.auth.service.AuthenticationService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.AccessRuleService;
+import edu.harvard.hms.dbmi.avillach.auth.service.impl.RoleService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.UserService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.JWTUtil;
 import edu.harvard.hms.dbmi.avillach.auth.utils.RestClientUtil;
@@ -19,6 +21,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.stream.Collectors;
+
+import static edu.harvard.hms.dbmi.avillach.auth.service.impl.RoleService.managed_open_access_role_name;
+
 
 @Service
 public class RASAuthenticationService extends OktaAuthenticationService implements AuthenticationService {
@@ -29,6 +35,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
     private final String connectionId;
     private final boolean isEnabled;
     private final AccessRuleService accessRuleService;
+    private final RoleService roleService;
 
     /**
      * Constructor for the RASAuthenticationService
@@ -46,12 +53,13 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
                                     @Value("${ras.okta.idp.provider.uri}") String idp_provider_uri,
                                     @Value("${ras.okta.connection.id}") String connectionId,
                                     @Value("${ras.okta.client.id}") String clientId,
-                                    @Value("${ras.okta.client.secret}") String clientSecret) {
+                                    @Value("${ras.okta.client.secret}") String clientSecret, RoleService roleService) {
         super(idp_provider_uri, clientId, clientSecret, restClientUtil);
 
         this.userService = userService;
         this.connectionId = connectionId;
         this.isEnabled = isEnabled;
+        this.roleService = roleService;
 
         logger.info("RASAuthenticationService is enabled: {}", isEnabled);
         logger.info("RASAuthenticationService initialized");
@@ -83,12 +91,22 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
                 return null;
             }
 
-            Set<RasDbgapPermission> permissions = ga4gpPassportToRasDbgapPermissions(introspectResponse);
-            for (RasDbgapPermission permission : permissions) {
-                // We can assign studies based on the ga4gh.
-                
-            }
+            Set<RasDbgapPermission> dbgapPermissions = ga4gpPassportToRasDbgapPermissions(introspectResponse);
+            Optional<Set<String>> dbgapRoleNames = this.roleService.getRoleNamesForDbgapPermissions(dbgapPermissions);
 
+            // Remove role from user if it doesn't exist in the dbgapRoleNames
+            dbgapRoleNames.ifPresent(strings -> user.getRoles().removeIf(role -> !strings.contains(role.getName()) &&
+                    !role.getName().equals(managed_open_access_role_name) &&
+                    !role.getName().startsWith("MANUAL_") &&
+                    !role.getName().equals("PIC-SURE Top Admin") &&
+                    !role.getName().equals("Admin")));
+
+            // Add role to user if it doesn't exist for the user, but does exist in the dbgapRoleNames
+            dbgapRoleNames.ifPresent(roleNames -> roleNames.parallelStream()
+                    .filter(roleName -> user.getRoles().parallelStream().noneMatch(role -> role.getName().equals(roleName)))
+                    .map(roleService::findByName)
+                    .filter(Objects::nonNull)
+                    .forEach(role -> user.getRoles().add(role)));
 
             HashMap<String, String> responseMap = createUserClaims(user);
             logger.info("LOGIN SUCCESS ___ {}:{} ___ Authorization will expire at  ___ {}___", user.getEmail(), user.getUuid().toString(), responseMap.get("expirationDate"));
@@ -180,7 +198,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
             Optional<Ga4ghPassportV1> parsedGa4ghPassportV1 = JWTUtil.parseGa4ghPassportV1(ga4ghPassport.toString());
             if (parsedGa4ghPassportV1.isPresent()) {
                 Ga4ghPassportV1 ga4ghPassportV1 = parsedGa4ghPassportV1.get();
-                logger.info("ga4gh_passport_v1: {}", ga4ghPassportV1.toString());
+                logger.info("ga4gh_passport_v1: {}", ga4ghPassportV1);
 
                 rasDbgapPermissions.addAll(ga4ghPassportV1.getRasDbgagPermissions());
             }

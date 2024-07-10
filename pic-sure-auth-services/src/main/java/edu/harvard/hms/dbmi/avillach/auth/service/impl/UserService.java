@@ -40,6 +40,8 @@ import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static edu.harvard.hms.dbmi.avillach.auth.service.impl.RoleService.managed_open_access_role_name;
+
 @Service
 public class UserService {
 
@@ -604,7 +606,7 @@ public class UserService {
             }
 
             // All users that login should have the fence_open_access role, or they will not be able to interact with the UI
-            Role fenceOpenAccessRole = roleService.getRoleByName(FENCEAuthenticationService.fence_open_access_role_name);
+            Role fenceOpenAccessRole = roleService.getRoleByName(managed_open_access_role_name);
             if (!user.getRoles().contains(fenceOpenAccessRole)) {
                 logger.info("Adding fence_open_access role to user: {}", user.getUuid());
                 Set<Role> roles = user.getRoles();

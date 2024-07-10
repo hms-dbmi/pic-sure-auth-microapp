@@ -6,9 +6,11 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.enums.SecurityRoles;
 import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
 import edu.harvard.hms.dbmi.avillach.auth.model.fenceMapping.StudyMetaData;
+import edu.harvard.hms.dbmi.avillach.auth.model.ras.RasDbgapPermission;
 import edu.harvard.hms.dbmi.avillach.auth.repository.PrivilegeRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.RoleRepository;
 import edu.harvard.hms.dbmi.avillach.auth.utils.FenceMappingUtility;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +32,8 @@ public class RoleService {
     private final PrivilegeRepository privilegeRepo;
     private final PrivilegeService privilegeService;
     private final FenceMappingUtility fenceMappingUtility;
+
+    public static final String managed_open_access_role_name = "MANAGED_ROLE_OPEN_ACCESS";
 
     @Autowired
     protected RoleService(RoleRepository roleRepository, PrivilegeRepository privilegeRepo, PrivilegeService privilegeService, FenceMappingUtility fenceMappingUtility) {
@@ -100,7 +104,7 @@ public class RoleService {
      * @param roles list of roles
      */
     private void checkPrivilegeAssociation(List<Role> roles) throws RuntimeException {
-        for (Role role: roles){
+        for (Role role : roles) {
             if (role.getPrivileges() != null) {
                 Set<Privilege> privileges = new HashSet<>();
                 for (Privilege p : role.getPrivileges()) {
@@ -134,7 +138,7 @@ public class RoleService {
         CustomUserDetails current_user = (CustomUserDetails) context.getAuthentication().getPrincipal();
         Set<String> roleNames = current_user.getUser().getRoles().stream().map(Role::getName).collect(Collectors.toSet());
 
-        if (!roleNames.contains(SecurityRoles.PIC_SURE_TOP_ADMIN.getRole())){
+        if (!roleNames.contains(SecurityRoles.PIC_SURE_TOP_ADMIN.getRole())) {
             logger.info("User doesn't have PIC-SURE Top Admin role, can't remove any role");
             return Optional.empty();
         }
@@ -248,6 +252,22 @@ public class RoleService {
 
         logger.debug("upsertRole() finished");
         return status;
+    }
+
+    public Optional<Set<String>> getRoleNamesForDbgapPermissions(Set<RasDbgapPermission> dbgapPermissions) {
+        if (dbgapPermissions == null || dbgapPermissions.isEmpty()) {
+            return Optional.empty();
+        }
+
+        Set<String> roles = new HashSet<>();
+        dbgapPermissions.parallelStream().forEach(dbgapPermission -> {
+            String roleName = StringUtils.isNotBlank(dbgapPermission.getConsentGroup()) ?
+                    "MANAGED_" + dbgapPermission.getPhsId() + "_" + dbgapPermission.getConsentGroup() :
+                    "MANAGED_" + dbgapPermission.getPhsId();
+            roles.add(roleName);
+        });
+
+        return Optional.of(roles);
     }
 }
 
