@@ -22,7 +22,7 @@ import static edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming.AuthRoleNaming
  * rules for a given study</p>
  * <p>Note: Only users with the super admin role can access this endpoint.</p>
  */
-@Controller("/studyAccess")
+@Controller
 public class StudyAccessController {
 
     private final StudyAccessService studyAccessService;
@@ -34,7 +34,7 @@ public class StudyAccessController {
 
     @Operation(description = "POST a single study and it creates the role, privs, and rules for it, requires SUPER_ADMIN role")
     @Transactional
-    @PostMapping(consumes = "application/json")
+    @PostMapping(consumes = "application/json", path = "/studyAccess")
     @RolesAllowed({SUPER_ADMIN, ADMIN})
     public ResponseEntity<String> addStudyAccess(@Parameter(description = "The Study Identifier of the new study from the metadata.json")
                                             @RequestBody String studyIdentifier) {
