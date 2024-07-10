@@ -197,7 +197,7 @@ public class RoleService {
             r.setDescription(roleDescription);
             // Since this is a new Role, we need to ensure that the
             // corresponding Privilege (with gates) and AccessRule is added.
-            r.setPrivileges(privilegeService.addPrivileges(r));
+            r.setPrivileges(privilegeService.addPrivileges(r, this.fenceMappingUtility.getFENCEMapping()));
             logger.info("upsertRole() created new role");
         }
 
@@ -233,7 +233,7 @@ public class RoleService {
                 r.setDescription(roleDescription);
                 // Since this is a new Role, we need to ensure that the
                 // corresponding Privilege (with gates) and AccessRule is added.
-                r.setPrivileges(privilegeService.addPrivileges(r));
+                r.setPrivileges(privilegeService.addPrivileges(r, this.fenceMappingUtility.getFENCEMapping()));
                 this.save(r);
                 logger.info("upsertRole() created new role");
             }

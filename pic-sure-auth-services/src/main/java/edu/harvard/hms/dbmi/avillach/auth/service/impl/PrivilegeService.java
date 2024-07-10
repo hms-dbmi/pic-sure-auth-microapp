@@ -32,7 +32,6 @@ public class PrivilegeService {
     private final PrivilegeRepository privilegeRepository;
     private final ApplicationService applicationService;
     private final AccessRuleService accessRuleService;
-    private final FenceMappingUtility fenceMappingUtility;
 
     private Application picSureApp;
     private final String variantAnnotationColumns;
@@ -45,7 +44,7 @@ public class PrivilegeService {
     private static final String topmedAccessionField = "\\\\_Topmed Study Accession with Subject ID\\\\";
 
     @Autowired
-    protected PrivilegeService(PrivilegeRepository privilegeRepository, ApplicationService applicationService, AccessRuleService accessRuleService, FenceMappingUtility fenceMappingUtility,
+    protected PrivilegeService(PrivilegeRepository privilegeRepository, ApplicationService applicationService, AccessRuleService accessRuleService,
                                @Value("${fence.variant.annotation.columns}") String variantAnnotationColumns,
                                @Value("${fence.harmonized.consent.group.concept.path}") String fenceHarmonizedConsentGroupConceptPath,
                                @Value("${fence.parent.consent.group.concept.path}") String fenceParentConceptPath,
@@ -54,7 +53,6 @@ public class PrivilegeService {
         this.privilegeRepository = privilegeRepository;
         this.applicationService = applicationService;
         this.accessRuleService = accessRuleService;
-        this.fenceMappingUtility = fenceMappingUtility;
         this.variantAnnotationColumns = variantAnnotationColumns;
         this.fence_harmonized_consent_group_concept_path = fenceHarmonizedConsentGroupConceptPath;
         this.fence_parent_consent_group_concept_path = fenceParentConceptPath;
@@ -112,7 +110,7 @@ public class PrivilegeService {
         return this.privilegeRepository.save(privilege);
     }
 
-    public Set<Privilege> addPrivileges(Role r) {
+    public Set<Privilege> addPrivileges(Role r, Map<String, StudyMetaData> fenceMapping) {
         String roleName = r.getName();
         logger.info("addFENCEPrivileges() starting, adding privilege(s) to role {}", roleName);
 
@@ -136,7 +134,7 @@ public class PrivilegeService {
         logger.info("addFENCEPrivileges() project name: {} consent group: {}", project_name, consent_group);
 
         // Look up the metadata by consent group.
-        StudyMetaData projectMetadata = getStudyMappingForProjectAndConsent(project_name, consent_group);
+        StudyMetaData projectMetadata = getStudyMappingForProjectAndConsent(project_name, consent_group, fenceMapping);
 
         if (projectMetadata == null) {
             //no privileges means no access to this project.  just return existing set of privs.
@@ -398,10 +396,10 @@ public class PrivilegeService {
         return consentGroup;
     }
 
-    private StudyMetaData getStudyMappingForProjectAndConsent(String projectId, String consent_group) {
+    private StudyMetaData getStudyMappingForProjectAndConsent(String projectId, String consent_group, Map<String, StudyMetaData> fenceMapping) {
         String consentVal = (consent_group != null && !consent_group.isEmpty()) ? projectId + "." + consent_group : projectId;
         logger.info("getFENCEMappingforProjectAndConsent() looking up {}", consentVal);
 
-        return this.fenceMappingUtility.getFENCEMapping().get(consentVal);
+        return fenceMapping.get(consentVal);
     }
 }
