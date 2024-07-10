@@ -1,6 +1,7 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.impl.authentication;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import edu.harvard.hms.dbmi.avillach.auth.model.ras.RasDbgapPermission;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.AccessRuleService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.UserService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.RestClientUtil;
@@ -56,20 +57,25 @@ public class RASAuthenticationServiceTest extends TestCase {
     private JsonNode exampleRasPassportJson;
 
     @Test
-    public void testGa4ghPassPortStudies_IsNull() throws JsonProcessingException {
-        Set<String> strings = rasAuthenticationService.ga4gpPassportToStudies(null);
-        assertNull(strings);
+    public void testGa4ghPassPortStudies_IsNull() {
+        Set<RasDbgapPermission> permissions = rasAuthenticationService.ga4gpPassportToRasDbgapPermissions(null);
+        assertNull(permissions);
     }
 
     @Test
-    public void testGa4gpPassportStudies_IsNotNull() throws JsonProcessingException {
-        Set<String> strings = rasAuthenticationService.ga4gpPassportToStudies(exampleRasPassportJson);
-        assertNotNull(strings);
+    public void testGa4gpPassportStudies_IsNotNull() {
+        Set<RasDbgapPermission> permissions = rasAuthenticationService.ga4gpPassportToRasDbgapPermissions(exampleRasPassportJson);
+        assertNotNull(permissions);
     }
 
     @Test
-    public void testGa4gpPassportStudies() throws JsonProcessingException {
-        Set<String> strings = rasAuthenticationService.ga4gpPassportToStudies(exampleRasPassportJson);
+    public void testGa4gpPassportStudies_HasCorrectStudies() {
+        Set<RasDbgapPermission> permissions = rasAuthenticationService.ga4gpPassportToRasDbgapPermissions(exampleRasPassportJson);
 
+        assertEquals(2, permissions.size());
+        assertTrue(permissions.stream().anyMatch(p -> p.getPhsId().equals("phs000300")));
+        assertTrue(permissions.stream().anyMatch(p -> p.getPhsId().equals("phs000006")));
     }
+
+
 }
