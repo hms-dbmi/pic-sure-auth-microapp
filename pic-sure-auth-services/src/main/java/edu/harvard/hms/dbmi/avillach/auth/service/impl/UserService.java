@@ -591,6 +591,9 @@ public class UserService {
      * @return The user
      */
     public User loadUser(JsonNode introspectResponse, String connectionID, String subjectPrefix) {
+        logger.info(connectionID);
+        logger.info(introspectResponse.toPrettyString());
+        logger.info(subjectPrefix);
         String userEmail = introspectResponse.get("sub").asText();
         try {
             // connection id = RAS
