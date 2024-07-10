@@ -255,7 +255,10 @@ public class RoleService {
     }
 
     public Optional<Set<String>> getRoleNamesForDbgapPermissions(Set<RasDbgapPermission> dbgapPermissions) {
+        logger.info("getRoleNamesForDbgapPermissions()");
         if (dbgapPermissions == null || dbgapPermissions.isEmpty()) {
+            System.out.println("dbgapPermissions is empty");
+            logger.info("getRoleNamesForDbgapPermissions() dbgapPermissions is empty");
             return Optional.empty();
         }
 
@@ -264,9 +267,11 @@ public class RoleService {
             String roleName = StringUtils.isNotBlank(dbgapPermission.getConsentGroup()) ?
                     "MANAGED_" + dbgapPermission.getPhsId() + "_" + dbgapPermission.getConsentGroup() :
                     "MANAGED_" + dbgapPermission.getPhsId();
+            logger.info("getRoleNamesForDbgapPermissions() roleName:{}", roleName);
             roles.add(roleName);
         });
 
+        logger.info(roles.toString());
         return Optional.of(roles);
     }
 }

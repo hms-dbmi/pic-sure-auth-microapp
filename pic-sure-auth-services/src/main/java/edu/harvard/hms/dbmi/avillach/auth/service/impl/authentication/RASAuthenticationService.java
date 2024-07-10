@@ -91,6 +91,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
                 return null;
             }
 
+            // TODO: It is likely that the passport is inside of the JWT token returned from ras
             Set<RasDbgapPermission> dbgapPermissions = ga4gpPassportToRasDbgapPermissions(introspectResponse);
             Optional<Set<String>> dbgapRoleNames = this.roleService.getRoleNamesForDbgapPermissions(dbgapPermissions);
 
