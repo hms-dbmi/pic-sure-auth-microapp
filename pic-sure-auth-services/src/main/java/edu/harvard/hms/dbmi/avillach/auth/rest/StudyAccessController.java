@@ -34,8 +34,8 @@ public class StudyAccessController {
 
     @Operation(description = "POST a single study and it creates the role, privs, and rules for it, requires SUPER_ADMIN role")
     @Transactional
-    @PostMapping(consumes = "application/json", path = "/studyAccess")
     @RolesAllowed({SUPER_ADMIN, ADMIN})
+    @PostMapping(consumes = "application/json", path = "/studyAccess")
     public ResponseEntity<String> addStudyAccess(@Parameter(description = "The Study Identifier of the new study from the metadata.json")
                                             @RequestBody String studyIdentifier) {
         String status = studyAccessService.addStudyAccess(studyIdentifier);
