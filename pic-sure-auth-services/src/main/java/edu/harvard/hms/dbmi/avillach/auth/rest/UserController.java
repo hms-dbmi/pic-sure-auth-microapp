@@ -120,7 +120,6 @@ public class UserController {
     public ResponseEntity<?> getQueryTemplate(
             @Parameter(description = "Application Id for the returning queryTemplate")
             @PathVariable("applicationId") String applicationId) {
-        logger.info("getQueryTemplate() applicationId: {}", applicationId);
         Optional<String> mergedTemplate = this.userService.getQueryTemplate(applicationId);
 
         if (mergedTemplate.isEmpty()) {
