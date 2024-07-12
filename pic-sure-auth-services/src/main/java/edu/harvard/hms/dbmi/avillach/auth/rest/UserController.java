@@ -132,7 +132,7 @@ public class UserController {
     }
 
     @Operation(description = "Retrieve the queryTemplate of default application")
-    @GetMapping(path = "/me/queryTemplate", produces = "application/json")
+    @GetMapping(value = {"/me/queryTemplate", "/me/queryTemplate/"}, produces = "application/json")
     public ResponseEntity<?> getQueryTemplate() {
         Map<String, String> defaultQueryTemplate = userService.getDefaultQueryTemplate();
 
