@@ -393,7 +393,6 @@ public class UserService {
     }
 
     public Map<String, String> getDefaultQueryTemplate() {
-        logger.info("getDefaultQueryTemplate() Application UUID: {}", this.applicationUUID);
         Optional<String> mergedTemplate = getQueryTemplate(this.applicationUUID);
 
         if (mergedTemplate.isEmpty()) {
