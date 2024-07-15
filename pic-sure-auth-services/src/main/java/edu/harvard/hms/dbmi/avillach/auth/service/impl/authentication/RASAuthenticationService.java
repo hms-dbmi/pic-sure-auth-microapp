@@ -9,6 +9,7 @@ import edu.harvard.hms.dbmi.avillach.auth.model.ras.Ga4ghPassportV1;
 import edu.harvard.hms.dbmi.avillach.auth.model.ras.RasDbgapPermission;
 import edu.harvard.hms.dbmi.avillach.auth.service.AuthenticationService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.AccessRuleService;
+import edu.harvard.hms.dbmi.avillach.auth.service.impl.RASPassPortService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.RoleService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.UserService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.JWTUtil;
@@ -36,6 +37,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
     private final boolean isEnabled;
     private final AccessRuleService accessRuleService;
     private final RoleService roleService;
+    private final RASPassPortService rasPassPortService;
 
     /**
      * Constructor for the RASAuthenticationService
@@ -53,13 +55,14 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
                                     @Value("${ras.okta.idp.provider.uri}") String idp_provider_uri,
                                     @Value("${ras.okta.connection.id}") String connectionId,
                                     @Value("${ras.okta.client.id}") String clientId,
-                                    @Value("${ras.okta.client.secret}") String clientSecret, RoleService roleService) {
+                                    @Value("${ras.okta.client.secret}") String clientSecret, RoleService roleService, RASPassPortService rasPassPortService) {
         super(idp_provider_uri, clientId, clientSecret, restClientUtil);
 
         this.userService = userService;
         this.connectionId = connectionId;
         this.isEnabled = isEnabled;
         this.roleService = roleService;
+        this.rasPassPortService = rasPassPortService;
 
         logger.info("RASAuthenticationService is enabled: {}", isEnabled);
         logger.info("RASAuthenticationService initialized");
@@ -98,7 +101,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
                 return null;
             }
 
-            Set<RasDbgapPermission> dbgapPermissions = ga4gpPassportToRasDbgapPermissions(introspectResponse);
+            Set<RasDbgapPermission> dbgapPermissions = this.rasPassPortService.ga4gpPassportToRasDbgapPermissions(introspectResponse);
             Optional<Set<String>> dbgapRoleNames = this.roleService.getRoleNamesForDbgapPermissions(dbgapPermissions);
 
             // Remove role from user if it doesn't exist in the dbgapRoleNames
@@ -194,25 +197,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
         return objectNode;
     }
 
-    protected Set<RasDbgapPermission> ga4gpPassportToRasDbgapPermissions(JsonNode introspectResponse) {
-        if (introspectResponse == null) {
-            return null;
-        }
 
-        HashSet<RasDbgapPermission> rasDbgapPermissions = new HashSet<>();
-        JsonNode ga4ghPassports = introspectResponse.get("ga4gh_passport_v1");
-        ga4ghPassports.forEach(ga4ghPassport -> {
-            Optional<Ga4ghPassportV1> parsedGa4ghPassportV1 = JWTUtil.parseGa4ghPassportV1(ga4ghPassport.toString());
-            if (parsedGa4ghPassportV1.isPresent()) {
-                Ga4ghPassportV1 ga4ghPassportV1 = parsedGa4ghPassportV1.get();
-                logger.info("ga4gh_passport_v1: {}", ga4ghPassportV1);
-
-                rasDbgapPermissions.addAll(ga4ghPassportV1.getRasDbgagPermissions());
-            }
-        });
-
-        return rasDbgapPermissions;
-    }
 
     @Override
     public String getProvider() {
