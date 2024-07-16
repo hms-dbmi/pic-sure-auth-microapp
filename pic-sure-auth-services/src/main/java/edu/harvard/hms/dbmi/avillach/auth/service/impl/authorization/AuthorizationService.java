@@ -86,7 +86,6 @@ public class AuthorizationService {
      * @see AccessRule
      */
     public boolean isAuthorized(Application application, Object requestBody, User user) {
-        // create timer
         String applicationName = application.getName();
         String resourceId = "null";
         String targetService = "null";
