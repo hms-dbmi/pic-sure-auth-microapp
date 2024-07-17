@@ -7,30 +7,34 @@ import org.springframework.data.repository.PagingAndSortingRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
  * <p>Provides operations for the User entity to interact with a database.</p>
+ *
  * @see User
  */
 
 @Repository
 public interface UserRepository extends JpaRepository<User, UUID> {
 
-   User findBySubject(String subject);
+    User findBySubject(String subject);
 
-   User findBySubjectAndConnection(String subject, Connection connection);
+    User findBySubjectAndConnection(String subject, Connection connection);
 
-   List<User> findByConnectionAndMatched(Connection connection, boolean matched);
+    List<User> findByConnectionAndMatched(Connection connection, boolean matched);
 
-   /**
-    * <p>Find a user by email.</p>
-    * @param email the email to search for
-    * @return User
-    */
-   User findByEmail(String email);
+    /**
+     * <p>Find a user by email.</p>
+     *
+     * @param email the email to search for
+     * @return User
+     */
+    User findByEmail(String email);
 
     User findByEmailAndConnectionId(String email, String id);
 
+    Set<User> findByPassportIsNotNull();
 
 }

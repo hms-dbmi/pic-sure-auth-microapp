@@ -623,4 +623,7 @@ public class UserService {
         }
     }
 
+    public Set<User> getAllUsersWithAPassport() {
+        return this.userRepository.findByPassportIsNotNull();
+    }
 }
