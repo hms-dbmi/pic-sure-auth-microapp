@@ -42,7 +42,7 @@ public class RASPassPortService {
 
     @PostConstruct
     public void init() {
-        // remove any trailing / from the rasURI.
+        // remove any trailing / from the rasURI if it was included.
         rasURI = rasURI.replaceAll("/$", "");
     }
 
