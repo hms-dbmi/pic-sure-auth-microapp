@@ -2,6 +2,8 @@ package edu.harvard.hms.dbmi.avillach.auth.service.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import edu.harvard.hms.dbmi.avillach.auth.entity.User;
+import edu.harvard.hms.dbmi.avillach.auth.enums.PassportValidationResponse;
 import edu.harvard.hms.dbmi.avillach.auth.model.ras.Ga4ghPassportV1;
 import edu.harvard.hms.dbmi.avillach.auth.model.ras.RasDbgapPermission;
 import edu.harvard.hms.dbmi.avillach.auth.utils.JWTUtil;
@@ -13,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -26,19 +29,72 @@ public class RASPassPortService {
 
     private final Logger logger = LoggerFactory.getLogger(RASPassPortService.class);
     private final RestClientUtil restClientUtil;
+    private final UserService userService;
 
     @Value("ras.uri")
     private String rasURI;
 
     @Autowired
-    public RASPassPortService(RestClientUtil restClientUtil) {
+    public RASPassPortService(RestClientUtil restClientUtil, UserService userService) {
         this.restClientUtil = restClientUtil;
+        this.userService = userService;
     }
 
     @PostConstruct
     public void init() {
         // remove any trailing / from the rasURI.
         rasURI = rasURI.replaceAll("/$", "");
+    }
+
+    /**
+     * We will run this nearly immediately after startup. We don't know how long it has been since the last auth micro app
+     * ran its validate.
+     */
+    @Scheduled(initialDelay = 1000, fixedDelay = 3000000)
+    public void validateAllUserPassports() {
+        /*
+            - Load all users who have passports - DONE
+            - Loop over the users and validate their passport - DONE
+            - Handle the response from the validatePassport call - In Progress
+            - Potentially add a scheduled job table. This will allow us to avoid running this job too often. - Write Proposal so team can review
+         */
+
+        Set<User> allUsersWithAPassport = this.userService.getAllUsersWithAPassport();
+        allUsersWithAPassport.parallelStream().forEach(user -> {
+            String passport = user.getPassport();
+            Optional<JsonNode> jsonNode = validatePassport(passport);
+            if (jsonNode.isPresent()) {
+                boolean successfullyUpdated = handlePassportValidationResponse(jsonNode.get());
+                if (successfullyUpdated) {
+                    logger.info("Successfully updated user passport for user: {}", user.getEmail());
+                }
+            }
+        });
+
+    }
+
+    private boolean handlePassportValidationResponse(JsonNode jsonNode) {
+        return switch (PassportValidationResponse.valueOf(jsonNode.get("status").asText())) {
+            case VALID -> handleValidValidationResponse(jsonNode);
+            case PERMISSION_UPDATE -> handlePermissionUpdateValidationResponse(jsonNode);
+            case INVALID, MISSING, INVALID_PASSPORT, VISA_EXPIRED, TXN_ERROR, EXPIRATION_ERROR, VALIDATION_ERROR,
+                 EXPIRED_POLLING -> handleFailedValidationResponse(jsonNode);
+        };
+    }
+
+    private boolean handleFailedValidationResponse(JsonNode validateResponse) {
+        // TODO: Implement once response data is known
+        return false;
+    }
+
+    private boolean handlePermissionUpdateValidationResponse(JsonNode validateResponse) {
+        // TODO: Implement once response data is known
+        return false;
+    }
+
+    private boolean handleValidValidationResponse(JsonNode validateResponse) {
+        // TODO: Implement once response data is known
+        return false;
     }
 
     public Optional<JsonNode> validatePassport(String passport) {
@@ -50,7 +106,7 @@ public class RASPassPortService {
         JsonNode respJson;
         ResponseEntity<String> resp;
         try {
-            resp = this.restClientUtil.retrievePostResponse("/passport/validate", request);
+            resp = this.restClientUtil.retrievePostResponse(this.rasURI + "/passport/validate", request);
             respJson = new ObjectMapper().readTree(resp.getBody());
         } catch (Exception e) {
             logger.error("Failed to validate passport: {}", passport, e);
@@ -71,7 +127,7 @@ public class RASPassPortService {
             Optional<Ga4ghPassportV1> parsedGa4ghPassportV1 = JWTUtil.parseGa4ghPassportV1(ga4ghPassport.toString());
             if (parsedGa4ghPassportV1.isPresent()) {
                 Ga4ghPassportV1 ga4ghPassportV1 = parsedGa4ghPassportV1.get();
-                logger.info("ga4gh_passport_v1: {}", ga4ghPassportV1);
+                logger.debug("ga4gh_passport_v1: {}", ga4ghPassportV1);
 
                 rasDbgapPermissions.addAll(ga4ghPassportV1.getRasDbgagPermissions());
             }
