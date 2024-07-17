@@ -3,16 +3,13 @@ package edu.harvard.hms.dbmi.avillach.auth.service.impl.authentication;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
-import edu.harvard.hms.dbmi.avillach.auth.model.ras.Ga4ghPassportV1;
 import edu.harvard.hms.dbmi.avillach.auth.model.ras.RasDbgapPermission;
 import edu.harvard.hms.dbmi.avillach.auth.service.AuthenticationService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.AccessRuleService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.RASPassPortService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.RoleService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.UserService;
-import edu.harvard.hms.dbmi.avillach.auth.utils.JWTUtil;
 import edu.harvard.hms.dbmi.avillach.auth.utils.RestClientUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -22,7 +19,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static edu.harvard.hms.dbmi.avillach.auth.service.impl.RoleService.managed_open_access_role_name;
 
@@ -118,6 +114,9 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
                     .filter(Objects::nonNull)
                     .forEach(role -> user.getRoles().add(role)));
 
+            String passport = introspectResponse.get("ga4gh_passport_v1").toString();
+            user.setPassport(passport);
+            userService.save(user);
             HashMap<String, String> responseMap = createUserClaims(user);
             logger.info("LOGIN SUCCESS ___ {}:{} ___ Authorization will expire at  ___ {}___", user.getEmail(), user.getUuid().toString(), responseMap.get("expirationDate"));
 
@@ -140,10 +139,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
             return null;
         }
 
-        logger.info(introspectResponse.toPrettyString());
-        logger.info(this.connectionId);
-        logger.info("ras");
-        logger.info("Load User");
+        logger.debug(introspectResponse.toPrettyString());
         User user = userService.loadUser(introspectResponse, this.connectionId, "ras");
         if (user == null) {
             return null;
