@@ -40,6 +40,10 @@ public class JWTUtil {
         this.clientSecretIsBase64 = clientSecretIsBase64;
     }
 
+    public static boolean isLongTermToken(String sub) {
+        return sub.startsWith(AuthNaming.LONG_TERM_TOKEN_PREFIX);
+    }
+
     private String getDecodedClientSecret() {
         if (clientSecretIsBase64) {
             return new String(Base64.decodeBase64(clientSecret));

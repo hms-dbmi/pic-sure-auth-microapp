@@ -73,11 +73,12 @@ public class UserService {
         this.connectionRepository = connectionRepository;
         this.roleService = roleService;
         this.tokenExpirationTime = tokenExpirationTime > 0 ? tokenExpirationTime : defaultTokenExpirationTime;
+        logger.info("Token Expiration Time : {}", tokenExpirationTime);
         this.applicationRepository = applicationRepository;
         this.applicationUUID = applicationUUID;
         this.jwtUtil = jwtUtil;
 
-        long defaultLongTermTokenExpirationTime = 1000L * 60 * 60 * 24 * 30; //
+        long defaultLongTermTokenExpirationTime = 1000L * 60 * 60 * 24 * 30;
         this.longTermTokenExpirationTime = longTermTokenExpirationTime > 0 ? longTermTokenExpirationTime : defaultLongTermTokenExpirationTime;
     }
 

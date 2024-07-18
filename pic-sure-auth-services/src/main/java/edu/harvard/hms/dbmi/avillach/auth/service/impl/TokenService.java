@@ -41,14 +41,18 @@ public class TokenService {
 
     private static final long defaultTokenExpirationTime = 1000L * 60 * 60; // 1 hour
     private final JWTUtil jwtUtil;
+    private final SessionService sessionService;
 
     @Autowired
     public TokenService(AuthorizationService authorizationService, UserRepository userRepository,
-                        @Value("${application.token.expiration.time}") long tokenExpirationTime, JWTUtil jwtUtil) {
+                        @Value("${application.token.expiration.time}") long tokenExpirationTime,
+                        JWTUtil jwtUtil,
+                        SessionService sessionService) {
         this.authorizationService = authorizationService;
         this.userRepository = userRepository;
         this.tokenExpirationTime = tokenExpirationTime > 0 ? tokenExpirationTime : defaultTokenExpirationTime;
         this.jwtUtil = jwtUtil;
+        this.sessionService = sessionService;
     }
 
     public Map<String, Object> inspectToken(Map<String, Object> inputMap) {
@@ -250,6 +254,11 @@ public class TokenService {
         Claims claims = jws.getPayload();
         if (!subject.equals(claims.getSubject())) {
             logger.error("refreshToken() user subject is not the same as the subject of the input token");
+            return Map.of("error", "Inner application error, try again or contact admin.");
+        }
+
+        if (!JWTUtil.isLongTermToken(claims.getSubject()) && sessionService.isSessionExpired(claims.getSubject())) {
+            logger.info("refreshToken() The user has just is being logged out.");
             return Map.of("error", "Inner application error, try again or contact admin.");
         }
 

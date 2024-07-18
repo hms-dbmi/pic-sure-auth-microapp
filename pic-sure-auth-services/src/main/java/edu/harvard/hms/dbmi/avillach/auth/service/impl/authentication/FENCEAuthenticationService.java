@@ -14,13 +14,12 @@ import edu.harvard.hms.dbmi.avillach.auth.service.impl.*;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.AccessRuleService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.FenceMappingUtility;
 import edu.harvard.hms.dbmi.avillach.auth.utils.RestClientUtil;
+import jakarta.annotation.PostConstruct;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.event.ContextRefreshedEvent;
-import org.springframework.context.event.EventListener;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -79,44 +78,11 @@ public class FENCEAuthenticationService implements AuthenticationService {
         this.isFenceEnabled = isFenceEnabled;
     }
 
-    @EventListener(ContextRefreshedEvent.class)
+    @PostConstruct
     public void initializeFenceService() {
         fenceConnection = connectionService.getConnectionByLabel("FENCE");
-
-        // log all the properties
         logger.info("isFenceEnabled: {}", isFenceEnabled);
         logger.info("idp_provider_uri: {}", idp_provider_uri);
-
-        if (fenceMappingUtility.getFENCEMapping() != null && fenceMappingUtility.getFenceMappingByAuthZ() != null
-                && !fenceMappingUtility.getFENCEMapping().isEmpty() && !fenceMappingUtility.getFenceMappingByAuthZ().isEmpty()) {
-            // Create all potential access rules using the fence mapping
-            Set<Role> roles = fenceMappingUtility.getFenceMappingByAuthZ().values().parallelStream().map(projectMetadata -> {
-                if (projectMetadata == null) {
-                    logger.error("initializeFenceService() -> createAndUpsertRole could not find study in FENCE mapping SKIPPING: {}", projectMetadata);
-                    return null;
-                }
-
-                if (projectMetadata.getStudyIdentifier() == null || projectMetadata.getStudyIdentifier().isEmpty()) {
-                    logger.error("initializeFenceService() -> createAndUpsertRole could not find study identifier in FENCE mapping SKIPPING: {}", projectMetadata);
-                    return null;
-                }
-
-                if (projectMetadata.getAuthZ() == null || projectMetadata.getAuthZ().isEmpty()) {
-                    logger.error("initializeFenceService() -> createAndUpsertRole could not find authZ in FENCE mapping SKIPPING: {}", projectMetadata);
-                    return null;
-                }
-
-                String projectId = projectMetadata.getStudyIdentifier();
-                String consentCode = projectMetadata.getConsentGroupCode();
-                String newRoleName = StringUtils.isNotBlank(consentCode) ? "MANAGED_" + projectId + "_" + consentCode : "MANAGED_" + projectId;
-
-                return this.roleService.createRole(newRoleName, "MANAGED role " + newRoleName);
-            }).filter(Objects::nonNull).collect(Collectors.toSet());
-
-            roleService.persistAll(roles);
-        } else {
-            logger.error("initializeFenceService() -> createAndUpsertRole could not find any studies in FENCE mapping");
-        }
     }
 
     @Override
@@ -175,7 +141,6 @@ public class FENCEAuthenticationService implements AuthenticationService {
         // Update the user's roles (or create them if none exists)
         Iterator<String> project_access_names = fence_user_profile.get("authz").fieldNames();
 
-        // I want to parallelize this, but I'm not sure if it's safe to do so.
         Set<String> roleNames = new HashSet<>();
         project_access_names.forEachRemaining(roleName -> {
             // We need to add/remove the users roles based on what is in the project_access_names list
@@ -192,12 +157,7 @@ public class FENCEAuthenticationService implements AuthenticationService {
             roleNames.add(newRoleName);
         });
 
-        // convert roles to string list
-        String roles = current_user.getRoles().stream().map(Role::getName).collect(Collectors.joining(","));
-        logger.info("Current User Roles: " + roles);
-
         // find roles that are in the user's roles but not in the project_access_names. These are the roles that need to be removed.
-        // exclude userRole -> "PIC-SURE Top Admin".equals(userRole.getName()) || "Admin".equals(userRole.getName()) || userRole.getName().startsWith("MANUAL_")
         Set<Role> rolesToRemove = current_user.getRoles().parallelStream()
                 .filter(role -> !roleNames.contains(role.getName()) && !role.getName().equals(fence_open_access_role_name) && !role.getName().startsWith("MANUAL_") && !role.getName().equals("PIC-SURE Top Admin") && !role.getName().equals("Admin"))
                 .collect(Collectors.toSet());
