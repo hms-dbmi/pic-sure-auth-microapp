@@ -11,7 +11,6 @@ import edu.harvard.hms.dbmi.avillach.auth.exceptions.NotAuthorizedException;
 import edu.harvard.hms.dbmi.avillach.auth.model.fenceMapping.StudyMetaData;
 import edu.harvard.hms.dbmi.avillach.auth.service.AuthenticationService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.*;
-import edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization.AccessRuleService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.FenceMappingUtility;
 import edu.harvard.hms.dbmi.avillach.auth.utils.RestClientUtil;
 import jakarta.annotation.PostConstruct;
@@ -103,7 +102,7 @@ public class FENCEAuthenticationService implements AuthenticationService {
         // Get the Gen3/FENCE user profile. It is a JsonNode object
         try {
             logger.debug("getFENCEProfile() query FENCE for user profile with code");
-            fence_user_profile = getFENCEUserProfile(getFENCEAccessToken(callback_url, fence_code).get("access_token").asText());
+            fence_user_profile = getFENCEUserProfile(getFENCEAccessToken(callBackUrl, fence_code).get("access_token").asText());
 
             if (logger.isTraceEnabled()) {
                 // create object mapper instance
