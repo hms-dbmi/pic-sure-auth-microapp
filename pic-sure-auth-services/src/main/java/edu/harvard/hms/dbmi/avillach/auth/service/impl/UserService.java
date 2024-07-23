@@ -55,6 +55,7 @@ public class UserService {
     private final RoleService roleService;
     private final long tokenExpirationTime;
     private static final long defaultTokenExpirationTime = 1000L * 60 * 60; // 1 hour
+    private final SessionService sessionService;
 
     public long longTermTokenExpirationTime;
 
@@ -71,7 +72,7 @@ public class UserService {
                        @Value("${application.token.expiration.time}") long tokenExpirationTime,
                        @Value("${application.default.uuid}") String applicationUUID,
                        @Value("${application.long.term.token.expiration.time}") long longTermTokenExpirationTime,
-                       JWTUtil jwtUtil) {
+                       JWTUtil jwtUtil, SessionService sessionService) {
         this.basicMailService = basicMailService;
         this.tosService = tosService;
         this.userRepository = userRepository;
@@ -85,6 +86,7 @@ public class UserService {
 
         long defaultLongTermTokenExpirationTime = 1000L * 60 * 60 * 24 * 30;
         this.longTermTokenExpirationTime = longTermTokenExpirationTime > 0 ? longTermTokenExpirationTime : defaultLongTermTokenExpirationTime;
+        this.sessionService = sessionService;
     }
 
     public HashMap<String, String> getUserProfileResponse(Map<String, Object> claims) {
@@ -627,5 +629,15 @@ public class UserService {
 
     public Set<User> getAllUsersWithAPassport() {
         return this.userRepository.findByPassportIsNotNull();
+    }
+
+    /**
+     * Clears users session and merge template which effectively logs them out.
+     *
+     * @param user
+     */
+    public void logoutUser(User user) {
+        evictFromCache(user.getSubject());
+        this.sessionService.endSession(user.getSubject());
     }
 }

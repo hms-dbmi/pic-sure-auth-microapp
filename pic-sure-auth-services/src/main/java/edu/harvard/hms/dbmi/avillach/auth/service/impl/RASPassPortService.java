@@ -35,7 +35,7 @@ public class RASPassPortService {
     private String rasURI;
 
     @Autowired
-    public RASPassPortService(RestClientUtil restClientUtil, UserService userService) {
+    public RASPassPortService(RestClientUtil restClientUtil, UserService userService, SessionService sessionService) {
         this.restClientUtil = restClientUtil;
         this.userService = userService;
     }
@@ -64,7 +64,7 @@ public class RASPassPortService {
             String passport = user.getPassport();
             Optional<JsonNode> jsonNode = validatePassport(passport);
             if (jsonNode.isPresent()) {
-                boolean successfullyUpdated = handlePassportValidationResponse(jsonNode.get());
+                boolean successfullyUpdated = handlePassportValidationResponse(jsonNode.get(), user);
                 if (successfullyUpdated) {
                     logger.info("Successfully updated user passport for user: {}", user.getEmail());
                 }
@@ -73,27 +73,33 @@ public class RASPassPortService {
 
     }
 
-    private boolean handlePassportValidationResponse(JsonNode jsonNode) {
+    private boolean handlePassportValidationResponse(JsonNode jsonNode, User user) {
         return switch (PassportValidationResponse.valueOf(jsonNode.get("status").asText())) {
             case VALID -> handleValidValidationResponse(jsonNode);
-            case PERMISSION_UPDATE -> handlePermissionUpdateValidationResponse(jsonNode);
-            case INVALID, MISSING, INVALID_PASSPORT, VISA_EXPIRED, TXN_ERROR, EXPIRATION_ERROR, VALIDATION_ERROR,
-                 EXPIRED_POLLING -> handleFailedValidationResponse(jsonNode);
+            case PERMISSION_UPDATE, INVALID, MISSING, INVALID_PASSPORT, VISA_EXPIRED, TXN_ERROR, EXPIRATION_ERROR, VALIDATION_ERROR,
+                 EXPIRED_POLLING -> handleFailedValidationResponse(jsonNode, user);
         };
     }
 
-    private boolean handleFailedValidationResponse(JsonNode validateResponse) {
-        // TODO: Implement once response data is known
-        return false;
+    /**
+     * If a passport is anything but VALID the user will be logged out and their passport be cleared.
+     *
+     * @param validateResponse
+     * @param user
+     * @return
+     */
+    private boolean handleFailedValidationResponse(JsonNode validateResponse, User user) {
+        user.setPassport(null);
+        this.userService.save(user);
+        this.userService.logoutUser(user);
+        this.logger.info("handleFailedValidationResponse: {}", validateResponse);
+        this.logger.info("User logged out for user: {}", user.getSubject());
+        return true;
     }
 
-    private boolean handlePermissionUpdateValidationResponse(JsonNode validateResponse) {
-        // TODO: Implement once response data is known
-        return false;
-    }
-
-    private boolean handleValidValidationResponse(JsonNode validateResponse) {
-        // TODO: Implement once response data is known
+    private boolean handleValidValidationResponse(JsonNode validateResponse, User user) {
+        this.logger.info("handleValidValidationResponse: {}", validateResponse);
+        this.logger.info("User {}'s passport is still VALID.", user.getSubject());
         return false;
     }
 
