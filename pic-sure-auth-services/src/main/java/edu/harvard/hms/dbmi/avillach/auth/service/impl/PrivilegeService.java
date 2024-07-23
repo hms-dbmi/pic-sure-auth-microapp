@@ -32,6 +32,7 @@ public class PrivilegeService {
     private final PrivilegeRepository privilegeRepository;
     private final ApplicationService applicationService;
     private final AccessRuleService accessRuleService;
+    private final FenceMappingUtility fenceMappingUtility;
 
     private Application picSureApp;
     private final String variantAnnotationColumns;
@@ -44,7 +45,7 @@ public class PrivilegeService {
     private static final String topmedAccessionField = "\\\\_Topmed Study Accession with Subject ID\\\\";
 
     @Autowired
-    protected PrivilegeService(PrivilegeRepository privilegeRepository, ApplicationService applicationService, AccessRuleService accessRuleService,
+    protected PrivilegeService(PrivilegeRepository privilegeRepository, ApplicationService applicationService, AccessRuleService accessRuleService, FenceMappingUtility fenceMappingUtility,
                                @Value("${fence.variant.annotation.columns}") String variantAnnotationColumns,
                                @Value("${fence.harmonized.consent.group.concept.path}") String fenceHarmonizedConsentGroupConceptPath,
                                @Value("${fence.parent.consent.group.concept.path}") String fenceParentConceptPath,
@@ -53,6 +54,7 @@ public class PrivilegeService {
         this.privilegeRepository = privilegeRepository;
         this.applicationService = applicationService;
         this.accessRuleService = accessRuleService;
+        this.fenceMappingUtility = fenceMappingUtility;
         this.variantAnnotationColumns = variantAnnotationColumns;
         this.fence_harmonized_consent_group_concept_path = fenceHarmonizedConsentGroupConceptPath;
         this.fence_parent_consent_group_concept_path = fenceParentConceptPath;

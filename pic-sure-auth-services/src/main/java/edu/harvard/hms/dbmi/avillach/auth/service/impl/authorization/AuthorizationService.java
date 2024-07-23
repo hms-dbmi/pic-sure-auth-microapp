@@ -8,6 +8,8 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.rest.TokenController;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.AccessRuleService;
+import edu.harvard.hms.dbmi.avillach.auth.service.impl.SessionService;
+import io.micrometer.common.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +43,7 @@ public class AuthorizationService {
     private final Logger logger = LoggerFactory.getLogger(AuthorizationService.class);
 
     protected AccessRuleService accessRuleService;
+    protected SessionService sessionService;
 
     /**
      * Applications that have strict access control. If the application is strict a user must have both privileges and access rules.
@@ -48,12 +51,12 @@ public class AuthorizationService {
      */
     private final Set<String> strictConnections = new HashSet<>();
 
-    public AuthorizationService() {
-    }
-
     @Autowired
-    public AuthorizationService(AccessRuleService accessRuleService, @Value("${strict.authorization.applications.connections}") String strictConnections) {
+    public AuthorizationService(AccessRuleService accessRuleService,
+                                SessionService sessionService,
+                                @Value("${strict.authorization.applications.connections}") String strictConnections) {
         this.accessRuleService = accessRuleService;
+        this.sessionService = sessionService;
         if (strictConnections != null && !strictConnections.isEmpty()) {
             this.strictConnections.addAll(Arrays.asList(strictConnections.split(",")));
         }
@@ -86,11 +89,24 @@ public class AuthorizationService {
      * @see AccessRule
      */
     public boolean isAuthorized(Application application, Object requestBody, User user) {
-        // create timer
-        long startTime = System.currentTimeMillis();
         String applicationName = application.getName();
         String resourceId = "null";
         String targetService = "null";
+
+        if (user == null) {
+            logger.error("isAuthorized() User cannot be null");
+            return false;
+        }
+
+        if (StringUtils.isBlank(user.getSubject())) {
+            logger.error("isAuthorized() Subject cannot be blank {}", user.getSubject());
+            return false;
+        }
+
+        if (sessionService.isSessionExpired(user.getSubject())) {
+            logger.error("isAuthorized() Session expired {}", user.getSubject());
+            return false;
+        }
 
         //in some cases, we don't go through the evaluation
         if (requestBody == null) {
@@ -98,7 +114,6 @@ public class AuthorizationService {
             return true;
         }
 
-        long parseTimeFrame = System.currentTimeMillis();
         try {
             Map requestBodyMap = (Map) requestBody;
             Map queryMap = (Map) requestBodyMap.get("query");
@@ -122,10 +137,14 @@ public class AuthorizationService {
             logger.debug("isAuthorized() Stack Trace: ", e1);
             return false;
         }
-        logger.info("Parse timeframe {} ms", (System.currentTimeMillis() - parseTimeFrame));
 
         Set<AccessRule> accessRules;
-        String label = user.getConnection().getLabel();
+        String label = "";
+        if (user.getConnection() != null) {
+            // Open Access doesn't currently use a connection
+            label = user.getConnection().getLabel();
+        }
+
         if (!this.strictConnections.contains(label)) {
             Set<Privilege> privileges = user.getPrivilegesByApplication(application);
             if (privileges == null || privileges.isEmpty()) {
@@ -139,7 +158,6 @@ public class AuthorizationService {
                 return true;
             }
         } else {
-            logger.info("User Email: {}", user.getEmail());
             accessRules = this.accessRuleService.getAccessRulesForUserAndApp(user, application);
             if (accessRules == null || accessRules.isEmpty()) {
                 logger.info("ACCESS_LOG ___ {},{},{} ___ has been denied access to execute query ___ {} ___ in application ___ {} ___ NO ACCESS RULES EVALUATED", user.getUuid().toString(), user.getEmail(), user.getName(), formattedQuery, applicationName);
@@ -174,7 +192,6 @@ public class AuthorizationService {
                 .map(ar -> (ar.getMergedName().isEmpty() ? ar.getName() : ar.getMergedName()))
                 .collect(Collectors.joining(", ")) + "]");
 
-        logger.info("Login time: {}ms", System.currentTimeMillis() - startTime);
         return result;
     }
 

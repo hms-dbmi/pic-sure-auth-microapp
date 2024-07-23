@@ -2,15 +2,11 @@ package edu.harvard.hms.dbmi.avillach.auth.service.impl;
 
 import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
-import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.enums.SecurityRoles;
 import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
-import edu.harvard.hms.dbmi.avillach.auth.model.fenceMapping.StudyMetaData;
-import edu.harvard.hms.dbmi.avillach.auth.model.ras.RasDbgapPermission;
 import edu.harvard.hms.dbmi.avillach.auth.repository.PrivilegeRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.RoleRepository;
 import edu.harvard.hms.dbmi.avillach.auth.utils.FenceMappingUtility;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,7 +28,6 @@ public class RoleService {
     private final PrivilegeRepository privilegeRepo;
     private final PrivilegeService privilegeService;
     private final FenceMappingUtility fenceMappingUtility;
-
     public static final String managed_open_access_role_name = "MANAGED_ROLE_OPEN_ACCESS";
 
     @Autowired
@@ -45,12 +40,10 @@ public class RoleService {
 
     @EventListener(ContextRefreshedEvent.class)
     public void createPermissionsForFenceMapping() {
-        Map<String, StudyMetaData> fenceMapping = this.fenceMappingUtility.getFENCEMapping();
-        Map<String, StudyMetaData> fenceMappingByAuthZ = this.fenceMappingUtility.getFenceMappingByAuthZ();
-        if (fenceMapping != null && fenceMappingByAuthZ != null
-                && !fenceMapping.isEmpty() && !fenceMappingByAuthZ.isEmpty()) {
+        if (this.fenceMappingUtility.getFENCEMapping() != null && this.fenceMappingUtility.getFenceMappingByAuthZ() != null
+                && !this.fenceMappingUtility.getFENCEMapping().isEmpty() && !this.fenceMappingUtility.getFenceMappingByAuthZ().isEmpty()) {
             // Create all potential access rules using the fence mapping
-            Set<Role> roles = fenceMappingByAuthZ.values().parallelStream().map(projectMetadata -> {
+            Set<Role> roles = this.fenceMappingUtility.getFenceMappingByAuthZ().values().parallelStream().map(projectMetadata -> {
                 if (projectMetadata == null) {
                     logger.error("createPermissionsForFenceMapping() -> createAndUpsertRole could not find study in FENCE mapping SKIPPING: {}", projectMetadata);
                     return null;
@@ -70,10 +63,10 @@ public class RoleService {
                 String consentCode = projectMetadata.getConsentGroupCode();
                 String newRoleName = org.apache.commons.lang3.StringUtils.isNotBlank(consentCode) ? "MANAGED_" + projectId + "_" + consentCode : "MANAGED_" + projectId;
 
-                return this.createRole(newRoleName, "MANAGEDrole " + newRoleName);
+                return this.createRole(newRoleName, "MANAGED role " + newRoleName);
             }).filter(Objects::nonNull).collect(Collectors.toSet());
 
-            persistAll(roles);
+            this.persistAll(roles);
         } else {
             logger.error("createPermissionsForFenceMapping() -> createAndUpsertRole could not find any studies in FENCE mapping");
         }

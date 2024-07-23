@@ -11,7 +11,7 @@ import edu.harvard.hms.dbmi.avillach.auth.exceptions.NotAuthorizedException;
 import edu.harvard.hms.dbmi.avillach.auth.model.fenceMapping.StudyMetaData;
 import edu.harvard.hms.dbmi.avillach.auth.service.AuthenticationService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.*;
-import edu.harvard.hms.dbmi.avillach.auth.service.impl.AccessRuleService;
+import edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization.AccessRuleService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.FenceMappingUtility;
 import edu.harvard.hms.dbmi.avillach.auth.utils.RestClientUtil;
 import jakarta.annotation.PostConstruct;
@@ -53,7 +53,7 @@ public class FENCEAuthenticationService implements AuthenticationService {
     private final String fence_client_id;
     private final String fence_client_secret;
 
-
+    public static final String fence_open_access_role_name = "MANAGED_ROLE_OPEN_ACCESS";
     private final RestClientUtil restClientUtil;
 
     @Autowired
@@ -103,8 +103,8 @@ public class FENCEAuthenticationService implements AuthenticationService {
         // Get the Gen3/FENCE user profile. It is a JsonNode object
         try {
             logger.debug("getFENCEProfile() query FENCE for user profile with code");
-            fence_user_profile = getFENCEUserProfile(getFENCEAccessToken(callBackUrl, fence_code).get("access_token").asText());
-            logger.info(fence_user_profile.toPrettyString());
+            fence_user_profile = getFENCEUserProfile(getFENCEAccessToken(callback_url, fence_code).get("access_token").asText());
+
             if (logger.isTraceEnabled()) {
                 // create object mapper instance
                 ObjectMapper mapper = new ObjectMapper();
@@ -142,7 +142,6 @@ public class FENCEAuthenticationService implements AuthenticationService {
         // Update the user's roles (or create them if none exists)
         Iterator<String> project_access_names = fence_user_profile.get("authz").fieldNames();
 
-        // I want to parallelize this, but I'm not sure if it's safe to do so.
         Set<String> roleNames = new HashSet<>();
         project_access_names.forEachRemaining(roleName -> {
             // We need to add/remove the users roles based on what is in the project_access_names list
@@ -159,12 +158,7 @@ public class FENCEAuthenticationService implements AuthenticationService {
             roleNames.add(newRoleName);
         });
 
-        // convert roles to string list
-        String roles = current_user.getRoles().stream().map(Role::getName).collect(Collectors.joining(","));
-        logger.info("Current User Roles: " + roles);
-
         // find roles that are in the user's roles but not in the project_access_names. These are the roles that need to be removed.
-        // exclude userRole -> "PIC-SURE Top Admin".equals(userRole.getName()) || "Admin".equals(userRole.getName()) || userRole.getName().startsWith("MANUAL_")
         Set<Role> rolesToRemove = current_user.getRoles().parallelStream()
                 .filter(role -> !roleNames.contains(role.getName()) && !role.getName().equals(managed_open_access_role_name) && !role.getName().startsWith("MANUAL_") && !role.getName().equals("PIC-SURE Top Admin") && !role.getName().equals("Admin"))
                 .collect(Collectors.toSet());
@@ -177,7 +171,7 @@ public class FENCEAuthenticationService implements AuthenticationService {
 
         // find roles that are in the project_access_names but not in the user's roles. These are the roles that need to be added.
         List<Role> newRoles = roleNames.parallelStream()
-                .map(roleName -> this.roleService.createRole(roleName, "MANAGEDrole " + roleName))
+                .map(roleName -> this.roleService.createRole(roleName, "MANAGED role " + roleName))
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
 

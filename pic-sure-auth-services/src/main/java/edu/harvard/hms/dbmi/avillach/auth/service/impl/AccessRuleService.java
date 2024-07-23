@@ -362,6 +362,8 @@ public class AccessRuleService {
         if (rule == null || rule.isEmpty())
             return true;
 
+        rule = rule.stripLeading();
+
         Object requestBodyValue;
         int accessRuleType = accessRule.getType();
 
@@ -640,7 +642,7 @@ public class AccessRuleService {
             // Log the creation of a new AccessRule
             AccessRule ar = getOrCreateAccessRule(
                     ar_name,
-                    "MANAGEDSUB AR to allow " + queryType + " Queries",
+                    "MANAGED SUB AR to allow " + queryType + " Queries",
                     "$.query.query.expectedResultType",
                     AccessRule.TypeNaming.ALL_EQUALS,
                     queryType,
@@ -688,7 +690,7 @@ public class AccessRuleService {
         // Create the AccessRule using the createAccessRule method
         return getOrCreateAccessRule(
                 ar_name,
-                "MANAGEDSUB AR for restricting " + type + " genomic concepts",
+                "MANAGED SUB AR for restricting " + type + " genomic concepts",
                 rule,
                 AccessRule.TypeNaming.IS_EMPTY,
                 null,
@@ -855,7 +857,7 @@ public class AccessRuleService {
      */
     protected AccessRule createConsentAccessRule(String studyIdentifier, String consent_group, String label, String consent_path) {
         String ar_name = (consent_group != null && !consent_group.isEmpty()) ? "AR_CONSENT_" + studyIdentifier + "_" + consent_group + "_" + label : "AR_CONSENT_" + studyIdentifier;
-        String description = (consent_group != null && !consent_group.isEmpty()) ? "MANAGEDAR for " + studyIdentifier + "." + consent_group + " clinical concepts" : "MANAGEDAR for " + studyIdentifier + " clinical concepts";
+        String description = (consent_group != null && !consent_group.isEmpty()) ? "MANAGED AR for " + studyIdentifier + "." + consent_group + " clinical concepts" : "MANAGED AR for " + studyIdentifier + " clinical concepts";
         String ruleText = "$.query.query.categoryFilters." + consent_path + "[*]";
         String arValue = (consent_group != null && !consent_group.isEmpty()) ? studyIdentifier + "." + consent_group : studyIdentifier;
 
@@ -883,7 +885,7 @@ public class AccessRuleService {
      */
     protected AccessRule upsertTopmedAccessRule(String project_name, String consent_group, String label) {
         String ar_name = (consent_group != null && !consent_group.isEmpty()) ? "AR_TOPMED_" + project_name + "_" + consent_group + "_" + label : "AR_TOPMED_" + project_name + "_" + label;
-        String description = "MANAGEDAR for " + project_name + "." + consent_group + " Topmed data";
+        String description = "MANAGED AR for " + project_name + "." + consent_group + " Topmed data";
         String ruleText = "$.query.query.categoryFilters." + fence_topmed_consent_group_concept_path + "[*]";
         String arValue = (consent_group != null && !consent_group.isEmpty()) ? project_name + "." + consent_group : project_name;
 
@@ -912,7 +914,7 @@ public class AccessRuleService {
     protected AccessRule upsertHarmonizedAccessRule(String project_name, String consent_group, String label) {
         String ar_name = "AR_TOPMED_" + project_name + "_" + consent_group + "_" + label;
         logger.info("upsertHarmonizedAccessRule() Creating new access rule {}", ar_name);
-        String description = "MANAGEDAR for " + project_name + "." + consent_group + " Topmed data";
+        String description = "MANAGED AR for " + project_name + "." + consent_group + " Topmed data";
         String ruleText = "$.query.query.categoryFilters." + fence_harmonized_consent_group_concept_path + "[*]";
         String arValue = project_name + "." + consent_group;
 
@@ -944,7 +946,7 @@ public class AccessRuleService {
         gateName = "GATE_" + gateName + "_" + (is_present ? "PRESENT" : "MISSING");
         return getOrCreateAccessRule(
                 gateName,
-                "MANAGEDGATE for " + description + " consent " + (is_present ? "present" : "missing"),
+                "MANAGED GATE for " + description + " consent " + (is_present ? "present" : "missing"),
                 rule,
                 is_present ? AccessRule.TypeNaming.IS_NOT_EMPTY : AccessRule.TypeNaming.IS_EMPTY,
                 null,
@@ -960,7 +962,7 @@ public class AccessRuleService {
         logger.info("createPhenotypeSubRule() Creating new access rule {}", ar_name);
         return getOrCreateAccessRule(
                 ar_name,
-                "MANAGEDSUB AR for " + alias + " " + label + " clinical concepts",
+                "MANAGED SUB AR for " + alias + " " + label + " clinical concepts",
                 rule,
                 ruleType,
                 ruleType == AccessRule.TypeNaming.IS_NOT_EMPTY ? null : conceptPath,

@@ -78,13 +78,13 @@ public class UserService {
         this.connectionRepository = connectionRepository;
         this.roleService = roleService;
         this.tokenExpirationTime = tokenExpirationTime > 0 ? tokenExpirationTime : defaultTokenExpirationTime;
+        logger.info("Token Expiration Time : {}", tokenExpirationTime);
         this.applicationRepository = applicationRepository;
         this.applicationUUID = applicationUUID;
         this.jwtUtil = jwtUtil;
 
-        long defaultLongTermTokenExpirationTime = 1000L * 60 * 60 * 24 * 30; //
+        long defaultLongTermTokenExpirationTime = 1000L * 60 * 60 * 24 * 30;
         this.longTermTokenExpirationTime = longTermTokenExpirationTime > 0 ? longTermTokenExpirationTime : defaultLongTermTokenExpirationTime;
-
     }
 
     public HashMap<String, String> getUserProfileResponse(Map<String, Object> claims) {
@@ -569,11 +569,13 @@ public class UserService {
         // Save the user to get a UUID
         user = save(user);
         user.setSubject("open_access|" + user.getUuid().toString());
-        if (openAccessRole != null) {
-            user.setRoles(Set.of(openAccessRole));
-        } else {
-            logger.error("createOpenAccessUser() openAccessRole is null");
+
+        if (user.getRoles() == null) {
             user.setRoles(new HashSet<>());
+        }
+
+        if (openAccessRole != null) {
+            user.getRoles().add(openAccessRole);
         }
 
         user.setEmail(user.getUuid() + "@open_access.com");
