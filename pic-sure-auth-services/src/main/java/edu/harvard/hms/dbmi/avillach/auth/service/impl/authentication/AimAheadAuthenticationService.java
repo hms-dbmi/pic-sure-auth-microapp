@@ -147,8 +147,8 @@ public class AimAheadAuthenticationService extends OktaAuthenticationService imp
     }
 
     private void clearCache(User user) {
-        userService.evictFromCache(user.getEmail());
-        accessRuleService.evictFromCache(user.getEmail());
+        userService.evictFromCache(user.getSubject());
+        accessRuleService.evictFromCache(user.getSubject());
     }
 
     /**

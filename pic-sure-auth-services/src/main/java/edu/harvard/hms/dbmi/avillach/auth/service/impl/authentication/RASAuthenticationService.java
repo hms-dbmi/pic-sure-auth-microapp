@@ -51,7 +51,9 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
                                     @Value("${ras.okta.idp.provider.uri}") String idp_provider_uri,
                                     @Value("${ras.okta.connection.id}") String connectionId,
                                     @Value("${ras.okta.client.id}") String clientId,
-                                    @Value("${ras.okta.client.secret}") String clientSecret, RoleService roleService, RASPassPortService rasPassPortService) {
+                                    @Value("${ras.okta.client.secret}") String clientSecret,
+                                    RoleService roleService,
+                                    RASPassPortService rasPassPortService) {
         super(idp_provider_uri, clientId, clientSecret, restClientUtil);
 
         this.userService = userService;
@@ -168,8 +170,8 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
     }
 
     private void clearCache(User user) {
-        userService.evictFromCache(user.getEmail());
-        accessRuleService.evictFromCache(user.getEmail());
+        userService.evictFromCache(user.getSubject());
+        accessRuleService.evictFromCache(user.getSubject());
     }
 
     /**

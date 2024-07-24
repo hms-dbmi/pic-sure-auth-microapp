@@ -33,10 +33,10 @@ public class CustomLogoutHandler implements LogoutHandler {
         if (!(principal instanceof CustomUserDetails customUserDetails)) {
             logger.error("logout() Principal is not an instance of User.");
         } else {
-            logger.info("logout() Logging out User: {}", customUserDetails.getUsername());
-            this.sessionService.endSession(customUserDetails.getUsername());
-            this.userService.evictFromCache(customUserDetails.getUsername());
-            this.accessRuleService.evictFromCache(customUserDetails.getUsername());
+            logger.info("logout() Logging out User: {}", customUserDetails.getUser().getSubject());
+            this.sessionService.endSession(customUserDetails.getUser().getSubject());
+            this.userService.evictFromCache(customUserDetails.getUser().getSubject());
+            this.accessRuleService.evictFromCache(customUserDetails.getUser().getSubject());
         }
     }
 }

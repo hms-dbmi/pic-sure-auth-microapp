@@ -129,9 +129,9 @@ public class FENCEAuthenticationService implements AuthenticationService {
             logger.info("getFENCEProfile() saved details for user with e-mail:{} and subject:{}", current_user.getEmail(), current_user.getSubject());
 
             if (!current_user.getEmail().isEmpty()) {
-                String email = current_user.getEmail();
-                accessRuleService.evictFromCache(email);
-                userService.evictFromCache(email);
+                String subject = current_user.getSubject();
+                accessRuleService.evictFromCache(subject);
+                userService.evictFromCache(subject);
             }
         } catch (Exception ex) {
             logger.error("getFENCEToken() Could not persist the user information, because {}", ex.getMessage());

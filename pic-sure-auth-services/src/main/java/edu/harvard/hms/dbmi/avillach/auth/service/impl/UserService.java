@@ -452,12 +452,12 @@ public class UserService {
     }
 
     @CacheEvict(value = "mergedTemplateCache")
-    public void evictFromCache(String email) {
-        if (email == null || email.isEmpty()) {
+    public void evictFromCache(String userSubject) {
+        if (userSubject == null || userSubject.isEmpty()) {
             logger.warn("evictFromCache() was called with a null or empty email");
             return;
         }
-        logger.info("evictFromCache() evicting cache for user: {}", email);
+        logger.info("evictFromCache() evicting cache for user: {}", userSubject);
     }
 
     @Transactional

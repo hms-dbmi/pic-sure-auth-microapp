@@ -58,8 +58,8 @@ public class OpenAuthenticationService implements AuthenticationService {
 
             //clear some cache entries if we register a new login
             // I don't see a clear need to caching here.
-            accessRuleService.evictFromCache(current_user.getEmail());
-            userService.evictFromCache(current_user.getEmail());
+            accessRuleService.evictFromCache(current_user.getSubject());
+            userService.evictFromCache(current_user.getSubject());
         }
 
         HashMap<String, Object> claims = new HashMap<>();
