@@ -29,7 +29,7 @@ public class SessionService {
     public void endSession(String userSubject) {
     }
 
-    public Optional<Long> getCachedSessionStartTime(String userSubject) {
+    private Optional<Long> getCachedSessionStartTime(String userSubject) {
         Cache cache = cacheManager.getCache("sessions");
         if (cache != null) {
             Cache.ValueWrapper valueWrapper = cache.get(userSubject);
