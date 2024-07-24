@@ -50,7 +50,7 @@ public class RASPassPortService {
      * We will run this nearly immediately after startup. We don't know how long it has been since the last auth micro app
      * ran its validate.
      */
-    @Scheduled(initialDelay = 1000, fixedDelay = 3000000)
+//    @Scheduled(initialDelay = 1000, fixedDelay = 3000000)
     public void validateAllUserPassports() {
         /*
             - Load all users who have passports - DONE
@@ -75,7 +75,7 @@ public class RASPassPortService {
 
     private boolean handlePassportValidationResponse(JsonNode jsonNode, User user) {
         return switch (PassportValidationResponse.valueOf(jsonNode.get("status").asText())) {
-            case VALID -> handleValidValidationResponse(jsonNode);
+            case VALID -> handleValidValidationResponse(jsonNode, user);
             case PERMISSION_UPDATE, INVALID, MISSING, INVALID_PASSPORT, VISA_EXPIRED, TXN_ERROR, EXPIRATION_ERROR, VALIDATION_ERROR,
                  EXPIRED_POLLING -> handleFailedValidationResponse(jsonNode, user);
         };
