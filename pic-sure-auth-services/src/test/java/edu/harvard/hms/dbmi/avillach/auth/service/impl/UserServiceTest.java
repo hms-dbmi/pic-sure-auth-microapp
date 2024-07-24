@@ -36,7 +36,6 @@ public class UserServiceTest {
 
     @Mock
     private SecurityContext securityContext;
-
     @Mock
     private BasicMailService basicMailService;
     @Mock
@@ -51,17 +50,11 @@ public class UserServiceTest {
     private RoleService roleService;
     @Mock
     private SessionService sessionService;
-
-    private JWTUtil jwtUtil;
-
     @Mock
     private JWTUtil mockJwtUtil;
-
-    @Mock
-    private RoleRepository roleRepository;
+    private JWTUtil jwtUtil;
 
     private static final long defaultTokenExpirationTime = 1000L * 60 * 60; // 1 hour
-    private String applicationUUID;
     private final long longTermTokenExpirationTime = 2592000000L;
 
     private UserService userService;
@@ -75,7 +68,7 @@ public class UserServiceTest {
         when(securityContext.getAuthentication()).thenReturn(authentication);
 
         jwtUtil = new JWTUtil(generate256Base64Secret(), true);
-        applicationUUID = UUID.randomUUID().toString();
+        String applicationUUID = UUID.randomUUID().toString();
         userService = new UserService(
                 basicMailService,
                 tosService,
