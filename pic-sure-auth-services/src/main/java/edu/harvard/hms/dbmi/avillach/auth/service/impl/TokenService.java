@@ -258,8 +258,8 @@ public class TokenService {
         }
 
         if (!JWTUtil.isLongTermToken(claims.getSubject()) && sessionService.isSessionExpired(claims.getSubject())) {
-            logger.info("refreshToken() The user has just is being logged out.");
-            return Map.of("error", "Inner application error, try again or contact admin.");
+            logger.info("refreshToken() The user has just is being logged out. The user's session has expired.");
+            return Map.of("error", "Your session has expired. Please log in again.");
         }
 
         Date expirationDate = new Date(Calendar.getInstance().getTimeInMillis() + this.tokenExpirationTime);
