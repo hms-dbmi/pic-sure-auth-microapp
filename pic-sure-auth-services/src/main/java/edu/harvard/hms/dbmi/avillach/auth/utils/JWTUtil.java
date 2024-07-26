@@ -40,10 +40,6 @@ public class JWTUtil {
         this.clientSecretIsBase64 = clientSecretIsBase64;
     }
 
-    public static boolean isLongTermToken(String sub) {
-        return sub.startsWith(AuthNaming.LONG_TERM_TOKEN_PREFIX);
-    }
-
     private String getDecodedClientSecret() {
         if (clientSecretIsBase64) {
             return new String(Base64.decodeBase64(clientSecret));
@@ -123,6 +119,10 @@ public class JWTUtil {
         return Optional.of(authorizationHeader.substring("Bearer".length()).trim());
     }
 
+    public static boolean isLongTermToken(String sub) {
+        return sub.startsWith(AuthNaming.LONG_TERM_TOKEN_PREFIX);
+    }
+
     public String setClientSecret(String clientSecret) {
         return clientSecret;
     }
@@ -131,5 +131,14 @@ public class JWTUtil {
         return clientSecretIsBase64;
     }
 
+    public boolean shouldRefreshToken(Date expiration, long tokenExpirationTime) {
+        long currentTime = System.currentTimeMillis();
+        if (currentTime >= expiration.getTime()) {
+            return false;
+        }
 
+        long halfExpirationTime = tokenExpirationTime / 2;
+        long refreshTime = expiration.getTime() - halfExpirationTime;
+        return currentTime >= refreshTime;
+    }
 }

@@ -192,6 +192,24 @@ public class TokenService {
                 roles.add(p.getName());
             }
             tokenInspection.addField("roles", String.join(",", roles));
+
+            // Refresh Token
+            Date expiration = jws.getPayload().getExpiration();
+            if (jwtUtil.shouldRefreshToken(expiration, tokenExpirationTime)) {
+                Map<String, String> refreshResponse = refreshToken(token);
+                if (refreshResponse.containsKey("token")) {
+                    tokenInspection.addField("token", refreshResponse.get("token"));
+                    tokenInspection.addField("tokenRefreshed", true);
+                }
+
+                if (refreshResponse.containsKey("error")) {
+                    tokenInspection.setMessage(refreshResponse.get("error"));
+                    tokenInspection.addField("active", false);
+                    return tokenInspection;
+                }
+            } else {
+                tokenInspection.addField("tokenRefreshed", false);
+            }
         } else {
             tokenInspection.setMessage(errorMsg);
             return tokenInspection;
