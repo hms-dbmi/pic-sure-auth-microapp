@@ -65,7 +65,6 @@ public class RASPassPortService {
             }
 
             String encodedPassport = user.getPassport();
-            // Decode the passport
             Optional<Passport> passportOptional = JWTUtil.parsePassportJWTV11(encodedPassport);
             if (passportOptional.isEmpty()) {
                 logger.error("Failed to decode passport for user: {}", user.getEmail());
@@ -112,17 +111,15 @@ public class RASPassPortService {
      * @return true if the user was successfully updated
      */
     private boolean handleFailedValidationResponse(String validateResponse, User user) {
-        user.setPassport("");
+        user.setPassport(null);
         this.userService.save(user);
         this.userService.logoutUser(user);
-        this.logger.info("handleFailedValidationResponse: {}", validateResponse);
-        this.logger.info("User logged out for user: {}", user.getSubject());
+        this.logger.info("handleFailedValidationResponse - {} - USER LOGGED OUT - {}", validateResponse, user.getSubject());
         return false;
     }
 
     private boolean handleValidValidationResponse(String validateResponse, User user) {
-        this.logger.info("handleValidValidationResponse: {}", validateResponse);
-        this.logger.info("User {}'s passport is still VALID.", user.getSubject());
+        this.logger.info("handleValidValidationResponse: PASSPORT VALIDATE RESPONSE __ {} __ FOR USER: {}", validateResponse, user.getSubject());
         return true;
     }
 
@@ -130,6 +127,16 @@ public class RASPassPortService {
         if (StringUtils.isBlank(visa)) {
             logger.error("validatePassport() passport is null");
             return Optional.empty();
+        }
+
+        Optional<Ga4ghPassportV1> ga4ghPassportV1 = JWTUtil.parseGa4ghPassportV1(visa);
+        if (ga4ghPassportV1.isEmpty()) {
+            logger.error("validatePassport() ga4ghPassportV1 is empty");
+            return Optional.ofNullable(PassportValidationResponse.INVALID_PASSPORT.getValue());
+        }
+
+        if (ga4ghPassportV1.get().getExp() < System.currentTimeMillis() / 1000) {
+            return Optional.ofNullable(PassportValidationResponse.VISA_EXPIRED.getValue());
         }
 
         MultiValueMap<String, String> queryParams = new LinkedMultiValueMap<>();
@@ -142,10 +149,7 @@ public class RASPassPortService {
             resp = this.restClientUtil.retrievePostResponse(this.rasURI + "/passport/validate", request);
             responseVal = resp.getBody();
         } catch (Exception e) {
-            // Passport validation failed. Log the error and return VISA_EXPIRED
-            // The restTemplate will throw an exception if a 4xx or 5xx status code is returned
-            // If a visa is expired, the response will be VISA_EXPIRED, but it is a 400 status code
-            logger.debug("validatePassport() Passport validation failed: {}", e.getMessage());
+            logger.error("validatePassport() Passport validation failed: {}", e.getMessage());
         }
 
         return Optional.ofNullable(responseVal);
