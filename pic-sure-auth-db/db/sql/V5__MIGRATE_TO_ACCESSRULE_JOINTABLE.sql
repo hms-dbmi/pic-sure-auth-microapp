@@ -29,4 +29,3 @@ UPDATE access_rule ar
     SET ar.subAccessRuleParent_uuid = NULL; -- Remove circular dependency reference so it can be dropped
 
 -- Step 4: Drop the column from the original table
-ALTER TABLE access_rule DROP COLUMN subAccessRuleParent_uuid;

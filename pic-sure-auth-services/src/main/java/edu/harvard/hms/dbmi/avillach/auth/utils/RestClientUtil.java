@@ -52,7 +52,6 @@ public class RestClientUtil {
             HttpEntity<String> entity = new HttpEntity<>(body, headers);
             return restTemplate.postForEntity(uri, entity, String.class);
         } catch (HttpClientErrorException ex) {
-            logger.error("HttpClientErrorException: {}", ex.getMessage());
             throw ex;
         }
     }
@@ -61,7 +60,6 @@ public class RestClientUtil {
         try {
             return restTemplate.postForEntity(uri, requestEntity, String.class);
         } catch (HttpClientErrorException ex) {
-            logger.error("HttpClientErrorException: {}", ex.getMessage());
             throw ex;
         }
     }

@@ -26,6 +26,7 @@ import java.security.SecureRandom;
 import java.util.*;
 
 import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -37,6 +38,9 @@ public class TokenServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private SessionService sessionService;
+
     private JWTUtil jwtUtil;
 
     @Mock
@@ -44,7 +48,7 @@ public class TokenServiceTest {
 
     private TokenService tokenService;
 
-    private static long testTokenExpiration = 1000L * 60 * 60;
+    private static final long testTokenExpiration = 1000L * 60 * 60;
 
     @Before
     public void setUp() {
@@ -53,8 +57,9 @@ public class TokenServiceTest {
 
         SecurityContextHolder.setContext(securityContext);
         when(securityContext.getAuthentication()).thenReturn(authentication);
+        when(sessionService.isSessionExpired(any(String.class))).thenReturn(false);
         jwtUtil = new JWTUtil(generate256Base64Secret(), true);
-        tokenService = new TokenService(authorizationService, userRepository, 1000L * 60 * 60, jwtUtil);
+        tokenService = new TokenService(authorizationService, userRepository, 1000L * 60 * 60, jwtUtil, sessionService);
     }
 
     @Test
@@ -311,7 +316,37 @@ public class TokenServiceTest {
     }
 
     @Test
-    public void testRefreshToken() {
+    public void testRefreshToken_isExpired() throws InterruptedException {
+        User user = createTestUser();
+        configureUserSecurityContext(user);
+        user.setSubject(user.getSubject());
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("sub", user.getSubject());
+
+        // Application Long term token
+        String token = jwtUtil.createJwtToken(
+                "whatever",
+                "edu.harvard.hms.dbmi.psama",
+                claims,
+                claims.get("sub").toString(),
+                1
+        );
+
+        // Ensure the token expires so the unit test never fails.
+        Thread.sleep(1);
+
+        // User privileges should be a subset of the application's privileges
+        when(userRepository.findBySubject(user.getSubject())).thenReturn(user);
+        when(userRepository.findById(user.getUuid())).thenReturn(Optional.of(user));
+
+        String authorizationHeader = "Bearer " + token;
+        Map<String, String> response = tokenService.refreshToken(authorizationHeader);
+        assertNotNull(response.get("error"));
+        assertEquals(response.get("error"), "Cannot parse original token");
+    }
+
+    @Test
+    public void testRefreshToken() throws InterruptedException {
         User user = createTestUser();
         configureUserSecurityContext(user);
         user.setSubject(user.getSubject());

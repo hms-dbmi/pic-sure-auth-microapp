@@ -2,6 +2,7 @@ package edu.harvard.hms.dbmi.avillach.auth.rest;
 
 import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.service.AuthenticationService;
+import edu.harvard.hms.dbmi.avillach.auth.service.impl.SessionService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.authentication.AuthenticationServiceRegistry;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -33,10 +34,12 @@ public class AuthenticationController {
     private final static Logger logger = LoggerFactory.getLogger(AuthenticationController.class.getName());
 
     private final AuthenticationServiceRegistry authenticationServiceRegistry;
+    private final SessionService sessionService;
 
     @Autowired
-    public AuthenticationController(AuthenticationServiceRegistry authenticationServiceRegistry) {
+    public AuthenticationController(AuthenticationServiceRegistry authenticationServiceRegistry, SessionService sessionService) {
         this.authenticationServiceRegistry = authenticationServiceRegistry;
+        this.sessionService = sessionService;
     }
 
     @Operation(description = "The authentication endpoint for retrieving a valid user token")
@@ -61,6 +64,13 @@ public class AuthenticationController {
 
         HashMap<String, String> authenticate = authenticationService.authenticate(authRequest, request.getServerName());
         if (authenticate != null && !authenticate.isEmpty()) {
+            if (authenticate.containsKey("userId")) {
+                sessionService.startSession(authenticate.get("userId"));
+            } else {
+                logger.error("authentication() userId authentication is null");
+                logger.error("User claims must contain a userId to start their session.");
+                return PICSUREResponse.unauthorizedError("User not authenticated.");
+            }
             logger.info("authentication() User authenticated successfully.");
             return PICSUREResponse.success(authenticate);
         }

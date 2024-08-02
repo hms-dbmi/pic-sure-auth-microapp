@@ -41,14 +41,18 @@ public class TokenService {
 
     private static final long defaultTokenExpirationTime = 1000L * 60 * 60; // 1 hour
     private final JWTUtil jwtUtil;
+    private final SessionService sessionService;
 
     @Autowired
     public TokenService(AuthorizationService authorizationService, UserRepository userRepository,
-                        @Value("${application.token.expiration.time}") long tokenExpirationTime, JWTUtil jwtUtil) {
+                        @Value("${application.token.expiration.time}") long tokenExpirationTime,
+                        JWTUtil jwtUtil,
+                        SessionService sessionService) {
         this.authorizationService = authorizationService;
         this.userRepository = userRepository;
         this.tokenExpirationTime = tokenExpirationTime > 0 ? tokenExpirationTime : defaultTokenExpirationTime;
         this.jwtUtil = jwtUtil;
+        this.sessionService = sessionService;
     }
 
     public Map<String, Object> inspectToken(Map<String, Object> inputMap) {
@@ -188,6 +192,24 @@ public class TokenService {
                 roles.add(p.getName());
             }
             tokenInspection.addField("roles", String.join(",", roles));
+
+            // Refresh Token
+            Date expiration = jws.getPayload().getExpiration();
+            if (jwtUtil.shouldRefreshToken(expiration, tokenExpirationTime)) {
+                Map<String, String> refreshResponse = refreshToken(token);
+                if (refreshResponse.containsKey("token")) {
+                    tokenInspection.addField("token", refreshResponse.get("token"));
+                    tokenInspection.addField("tokenRefreshed", true);
+                }
+
+                if (refreshResponse.containsKey("error")) {
+                    tokenInspection.setMessage(refreshResponse.get("error"));
+                    tokenInspection.addField("active", false);
+                    return tokenInspection;
+                }
+            } else {
+                tokenInspection.addField("tokenRefreshed", false);
+            }
         } else {
             tokenInspection.setMessage(errorMsg);
             return tokenInspection;
@@ -251,6 +273,11 @@ public class TokenService {
         if (!subject.equals(claims.getSubject())) {
             logger.error("refreshToken() user subject is not the same as the subject of the input token");
             return Map.of("error", "Inner application error, try again or contact admin.");
+        }
+
+        if (!JWTUtil.isLongTermToken(claims.getSubject()) && sessionService.isSessionExpired(claims.getSubject())) {
+            logger.info("refreshToken() The user has just is being logged out. The user's session has expired.");
+            return Map.of("error", "Your session has expired. Please log in again.");
         }
 
         Date expirationDate = new Date(Calendar.getInstance().getTimeInMillis() + this.tokenExpirationTime);
