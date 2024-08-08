@@ -22,7 +22,7 @@ public class Application extends BaseEntity implements Principal {
     private String url;
     private boolean enable = true;
 
-    @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
     @JoinColumn(name = "application_id", referencedColumnName = "uuid")
     private Set<Privilege> privileges;
 
