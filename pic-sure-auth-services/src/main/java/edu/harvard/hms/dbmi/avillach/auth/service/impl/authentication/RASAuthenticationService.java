@@ -103,13 +103,17 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
 
         User user = initializedUser.get();
         Optional<Passport> rasPassport = this.rasPassPortService.extractPassport(introspectResponse);
+
+        if (rasPassport.isEmpty()) {
+            logger.info("LOGIN FAILED ___ NO RAS PASSPORT FOUND ___");
+            return null;
+        }
+
         Set<RasDbgapPermission> dbgapPermissions = this.rasPassPortService.ga4gpPassportToRasDbgapPermissions(rasPassport.get().getGa4ghPassportV1());
-        logger.info("List of assigned study access permissions: {}", dbgapPermissions.stream().map(studyData -> studyData.getPhsId() + "." + studyData.getVersion() + "." + studyData.getParticipantSet() + "." + studyData.getConsentGroup()).collect(Collectors.toSet()));
         Optional<Set<String>> dbgapRoleNames = this.roleService.getRoleNamesForDbgapPermissions(dbgapPermissions);
-        logger.info("User dbGaP role names: {}", dbgapRoleNames.orElse(null));
         if (dbgapRoleNames.isPresent()) {
             user = userService.updateUserRoles(user, dbgapRoleNames.get());
-            logger.info("User roles updated: {}", user.getRoles().stream().map(role -> role.getName().replace("MANAGED_", "")).toArray());
+            logger.debug("User roles updated: {}", user.getRoles().stream().map(role -> role.getName().replace("MANAGED_", "")).toArray());
         }
 
         String passport = introspectResponse.get("passport_jwt_v11").toString();
