@@ -685,6 +685,9 @@ public class UserService {
             }
         }
 
+        // Every user has access to public datasets by default.
+        current_user.getRoles().addAll(roleService.getPublicAccessRoles());
+
         try {
             current_user = this.changeRole(current_user, current_user.getRoles());
             logger.debug("upsertRole() updated user, who now has {} roles.", current_user.getRoles().size());

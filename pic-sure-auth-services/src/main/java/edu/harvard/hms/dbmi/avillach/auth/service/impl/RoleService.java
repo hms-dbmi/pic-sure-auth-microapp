@@ -9,6 +9,7 @@ import edu.harvard.hms.dbmi.avillach.auth.model.ras.RasDbgapPermission;
 import edu.harvard.hms.dbmi.avillach.auth.repository.PrivilegeRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.RoleRepository;
 import edu.harvard.hms.dbmi.avillach.auth.utils.FenceMappingUtility;
+import jakarta.annotation.PostConstruct;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +34,7 @@ public class RoleService {
     private final PrivilegeService privilegeService;
     private final FenceMappingUtility fenceMappingUtility;
     public static final String managed_open_access_role_name = "MANAGED_ROLE_OPEN_ACCESS";
+    private final Set<Role> publicAccessRoles = new HashSet<>();
 
     @Autowired
     public RoleService(RoleRepository roleRepository, PrivilegeRepository privilegeRepo, PrivilegeService privilegeService, FenceMappingUtility fenceMappingUtility) {
@@ -40,6 +42,14 @@ public class RoleService {
         this.privilegeRepo = privilegeRepo;
         this.privilegeService = privilegeService;
         this.fenceMappingUtility = fenceMappingUtility;
+    }
+
+    @PostConstruct
+    public void init() {
+        // Log the public access roles as comma separated values for startup logs
+        String publicAccessRolesString = publicAccessRoles.stream().map(Role::getName).collect(Collectors.joining(", "));
+        logger.info("Public access roles: {}", publicAccessRolesString);
+        logger.info("RoleService initialized...");
     }
 
     @EventListener(ContextRefreshedEvent.class)
@@ -67,7 +77,13 @@ public class RoleService {
                 String consentCode = projectMetadata.getConsentGroupCode();
                 String newRoleName = org.apache.commons.lang3.StringUtils.isNotBlank(consentCode) ? "MANAGED_" + projectId + "_" + consentCode : "MANAGED_" + projectId;
 
-                return this.createRole(newRoleName, "MANAGED role " + newRoleName);
+                Role role = this.createRole(newRoleName, "MANAGED role " + newRoleName);
+
+                if (projectMetadata.getStudyType().equalsIgnoreCase("public")) {
+                    publicAccessRoles.add(role);
+                }
+
+                return role;
             }).filter(Objects::nonNull).collect(Collectors.toSet());
 
             this.persistAll(roles);
@@ -170,7 +186,7 @@ public class RoleService {
         return this.roleRepository.saveAll(newRoles);
     }
 
-    public List<Role> persistAll(Set<Role> newRoles) {
+    private List<Role> persistAll(Set<Role> newRoles) {
         return this.roleRepository.saveAll(newRoles);
     }
 
@@ -297,5 +313,10 @@ public class RoleService {
         return this.findByNameIn(roleNames).stream()
                 .collect(Collectors.toMap(Role::getName, Function.identity()));
     }
+
+    public Set<Role> getPublicAccessRoles() {
+        return publicAccessRoles;
+    }
+
 }
 
