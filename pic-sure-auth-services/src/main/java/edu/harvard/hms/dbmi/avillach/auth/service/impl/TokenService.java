@@ -230,49 +230,31 @@ public class TokenService {
     public Map<String, String> refreshToken(String authorizationHeader) {
         logger.debug("RefreshToken starting...");
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        Object principal = authentication.getPrincipal();
-        if (!(principal instanceof CustomUserDetails customUserDetails)) {
-            logger.error("refreshToken() Principal is not an instance of User.");
-            throw new NotAuthorizedException("User not found");
-        }
-
-        User user = customUserDetails.getUser();
-        if (user == null || user.getUuid() == null) {
-            logger.error("refreshToken() Stored user doesn't have a uuid.");
-            return Map.of("error", "Inner application error, please contact admin.");
-        }
-
-        Optional<User> loadUser = this.userRepository.findById(user.getUuid());
-        if (loadUser.isEmpty()) {
-            logger.error("refreshToken() When retrieving current user, it returned null, the user might be removed from database");
-            throw new NotAuthorizedException("User doesn't exist anymore");
-        }
-
-        if (!loadUser.get().isActive()) {
-            logger.error("refreshToken() The user has just been deactivated.");
-            throw new NotAuthorizedException("User has been deactivated.");
-        }
-
-        String subject = loadUser.get().getSubject();
-        if (subject == null || subject.isEmpty()) {
-            logger.error("refreshToken() subject doesn't exist in the user.");
-            return Map.of("error", "Inner application error, please contact admin.");
-        }
-
-        // parse origin token
+        String subject;
         Jws<Claims> jws;
         try {
             String token = JWTUtil.getTokenFromAuthorizationHeader(authorizationHeader).orElseThrow(() -> new NotAuthorizedException("Token not found"));
             jws = this.jwtUtil.parseToken(token);
         } catch (NotAuthorizedException ex) {
-            return Map.of("error", "Cannot parse original token");
+            return Map.of("error", "Cannot parse original token.");
         }
 
         Claims claims = jws.getPayload();
-        if (!subject.equals(claims.getSubject())) {
-            logger.error("refreshToken() user subject is not the same as the subject of the input token");
-            return Map.of("error", "Inner application error, try again or contact admin.");
+        subject = claims.getSubject();
+        if (subject == null || subject.isEmpty()) {
+            logger.error("refreshToken() subject doesn't exist in the user.");
+            return Map.of("error", "Inner application error, please contact admin.");
+        }
+
+        User loadUser = this.userRepository.findBySubject(subject);
+        if (loadUser == null) {
+            logger.error("refreshToken() When retrieving current user, it returned null, the user might be removed from database");
+            throw new NotAuthorizedException("User doesn't exist anymore.");
+        }
+
+        if (!loadUser.isActive()) {
+            logger.error("refreshToken() The user has just been deactivated.");
+            throw new NotAuthorizedException("User has been deactivated.");
         }
 
         if (!JWTUtil.isLongTermToken(claims.getSubject()) && sessionService.isSessionExpired(claims.getSubject())) {

@@ -342,7 +342,7 @@ public class TokenServiceTest {
         String authorizationHeader = "Bearer " + token;
         Map<String, String> response = tokenService.refreshToken(authorizationHeader);
         assertNotNull(response.get("error"));
-        assertEquals(response.get("error"), "Cannot parse original token");
+        assertEquals(response.get("error"), "Cannot parse original token.");
     }
 
     @Test
@@ -373,84 +373,6 @@ public class TokenServiceTest {
     }
 
     @Test(expected = NotAuthorizedException.class)
-    public void testRefreshToken_withoutCustomUserDetailsInAsPrincipal() {
-        User user = createTestUser();
-//        configureUserSecurityContext(user); // This is commented out to simulate the absence of CustomUserDetails
-        user.setSubject(user.getSubject());
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("sub", user.getSubject());
-
-        // Application Long term token
-        String token = jwtUtil.createJwtToken(
-                "whatever",
-                "edu.harvard.hms.dbmi.psama",
-                claims,
-                claims.get("sub").toString(),
-                testTokenExpiration
-        );
-
-        // User privileges should be a subset of the application's privileges
-        when(userRepository.findBySubject(user.getSubject())).thenReturn(user);
-        when(userRepository.findById(user.getUuid())).thenReturn(Optional.of(user));
-
-        String authorizationHeader = "Bearer " + token;
-        tokenService.refreshToken(authorizationHeader);
-    }
-
-    @Test
-    public void testRefreshToken_withoutUserInCustomUserDetails() {
-        User user = createTestUser();
-        configureUserSecurityContext(null);
-        user.setSubject(user.getSubject());
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("sub", user.getSubject());
-
-        // Application Long term token
-        String token = jwtUtil.createJwtToken(
-                "whatever",
-                "edu.harvard.hms.dbmi.psama",
-                claims,
-                claims.get("sub").toString(),
-                testTokenExpiration
-        );
-
-        // User privileges should be a subset of the application's privileges
-        when(userRepository.findBySubject(user.getSubject())).thenReturn(user);
-        when(userRepository.findById(user.getUuid())).thenReturn(Optional.of(user));
-
-        String authorizationHeader = "Bearer " + token;
-        Map<String, String> response = tokenService.refreshToken(authorizationHeader);
-        assertEquals("Inner application error, please contact admin.", response.get("error"));
-    }
-
-    @Test
-    public void testRefreshToken_withUserWithoutUUID_InCustomUserDetails() {
-        User user = createTestUser();
-        user.setUuid(null);
-        configureUserSecurityContext(user);
-        user.setSubject(user.getSubject());
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("sub", user.getSubject());
-
-        // Application Long term token
-        String token = jwtUtil.createJwtToken(
-                "whatever",
-                "edu.harvard.hms.dbmi.psama",
-                claims,
-                claims.get("sub").toString(),
-                testTokenExpiration
-        );
-
-        // User privileges should be a subset of the application's privileges
-        when(userRepository.findBySubject(user.getSubject())).thenReturn(user);
-        when(userRepository.findById(user.getUuid())).thenReturn(Optional.of(user));
-
-        String authorizationHeader = "Bearer " + token;
-        Map<String, String> response = tokenService.refreshToken(authorizationHeader);
-        assertEquals("Inner application error, please contact admin.", response.get("error"));
-    }
-
-    @Test(expected = NotAuthorizedException.class)
     public void testRefreshToken_whereUserNotExists() {
         User user = createTestUser();
         configureUserSecurityContext(user);
@@ -467,8 +389,7 @@ public class TokenServiceTest {
                 testTokenExpiration
         );
 
-        // User privileges should be a subset of the application's privileges
-        when(userRepository.findBySubject(user.getSubject())).thenReturn(user);
+        when(userRepository.findBySubject(user.getSubject())).thenReturn(null);
         when(userRepository.findById(user.getUuid())).thenReturn(Optional.empty());
 
         String authorizationHeader = "Bearer " + token;
@@ -501,34 +422,7 @@ public class TokenServiceTest {
         tokenService.refreshToken(authorizationHeader);
     }
 
-    @Test
-    public void testRefreshToken_whereUserSubjectNull() {
-        User user = createTestUser();
-        configureUserSecurityContext(user);
-        user.setSubject(user.getSubject());
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("sub", user.getSubject());
-
-        // Application Long term token
-        String token = jwtUtil.createJwtToken(
-                "whatever",
-                "edu.harvard.hms.dbmi.psama",
-                claims,
-                claims.get("sub").toString(),
-                testTokenExpiration
-        );
-        user.setSubject(null);
-
-        // User privileges should be a subset of the application's privileges
-        when(userRepository.findBySubject(user.getSubject())).thenReturn(user);
-        when(userRepository.findById(user.getUuid())).thenReturn(Optional.of(user));
-
-        String authorizationHeader = "Bearer " + token;
-        Map<String, String> response = tokenService.refreshToken(authorizationHeader);
-        assertEquals("Inner application error, please contact admin.", response.get("error"));
-    }
-
-    @Test
+    @Test(expected = NotAuthorizedException.class)
     public void testRefreshToken_whereUserSubjectHasChanged() {
         User user = createTestUser();
         configureUserSecurityContext(user);
@@ -551,8 +445,7 @@ public class TokenServiceTest {
         when(userRepository.findById(user.getUuid())).thenReturn(Optional.of(user));
 
         String authorizationHeader = "Bearer " + token;
-        Map<String, String> response = tokenService.refreshToken(authorizationHeader);
-        assertEquals("Inner application error, try again or contact admin.", response.get("error"));
+        tokenService.refreshToken(authorizationHeader);
     }
 
     private User createTestUser() {
