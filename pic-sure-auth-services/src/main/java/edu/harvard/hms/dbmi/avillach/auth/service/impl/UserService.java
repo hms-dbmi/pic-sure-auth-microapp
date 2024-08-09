@@ -635,6 +635,7 @@ public class UserService {
      */
     public void logoutUser(User user) {
         evictFromCache(user.getSubject());
+        this.removeUserPassport(user.getSubject());
         this.sessionService.endSession(user.getSubject());
     }
 
@@ -708,6 +709,14 @@ public class UserService {
         } catch (JsonProcessingException e) {
             logger.warn("Error parsing idp value from medatada", e);
             return "";
+        }
+    }
+
+    public void removeUserPassport(String subject) {
+        User user = this.findBySubject(subject);
+        if (user != null) {
+            user.setPassport(null);
+            this.save(user);
         }
     }
 }

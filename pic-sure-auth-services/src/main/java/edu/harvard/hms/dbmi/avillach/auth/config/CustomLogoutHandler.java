@@ -42,6 +42,7 @@ public class CustomLogoutHandler implements LogoutHandler {
             this.sessionService.endSession(subject);
             this.userService.evictFromCache(subject);
             this.accessRuleService.evictFromCache(subject);
+            this.userService.removeUserPassport(subject);
         }
     }
 }
