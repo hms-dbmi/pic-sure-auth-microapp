@@ -42,6 +42,10 @@ public class JWTUtil {
         this.clientSecretIsBase64 = clientSecretIsBase64;
     }
 
+    public static void updateExpirationTime(String v, long l) {
+
+
+    }
 
 
     private String getDecodedClientSecret() {
@@ -117,7 +121,7 @@ public class JWTUtil {
 
     public static Optional<String> getTokenFromAuthorizationHeader(String authorizationHeader) {
         if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
-            return Optional.empty();
+            return Optional.ofNullable(authorizationHeader);
         }
 
         return Optional.of(authorizationHeader.substring("Bearer".length()).trim());

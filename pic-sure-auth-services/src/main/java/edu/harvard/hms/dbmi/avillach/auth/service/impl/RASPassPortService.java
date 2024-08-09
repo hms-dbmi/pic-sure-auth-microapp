@@ -76,12 +76,22 @@ public class RASPassPortService {
 
             List<String> ga4ghPassportV1 = passportOptional.get().getGa4ghPassportV1();
             for (String visa : ga4ghPassportV1) {
-                Optional<String> response = validateVisa(visa);
-                if (response.isPresent()) {
-                    boolean successfullyUpdated = handlePassportValidationResponse(response.get(), user);
-                    if (!successfullyUpdated) {
-                        logger.info("User {}'s passport is no longer valid. User logged out.", user.getSubject());
-                        break;
+                Optional<Ga4ghPassportV1> parsedVisa = JWTUtil.parseGa4ghPassportV1(visa);
+                if (parsedVisa.isEmpty()) {
+                    logger.error("validatePassport() ga4ghPassportV1 is empty");
+                    return;
+                }
+
+                if (parsedVisa.get().getExp() < System.currentTimeMillis() / 1000) {
+                    handleFailedValidationResponse(PassportValidationResponse.VISA_EXPIRED.getValue(), user);
+                } else {
+                    Optional<String> response = validateVisa(visa);
+                    if (response.isPresent()) {
+                        boolean successfullyUpdated = handlePassportValidationResponse(response.get(), user);
+                        if (!successfullyUpdated) {
+                            logger.info("User {}'s passport is no longer valid. User logged out.", user.getSubject());
+                            break;
+                        }
                     }
                 }
             }
@@ -127,16 +137,6 @@ public class RASPassPortService {
         if (StringUtils.isBlank(visa)) {
             logger.error("validatePassport() passport is null");
             return Optional.empty();
-        }
-
-        Optional<Ga4ghPassportV1> ga4ghPassportV1 = JWTUtil.parseGa4ghPassportV1(visa);
-        if (ga4ghPassportV1.isEmpty()) {
-            logger.error("validatePassport() ga4ghPassportV1 is empty");
-            return Optional.ofNullable(PassportValidationResponse.INVALID_PASSPORT.getValue());
-        }
-
-        if (ga4ghPassportV1.get().getExp() < System.currentTimeMillis() / 1000) {
-            return Optional.ofNullable(PassportValidationResponse.VISA_EXPIRED.getValue());
         }
 
         MultiValueMap<String, String> queryParams = new LinkedMultiValueMap<>();
