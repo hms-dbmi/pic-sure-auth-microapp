@@ -10,6 +10,7 @@ import edu.harvard.hms.dbmi.avillach.auth.model.ras.Passport;
 import edu.harvard.hms.dbmi.avillach.auth.model.ras.RasDbgapPermission;
 import edu.harvard.hms.dbmi.avillach.auth.service.AuthenticationService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.*;
+import edu.harvard.hms.dbmi.avillach.auth.utils.JWTUtil;
 import edu.harvard.hms.dbmi.avillach.auth.utils.RestClientUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -108,6 +109,8 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
             logger.info("LOGIN FAILED ___ NO RAS PASSPORT FOUND ___");
             return null;
         }
+
+        logger.info("RAS PASSPORT FOUND ___ USER: {} ___ PASSPORT: {}", user.getSubject(), JWTUtil.decodePassport(introspectResponse.get("passport_jwt_v11").toString()).get());
 
         Set<RasDbgapPermission> dbgapPermissions = this.rasPassPortService.ga4gpPassportToRasDbgapPermissions(rasPassport.get().getGa4ghPassportV1());
         Optional<Set<String>> dbgapRoleNames = this.roleService.getRoleNamesForDbgapPermissions(dbgapPermissions);
