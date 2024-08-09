@@ -78,7 +78,7 @@ public class RASAuthenticationServiceTest {
 
     @Test
     public void testAuthorizationCodeFlow_Successful() {
-        String data = "{\"access_token\":\"" + testAccessToken + "\", \"active\":true}";
+        String data = "{\"access_token\":\"" + testAccessToken + "\", \"active\":true, \"id_token\":\"SomeRandomToken\"}";
         String payload = "token_type_hint=access_token&token=" + testAccessToken;
         String redirectUri = "https://" + testDomain + "/psamaui/login";
         String queryString = "grant_type=authorization_code" + "&code=" + code + "&redirect_uri=" + redirectUri;
