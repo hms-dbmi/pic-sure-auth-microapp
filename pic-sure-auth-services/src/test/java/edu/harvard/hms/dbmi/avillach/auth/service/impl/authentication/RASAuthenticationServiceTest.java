@@ -1,7 +1,5 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.impl.authentication;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Connection;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
@@ -35,10 +33,9 @@ public class RASAuthenticationServiceTest {
     private RestClientUtil restClientUtil;
     @Mock
     private ConnectionWebService connectionService;
-
+    private RASPassPortService rasPassPortService;
     private RASAuthenticationService rasAuthenticationService;
 
-    private final ObjectMapper mapper = new ObjectMapper();
     private final String testAccessToken = "someRandomAccessToken";
     private final String code = "123123123";
     private final String testDomain = "https://testdomain.com";
@@ -49,7 +46,9 @@ public class RASAuthenticationServiceTest {
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
         RoleService roleService = new RoleService(mock(RoleRepository.class), mock(PrivilegeRepository.class), mock(PrivilegeService.class), mock(FenceMappingUtility.class));
-        RASPassPortService rasPassPortService = new RASPassPortService(restClientUtil, userService,  "");
+        this.rasPassPortService = spy(new RASPassPortService(restClientUtil, userService, ""));
+        doReturn(false).when(rasPassPortService).isExpired(any());
+
         rasAuthenticationService = new RASAuthenticationService(
                 userService,
                 accessRuleService,
@@ -59,6 +58,7 @@ public class RASAuthenticationServiceTest {
                 "",
                 "",
                 "",
+                "https://stsstg.nih.gov",
                 roleService,
                 rasPassPortService,
                 connectionService

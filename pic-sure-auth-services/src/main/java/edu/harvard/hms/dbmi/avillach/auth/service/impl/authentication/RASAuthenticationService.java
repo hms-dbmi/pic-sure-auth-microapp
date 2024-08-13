@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Connection;
-import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.model.ras.Passport;
 import edu.harvard.hms.dbmi.avillach.auth.model.ras.RasDbgapPermission;
@@ -20,7 +19,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 public class RASAuthenticationService extends OktaAuthenticationService implements AuthenticationService {
@@ -33,6 +31,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
     private final RoleService roleService;
     private final RASPassPortService rasPassPortService;
     private Connection rasConnection;
+    private final String rasPassportIssuer;
 
     /**
      * Constructor for the RASAuthenticationService
@@ -52,14 +51,17 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
                                     @Value("${ras.okta.connection.id}") String connectionId,
                                     @Value("${ras.okta.client.id}") String clientId,
                                     @Value("${ras.okta.client.secret}") String clientSecret,
+                                    @Value("${ras.passport.issuer}") String rasPassportIssuer,
                                     RoleService roleService,
-                                    RASPassPortService rasPassPortService, ConnectionWebService connectionService) {
+                                    RASPassPortService rasPassPortService,
+                                    ConnectionWebService connectionService ) {
         super(idp_provider_uri, clientId, clientSecret, restClientUtil);
 
         this.userService = userService;
         this.isEnabled = isEnabled;
         this.roleService = roleService;
         this.rasPassPortService = rasPassPortService;
+        this.rasPassportIssuer = rasPassportIssuer;
 
         logger.info("RASAuthenticationService is enabled: {}", isEnabled);
         logger.info("RASAuthenticationService initialized");
@@ -104,9 +106,18 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
 
         User user = initializedUser.get();
         Optional<Passport> rasPassport = this.rasPassPortService.extractPassport(introspectResponse);
-
         if (rasPassport.isEmpty()) {
             logger.info("LOGIN FAILED ___ NO RAS PASSPORT FOUND ___");
+            return null;
+        }
+
+        if (rasPassPortService.isExpired(rasPassport.get())) {
+            logger.error("validateRASPassport() passport is expired");
+            return null;
+        }
+
+        if (!rasPassport.get().getIss().equals(this.rasPassportIssuer)) {
+            logger.error("validateRASPassport() passport issuer is not correct");
             return null;
         }
 

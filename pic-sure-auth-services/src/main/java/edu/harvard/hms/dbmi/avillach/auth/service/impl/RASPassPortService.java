@@ -191,4 +191,8 @@ public class RASPassPortService {
 
         return JWTUtil.parsePassportJWTV11(introspectResponse.get("passport_jwt_v11").toString());
     }
+
+    public boolean isExpired(Passport passport) {
+        return passport.getExp() < System.currentTimeMillis() / 1000;
+    }
 }

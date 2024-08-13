@@ -42,12 +42,6 @@ public class JWTUtil {
         this.clientSecretIsBase64 = clientSecretIsBase64;
     }
 
-    public static void updateExpirationTime(String v, long l) {
-
-
-    }
-
-
     private String getDecodedClientSecret() {
         if (clientSecretIsBase64) {
             return new String(Base64.decodeBase64(clientSecret));
