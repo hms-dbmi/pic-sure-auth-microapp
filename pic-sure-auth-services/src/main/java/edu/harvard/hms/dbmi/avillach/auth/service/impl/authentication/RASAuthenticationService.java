@@ -132,7 +132,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
 
         String passport = introspectResponse.get("passport_jwt_v11").toString();
         user.setPassport(passport);
-        logger.info("RAS PASSPORT SUCCESSFULLY ADDED TO USER DATA: {}", user.getPassport());
+        logger.info("RAS PASSPORT SUCCESSFULLY ADDED TO USER: {}", user.getSubject());
         userService.save(user);
         HashMap<String, String> responseMap = createUserClaims(user, idToken);
         responseMap.put("oktaIdToken", idToken);
