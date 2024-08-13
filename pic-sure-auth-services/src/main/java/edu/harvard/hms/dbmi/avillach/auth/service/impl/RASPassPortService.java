@@ -193,6 +193,7 @@ public class RASPassPortService {
     }
 
     public boolean isExpired(Passport passport) {
-        return passport.getExp() < System.currentTimeMillis() / 1000;
+        return passport.getExp() < System.currentTimeMillis() / 1000 &&
+                passport.getIat() < System.currentTimeMillis() / 1000;
     }
 }
