@@ -593,9 +593,6 @@ public class UserService {
     /**
      * Using the introspection token response, load the user from the database. If the user does not exist, we
      * will reject their login attempt. For the RAS integration here is a sample payload.
-     * {'sub': '756eLtvlSLgb8o5voHA_913-wHKP04r-70LO07y-FQg', 'preferred_username': 'gen3_test_1@era.nih.gov',
-     * 'userid': 'gen3_test_1', 'email': 'gen3_test_1@perf.nih.gov', 'txn': 'fae8b4c66c12ae1c.607af39c33c51b7c',
-     * 'passport_jwt_v11': <redacted>}
      *
      * @param node The response from the introspect endpoint
      * @return The user
