@@ -83,7 +83,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
      */
     @Override
     public HashMap<String, String> authenticate(Map<String, String> authRequest, String host) {
-        logger.info("RAS OKTA LOGIN ATTEMPT ___ {} ___", authRequest.get("code"));
+        logger.info("RAS OKTA LOGIN ATTEMPT ___ CODE {}", authRequest.get("code"));
 
         JsonNode introspectResponse = null;
         String idToken = null;
@@ -107,37 +107,42 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
         User user = initializedUser.get();
         Optional<Passport> rasPassport = this.rasPassPortService.extractPassport(introspectResponse);
         if (rasPassport.isEmpty()) {
-            logger.info("LOGIN FAILED ___ NO RAS PASSPORT FOUND ___");
+            logger.info("LOGIN FAILED ___ NO RAS PASSPORT FOUND ___ USER: {} ___ CODE {}", user.getSubject(), authRequest.get("code"));
             return null;
         }
 
         if (rasPassPortService.isExpired(rasPassport.get())) {
-            logger.error("validateRASPassport() LOGIN FAILED ___ PASSPORT IS EXPIRED ___ USER: {}", user.getSubject());
+            logger.error("validateRASPassport() LOGIN FAILED ___ PASSPORT IS EXPIRED ___ USER: {} ___ CODE {}", user.getSubject(), authRequest.get("code"));
             return null;
         }
 
         if (!rasPassport.get().getIss().equals(this.rasPassportIssuer)) {
             logger.error("validateRASPassport() LOGIN FAILED ___ PASSPORT ISSUER IS NOT CORRECT ___ USER: {} ___ " +
-                    "EXPECTED ISSUER {} ___ ACTUAL ISSUER {}", user.getSubject(), this.rasPassportIssuer, rasPassport.get().getIss());
+                    "EXPECTED ISSUER {} ___ ACTUAL ISSUER {} ___ CODE {}",
+                    user.getSubject(), this.rasPassportIssuer, rasPassport.get().getIss(), authRequest.get("code"));
             return null;
         }
 
-        logger.info("RAS PASSPORT FOUND ___ USER: {} ___ PASSPORT: {}", user.getSubject(), rasPassport.get());
+        logger.info("RAS PASSPORT FOUND ___ USER: {} ___ PASSPORT: {} ___ CODE {}", user.getSubject(), rasPassport.get(), authRequest.get("code"));
 
         Set<RasDbgapPermission> dbgapPermissions = this.rasPassPortService.ga4gpPassportToRasDbgapPermissions(rasPassport.get().getGa4ghPassportV1());
         Optional<Set<String>> dbgapRoleNames = this.roleService.getRoleNamesForDbgapPermissions(dbgapPermissions);
         if (dbgapRoleNames.isPresent()) {
             user = userService.updateUserRoles(user, dbgapRoleNames.get());
-            logger.debug("USER {} ROLES UPDATED {}", user.getSubject(), user.getRoles().stream().map(role -> role.getName().replace("MANAGED_", "")).toArray());
+            logger.debug("USER {} ROLES UPDATED {} ___ CODE {}",
+                    user.getSubject(),
+                    user.getRoles().stream().map(role -> role.getName().replace("MANAGED_", "")).toArray(),
+                    authRequest.get("code"));
         }
 
         String passport = introspectResponse.get("passport_jwt_v11").toString();
         user.setPassport(passport);
-        logger.info("RAS PASSPORT SUCCESSFULLY ADDED TO USER: {}", user.getSubject());
+        logger.info("RAS PASSPORT SUCCESSFULLY ADDED TO USER: {} ___ CODE {}", user.getSubject(), authRequest.get("code"));
         userService.save(user);
         HashMap<String, String> responseMap = createUserClaims(user, idToken);
         responseMap.put("oktaIdToken", idToken);
-        logger.info("LOGIN SUCCESS ___ USER {}:{} ___ AUTHORIZATION WILL EXPIRE AT  ___ {}___", user.getSubject(), user.getUuid().toString(), responseMap.get("expirationDate"));
+        logger.info("LOGIN SUCCESS ___ USER {}:{} ___ AUTHORIZATION WILL EXPIRE AT  ___ {} ___ CODE {}",
+                user.getSubject(), user.getUuid().toString(), responseMap.get("expirationDate"), authRequest.get("code"));
         return responseMap;
     }
 

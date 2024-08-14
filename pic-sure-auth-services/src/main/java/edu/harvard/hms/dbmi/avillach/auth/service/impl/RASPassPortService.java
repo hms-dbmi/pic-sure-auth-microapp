@@ -59,6 +59,7 @@ public class RASPassPortService {
     public void validateAllUserPassports() {
         Set<User> allUsersWithAPassport = this.userService.getAllUsersWithAPassport();
         allUsersWithAPassport.parallelStream().forEach(user -> {
+            logger.info("validateAllUserPassports() ATTEMPTING TO VALIDATE PASSPORT___ USER {}", user.getSubject());
             if (StringUtils.isBlank(user.getPassport())) {
                 logger.error("NO PASSPORT FOUND ___ uSER {}", user.getSubject());
                 return;
@@ -67,7 +68,7 @@ public class RASPassPortService {
             String encodedPassport = user.getPassport();
             Optional<Passport> passportOptional = JWTUtil.parsePassportJWTV11(encodedPassport);
             if (passportOptional.isEmpty()) {
-                logger.error("fAILED TO DECODE PASSPORT ___ USER: {}", user.getEmail());
+                logger.error("fAILED TO DECODE PASSPORT ___ USER: {}", user.getSubject());
                 user.setPassport(null);
                 userService.save(user);
                 userService.logoutUser(user);
@@ -78,7 +79,7 @@ public class RASPassPortService {
             for (String visa : ga4ghPassportV1) {
                 Optional<Ga4ghPassportV1> parsedVisa = JWTUtil.parseGa4ghPassportV1(visa);
                 if (parsedVisa.isEmpty()) {
-                    logger.error("validatePassport() ga4ghPassportV1 is empty");
+                    logger.error("validatePassport() ga4ghPassportV1 PASSPORT VISA IS EMPTY ___ USER {}", user.getSubject());
                     return;
                 }
 
@@ -89,8 +90,10 @@ public class RASPassPortService {
                     if (response.isPresent()) {
                         boolean successfullyUpdated = handlePassportValidationResponse(response.get(), user);
                         if (!successfullyUpdated) {
-                            logger.info("PASSPORT IS NO LONGER VALID ___ USER {} ___ USER LOGGED OUT", user.getSubject());
+                            logger.info("PASSPORT VALIDATION COMPLETE __ PASSPORT IS NO LONGER VALID ___ USER {} ___ USER LOGGED OUT", user.getSubject());
                             break;
+                        } else {
+                            logger.info("PASSPORT VALIDATION COMPLETE __ PASSPORT IS VALID ___ USER {}", user.getSubject());
                         }
                     }
                 }
