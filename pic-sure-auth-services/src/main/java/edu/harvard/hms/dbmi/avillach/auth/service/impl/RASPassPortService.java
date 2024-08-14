@@ -60,14 +60,14 @@ public class RASPassPortService {
         Set<User> allUsersWithAPassport = this.userService.getAllUsersWithAPassport();
         allUsersWithAPassport.parallelStream().forEach(user -> {
             if (StringUtils.isBlank(user.getPassport())) {
-                logger.error("User {} has no passport.", user.getSubject());
+                logger.error("NO PASSPORT FOUND ___ uSER {}", user.getSubject());
                 return;
             }
 
             String encodedPassport = user.getPassport();
             Optional<Passport> passportOptional = JWTUtil.parsePassportJWTV11(encodedPassport);
             if (passportOptional.isEmpty()) {
-                logger.error("Failed to decode passport for user: {}", user.getEmail());
+                logger.error("fAILED TO DECODE PASSPORT ___ USER: {}", user.getEmail());
                 user.setPassport(null);
                 userService.save(user);
                 userService.logoutUser(user);
@@ -89,7 +89,7 @@ public class RASPassPortService {
                     if (response.isPresent()) {
                         boolean successfullyUpdated = handlePassportValidationResponse(response.get(), user);
                         if (!successfullyUpdated) {
-                            logger.info("User {}'s passport is no longer valid. User logged out.", user.getSubject());
+                            logger.info("PASSPORT IS NO LONGER VALID ___ USER {} ___ USER LOGGED OUT", user.getSubject());
                             break;
                         }
                     }
@@ -102,7 +102,7 @@ public class RASPassPortService {
     private boolean handlePassportValidationResponse(String response, User user) {
         PassportValidationResponse passportValidationResponse = PassportValidationResponse.fromValue(response);
         if (passportValidationResponse == null) {
-            logger.error("handlePassportValidationResponse() passportValidationResponse is null");
+            logger.error("handlePassportValidationResponse() VALIDATE PASSPORT RESPONSE WAS NULL ___ USER {}, ", user.getSubject());
             return false;
         }
 
@@ -129,13 +129,13 @@ public class RASPassPortService {
     }
 
     private boolean handleValidValidationResponse(String validateResponse, User user) {
-        this.logger.info("handleValidValidationResponse: PASSPORT VALIDATE RESPONSE __ {} __ FOR USER: {}", validateResponse, user.getSubject());
+        this.logger.info("handleValidValidationResponse PASSPORT VALIDATE RESPONSE ___ {} ___ USER {}", validateResponse, user.getSubject());
         return true;
     }
 
     public Optional<String> validateVisa(String visa) {
         if (StringUtils.isBlank(visa)) {
-            logger.error("validatePassport() passport is null");
+            logger.error("validatePassport() VISA IS EMPTY");
             return Optional.empty();
         }
 
@@ -149,7 +149,7 @@ public class RASPassPortService {
             resp = this.restClientUtil.retrievePostResponse(this.rasURI + "/passport/validate", request);
             responseVal = resp.getBody();
         } catch (Exception e) {
-            logger.error("validatePassport() Passport validation failed: {}", e.getMessage());
+            logger.error("validatePassport() FAILED TO VALIDATE VISA ___ {}", e.getMessage());
         }
 
         return Optional.ofNullable(responseVal);
@@ -160,6 +160,7 @@ public class RASPassPortService {
             return null;
         }
 
+        logger.debug("Converting ga4ghPassports to RasDbgapPermissions");
         HashSet<RasDbgapPermission> rasDbgapPermissions = new HashSet<>();
         ga4ghPassports.forEach(ga4ghPassport -> {
             Optional<Ga4ghPassportV1> parsedGa4ghPassportV1 = JWTUtil.parseGa4ghPassportV1(ga4ghPassport);

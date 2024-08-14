@@ -112,16 +112,16 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
         }
 
         if (rasPassPortService.isExpired(rasPassport.get())) {
-            logger.error("validateRASPassport() passport is expired");
+            logger.error("validateRASPassport() LOGIN FAILED ___ PASSPORT IS EXPIRED ___ USER: {}", user.getSubject());
             return null;
         }
 
         if (!rasPassport.get().getIss().equals(this.rasPassportIssuer)) {
-            logger.error("validateRASPassport() passport issuer is not correct");
+            logger.error("validateRASPassport() LOGIN FAILED ___ PASSPORT ISSUER IS NOT CORRECT ___ USER: {}", user.getSubject());
             return null;
         }
 
-        logger.info("RAS PASSPORT FOUND ___ USER: {} ___ PASSPORT: {}", user.getSubject(), JWTUtil.decodePassport(introspectResponse.get("passport_jwt_v11").toString()).get());
+        logger.info("RAS PASSPORT FOUND ___ USER: {} ___ PASSPORT: {}", user.getSubject(), rasPassport.get());
 
         Set<RasDbgapPermission> dbgapPermissions = this.rasPassPortService.ga4gpPassportToRasDbgapPermissions(rasPassport.get().getGa4ghPassportV1());
         Optional<Set<String>> dbgapRoleNames = this.roleService.getRoleNamesForDbgapPermissions(dbgapPermissions);

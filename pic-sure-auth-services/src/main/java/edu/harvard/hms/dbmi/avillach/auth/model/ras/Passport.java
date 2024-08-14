@@ -80,4 +80,17 @@ public class Passport {
     public void setGa4ghPassportV1(List<String> ga4ghPassportV1) {
         this.ga4ghPassportV1 = ga4ghPassportV1;
     }
+
+    @Override
+    public String toString() {
+        return "Passport{" +
+                "exp=" + exp +
+                ", iat=" + iat +
+                ", iss='" + iss + '\'' +
+                ", txn='" + txn + '\'' +
+                ", scope='" + scope + '\'' +
+                ", jti='" + jti + '\'' +
+                ", sub='" + sub + '\'' +
+                '}';
+    }
 }
