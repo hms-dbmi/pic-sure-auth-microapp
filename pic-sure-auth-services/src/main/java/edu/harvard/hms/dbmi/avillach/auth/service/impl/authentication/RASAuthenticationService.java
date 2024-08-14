@@ -94,13 +94,13 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
         }
 
         if (introspectResponse == null) {
-            logger.info("LOGIN FAILED ___ USER NOT AUTHENTICATED ___ INTROSPECTION RESPONSE {}", introspectResponse);
+            logger.info("LOGIN FAILED ___ USER NOT AUTHENTICATED ___ INTROSPECTION RESPONSE {} ___ CODE {}", introspectResponse, authRequest.get("code"));
             return null;
         }
 
         Optional<User> initializedUser = initializeUser(introspectResponse);
         if (initializedUser.isEmpty()) {
-            logger.info("LOGIN FAILED ___ COULD NOT CREATE USER ");
+            logger.info("LOGIN FAILED ___ COULD NOT CREATE USER ___ INTROSPECTION RESPONSE {} ___ CODE {}", introspectResponse, authRequest.get("code"));
             return null;
         }
 
@@ -137,7 +137,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
         userService.save(user);
         HashMap<String, String> responseMap = createUserClaims(user, idToken);
         responseMap.put("oktaIdToken", idToken);
-        logger.info("LOGIN SUCCESS ___ {}:{} ___ Authorization will expire at  ___ {}___", user.getEmail(), user.getUuid().toString(), responseMap.get("expirationDate"));
+        logger.info("LOGIN SUCCESS ___ USER {}:{} ___ AUTHORIZATION WILL EXPIRE AT  ___ {}___", user.getSubject(), user.getUuid().toString(), responseMap.get("expirationDate"));
         return responseMap;
     }
 
