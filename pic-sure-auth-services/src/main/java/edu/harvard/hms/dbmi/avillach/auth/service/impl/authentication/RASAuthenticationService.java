@@ -94,13 +94,13 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
         }
 
         if (introspectResponse == null) {
-            logger.info("LOGIN FAILED ___ USER NOT AUTHENTICATED ___ Introspection Response {}", introspectResponse);
+            logger.info("LOGIN FAILED ___ USER NOT AUTHENTICATED ___ INTROSPECTION RESPONSE {}", introspectResponse);
             return null;
         }
 
         Optional<User> initializedUser = initializeUser(introspectResponse);
         if (initializedUser.isEmpty()) {
-            logger.info("LOGIN FAILED ___ COULD NOT CREATE USER ___");
+            logger.info("LOGIN FAILED ___ COULD NOT CREATE USER ");
             return null;
         }
 
@@ -117,7 +117,8 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
         }
 
         if (!rasPassport.get().getIss().equals(this.rasPassportIssuer)) {
-            logger.error("validateRASPassport() LOGIN FAILED ___ PASSPORT ISSUER IS NOT CORRECT ___ USER: {}", user.getSubject());
+            logger.error("validateRASPassport() LOGIN FAILED ___ PASSPORT ISSUER IS NOT CORRECT ___ USER: {} ___ " +
+                    "EXPECTED ISSUER {} ___ ACTUAL ISSUER {}", user.getSubject(), this.rasPassportIssuer, rasPassport.get().getIss());
             return null;
         }
 
@@ -127,7 +128,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
         Optional<Set<String>> dbgapRoleNames = this.roleService.getRoleNamesForDbgapPermissions(dbgapPermissions);
         if (dbgapRoleNames.isPresent()) {
             user = userService.updateUserRoles(user, dbgapRoleNames.get());
-            logger.debug("User roles updated: {}", user.getRoles().stream().map(role -> role.getName().replace("MANAGED_", "")).toArray());
+            logger.debug("USER {} ROLES UPDATED {}", user.getSubject(), user.getRoles().stream().map(role -> role.getName().replace("MANAGED_", "")).toArray());
         }
 
         String passport = introspectResponse.get("passport_jwt_v11").toString();
