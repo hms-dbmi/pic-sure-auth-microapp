@@ -59,7 +59,7 @@ public class RASPassPortService {
     public void validateAllUserPassports() {
         Set<User> allUsersWithAPassport = this.userService.getAllUsersWithAPassport();
         allUsersWithAPassport.parallelStream().forEach(user -> {
-            logger.info("validateAllUserPassports() ATTEMPTING TO VALIDATE PASSPORT___ USER {}", user.getSubject());
+            logger.info("validateAllUserPassports() ATTEMPTING TO VALIDATE PASSPORT ___ USER {}", user.getSubject());
             if (StringUtils.isBlank(user.getPassport())) {
                 logger.error("NO PASSPORT FOUND ___ uSER {}", user.getSubject());
                 return;
@@ -68,7 +68,7 @@ public class RASPassPortService {
             String encodedPassport = user.getPassport();
             Optional<Passport> passportOptional = JWTUtil.parsePassportJWTV11(encodedPassport);
             if (passportOptional.isEmpty()) {
-                logger.error("fAILED TO DECODE PASSPORT ___ USER: {}", user.getSubject());
+                logger.error("FAILED TO DECODE PASSPORT ___ USER: {}", user.getSubject());
                 user.setPassport(null);
                 userService.save(user);
                 userService.logoutUser(user);
