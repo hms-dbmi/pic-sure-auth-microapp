@@ -60,10 +60,15 @@ public class RASPassPortService {
         logger.info("validateAllUserPassports() STARTING PASSPORT VALIDATION");
 
         Set<User> allUsersWithAPassport = this.userService.getAllUsersWithAPassport();
+        if (allUsersWithAPassport.isEmpty()) {
+            logger.info("validateAllUserPassports() NO USERS WITH PASSPORTS FOUND");
+            return;
+        }
+
         allUsersWithAPassport.parallelStream().forEach(user -> {
             logger.info("validateAllUserPassports() ATTEMPTING TO VALIDATE PASSPORT ___ USER {}", user.getSubject());
             if (StringUtils.isBlank(user.getPassport())) {
-                logger.error("NO PASSPORT FOUND ___ uSER {}", user.getSubject());
+                logger.error("NO PASSPORT FOUND ___ USER {}", user.getSubject());
                 return;
             }
 
