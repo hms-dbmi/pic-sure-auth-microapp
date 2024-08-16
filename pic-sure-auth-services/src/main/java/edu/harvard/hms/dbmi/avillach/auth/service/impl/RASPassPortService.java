@@ -55,8 +55,10 @@ public class RASPassPortService {
      * We will run this nearly immediately after startup. We don't know how long it has been since the last auth micro app
      * ran its validate.
      */
-    @Scheduled(initialDelay = 1000, fixedDelay = 3000000)
+    @Scheduled(initialDelay = 1000, fixedDelay = 300000)
     public void validateAllUserPassports() {
+        logger.info("validateAllUserPassports() STARTING PASSPORT VALIDATION");
+
         Set<User> allUsersWithAPassport = this.userService.getAllUsersWithAPassport();
         allUsersWithAPassport.parallelStream().forEach(user -> {
             logger.info("validateAllUserPassports() ATTEMPTING TO VALIDATE PASSPORT ___ USER {}", user.getSubject());
