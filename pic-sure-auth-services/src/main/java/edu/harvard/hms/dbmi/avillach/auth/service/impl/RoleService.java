@@ -170,8 +170,8 @@ public class RoleService {
         roles.add(t);
     }
 
-    public Role getRoleByName(String fenceOpenAccessRoleName) {
-        return this.roleRepository.findByName(fenceOpenAccessRoleName);
+    public Role getRoleByName(String roleName) {
+        return this.roleRepository.findByName(roleName);
     }
 
     public Role save(Role r) {
@@ -199,7 +199,7 @@ public class RoleService {
             logger.info("createRole() roleName is empty");
             return null;
         }
-
+        logger.info("createRole() New PSAMA role name:{}", roleName);
         // Create the Role in the repository, if it does not exist. Otherwise, add it.
         Role role = findByName(roleName);
         if (role != null) {
