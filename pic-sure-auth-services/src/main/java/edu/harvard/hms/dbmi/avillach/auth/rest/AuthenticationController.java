@@ -64,7 +64,7 @@ public class AuthenticationController {
         }
 
         HashMap<String, String> authenticate = authenticationService.authenticate(authRequest, request.getServerName());
-        if (CollectionUtils.isEmpty(authenticate)) {
+        if (!CollectionUtils.isEmpty(authenticate)) {
             if (authenticate.containsKey("userId")) {
                 sessionService.startSession(authenticate.get("userId"));
             } else {
