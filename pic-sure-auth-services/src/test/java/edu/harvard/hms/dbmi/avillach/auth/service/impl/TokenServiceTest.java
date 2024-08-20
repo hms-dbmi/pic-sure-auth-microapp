@@ -6,8 +6,7 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.enums.SecurityRoles;
 import edu.harvard.hms.dbmi.avillach.auth.exceptions.NotAuthorizedException;
-import edu.harvard.hms.dbmi.avillach.auth.model.CustomApplicationDetails;
-import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
+import edu.harvard.hms.dbmi.avillach.auth.model.*;
 import edu.harvard.hms.dbmi.avillach.auth.repository.UserRepository;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization.AuthorizationService;
 import edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming;
@@ -340,9 +339,9 @@ public class TokenServiceTest {
         when(userRepository.findById(user.getUuid())).thenReturn(Optional.of(user));
 
         String authorizationHeader = "Bearer " + token;
-        Map<String, String> response = tokenService.refreshToken(authorizationHeader);
-        assertNotNull(response.get("error"));
-        assertEquals(response.get("error"), "Cannot parse original token.");
+        RefreshToken response = tokenService.refreshToken(authorizationHeader);
+        assertTrue(response instanceof InvalidRefreshToken);
+        assertEquals("Cannot parse original token.", ((InvalidRefreshToken) response).error());
     }
 
     @Test
@@ -367,12 +366,13 @@ public class TokenServiceTest {
         when(userRepository.findById(user.getUuid())).thenReturn(Optional.of(user));
 
         String authorizationHeader = "Bearer " + token;
-        Map<String, String> response = tokenService.refreshToken(authorizationHeader);
-        assertNotNull(response.get("token"));
-        assertNotNull(response.get("expirationDate"));
+        RefreshToken response = tokenService.refreshToken(authorizationHeader);
+        assertTrue(response instanceof ValidRefreshToken);
+        assertNotNull(((ValidRefreshToken) response).token());
+        assertNotNull(((ValidRefreshToken) response).expirationDate());
     }
 
-    @Test(expected = NotAuthorizedException.class)
+    @Test
     public void testRefreshToken_whereUserNotExists() {
         User user = createTestUser();
         configureUserSecurityContext(user);
@@ -393,10 +393,12 @@ public class TokenServiceTest {
         when(userRepository.findById(user.getUuid())).thenReturn(Optional.empty());
 
         String authorizationHeader = "Bearer " + token;
-        tokenService.refreshToken(authorizationHeader);
+        RefreshToken refreshToken = tokenService.refreshToken(authorizationHeader);
+        assertTrue(refreshToken instanceof InvalidRefreshToken);
+        assertEquals("User doesn't exist anymore.", ((InvalidRefreshToken) refreshToken).error());
     }
 
-    @Test(expected = NotAuthorizedException.class)
+    @Test
     public void testRefreshToken_whereUserNotActive() {
         User user = createTestUser();
         user.setActive(false);
@@ -419,10 +421,12 @@ public class TokenServiceTest {
         when(userRepository.findById(user.getUuid())).thenReturn(Optional.of(user));
 
         String authorizationHeader = "Bearer " + token;
-        tokenService.refreshToken(authorizationHeader);
+        RefreshToken refreshToken = tokenService.refreshToken(authorizationHeader);
+        assertTrue(refreshToken instanceof InvalidRefreshToken);
+        assertEquals("User has been deactivated.", ((InvalidRefreshToken) refreshToken).error());
     }
 
-    @Test(expected = NotAuthorizedException.class)
+    @Test
     public void testRefreshToken_whereUserSubjectHasChanged() {
         User user = createTestUser();
         configureUserSecurityContext(user);
@@ -445,7 +449,9 @@ public class TokenServiceTest {
         when(userRepository.findById(user.getUuid())).thenReturn(Optional.of(user));
 
         String authorizationHeader = "Bearer " + token;
-        tokenService.refreshToken(authorizationHeader);
+        RefreshToken refreshToken = tokenService.refreshToken(authorizationHeader);
+        assertTrue(refreshToken instanceof InvalidRefreshToken);
+        assertEquals("User doesn't exist anymore.", ((InvalidRefreshToken) refreshToken).error());
     }
 
     private User createTestUser() {
