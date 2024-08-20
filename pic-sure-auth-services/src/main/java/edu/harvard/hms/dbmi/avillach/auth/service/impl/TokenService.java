@@ -207,7 +207,7 @@ public class TokenService {
             }
         } else {
             tokenInspection.setMessage(errorMsg);
-            tokenInspection.addField("active", false); // Set active to false since authorization failed
+            tokenInspection.addField("active", false);
         }
 
         // Attach additional fields regardless of the authorization outcome
