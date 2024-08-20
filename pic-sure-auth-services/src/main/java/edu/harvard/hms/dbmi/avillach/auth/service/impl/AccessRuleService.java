@@ -9,6 +9,7 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.Application;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.repository.AccessRuleRepository;
+import io.micrometer.common.util.StringUtils;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -164,7 +165,7 @@ public class AccessRuleService {
 
     @CacheEvict(value = "mergedRulesCache")
     public void evictFromMergedAccessRuleCache(String userSubject) {
-        if (userSubject == null || userSubject.isEmpty()) {
+        if (StringUtils.isBlank(userSubject)) {
             logger.warn("evictFromMergedAccessRuleCache() was called with a null or empty email");
             return;
         }

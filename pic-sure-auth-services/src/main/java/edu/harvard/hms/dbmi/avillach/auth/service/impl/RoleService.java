@@ -5,11 +5,11 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.enums.SecurityRoles;
 import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
+import edu.harvard.hms.dbmi.avillach.auth.model.fenceMapping.StudyMetaData;
 import edu.harvard.hms.dbmi.avillach.auth.model.ras.RasDbgapPermission;
 import edu.harvard.hms.dbmi.avillach.auth.repository.PrivilegeRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.RoleRepository;
 import edu.harvard.hms.dbmi.avillach.auth.utils.FenceMappingUtility;
-import jakarta.annotation.PostConstruct;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,52 +44,51 @@ public class RoleService {
         this.fenceMappingUtility = fenceMappingUtility;
     }
 
-    @PostConstruct
-    public void init() {
-        // Log the public access roles as comma separated values for startup logs
-        String publicAccessRolesString = publicAccessRoles.stream().map(Role::getName).collect(Collectors.joining(", "));
-        logger.info("Public access roles: {}", publicAccessRolesString);
-        logger.info("RoleService initialized...");
-    }
-
     @EventListener(ContextRefreshedEvent.class)
     public void createPermissionsForFenceMapping() {
         if (this.fenceMappingUtility.getFENCEMapping() != null && this.fenceMappingUtility.getFenceMappingByAuthZ() != null
                 && !this.fenceMappingUtility.getFENCEMapping().isEmpty() && !this.fenceMappingUtility.getFenceMappingByAuthZ().isEmpty()) {
             // Create all potential access rules using the fence mapping
-            Set<Role> roles = this.fenceMappingUtility.getFenceMappingByAuthZ().values().parallelStream().map(projectMetadata -> {
-                if (projectMetadata == null) {
-                    logger.error("createPermissionsForFenceMapping() -> createAndUpsertRole could not find study in FENCE mapping SKIPPING: NULL");
-                    return null;
-                }
-
-                if (projectMetadata.getStudyIdentifier() == null || projectMetadata.getStudyIdentifier().isEmpty()) {
-                    logger.error("createPermissionsForFenceMapping() -> createAndUpsertRole could not find study identifier in FENCE mapping SKIPPING: {}", projectMetadata);
-                    return null;
-                }
-
-                if (projectMetadata.getAuthZ() == null || projectMetadata.getAuthZ().isEmpty()) {
-                    logger.error("createPermissionsForFenceMapping() -> createAndUpsertRole could not find authZ in FENCE mapping SKIPPING: {}", projectMetadata);
-                    return null;
-                }
-
-                String projectId = projectMetadata.getStudyIdentifier();
-                String consentCode = projectMetadata.getConsentGroupCode();
-                String newRoleName = org.apache.commons.lang3.StringUtils.isNotBlank(consentCode) ? "MANAGED_" + projectId + "_" + consentCode : "MANAGED_" + projectId;
-
-                Role role = this.createRole(newRoleName, "MANAGED role " + newRoleName);
-
-                if (projectMetadata.getStudyType().equalsIgnoreCase("public")) {
-                    publicAccessRoles.add(role);
-                }
-
-                return role;
-            }).filter(Objects::nonNull).collect(Collectors.toSet());
+            Set<Role> roles = this.fenceMappingUtility.getFenceMappingByAuthZ().values().parallelStream()
+                    .filter(this::projectMetaIsValid)
+                    .map(this::extractRole)
+                    .collect(Collectors.toSet());
 
             this.persistAll(roles);
         } else {
             logger.error("createPermissionsForFenceMapping() -> createAndUpsertRole could not find any studies in FENCE mapping");
         }
+
+        String publicAccessRolesString = publicAccessRoles.stream().map(Role::getName).collect(Collectors.joining(", "));
+        logger.info("Public access roles: {}", publicAccessRolesString);
+        logger.info("RoleService initialized...");
+    }
+
+    private boolean projectMetaIsValid(StudyMetaData projectMetadata) {
+        if (projectMetadata == null) {
+            logger.error("createPermissionsForFenceMapping() -> createAndUpsertRole could not find study in FENCE mapping SKIPPING: NULL");
+            return false;
+        }
+        if (projectMetadata.getStudyIdentifier() == null || projectMetadata.getStudyIdentifier().isEmpty()) {
+            logger.error("createPermissionsForFenceMapping() -> createAndUpsertRole could not find study identifier in FENCE mapping SKIPPING: {}", projectMetadata);
+            return false;
+        }
+        if (projectMetadata.getAuthZ() == null || projectMetadata.getAuthZ().isEmpty()) {
+            logger.error("createPermissionsForFenceMapping() -> createAndUpsertRole could not find authZ in FENCE mapping SKIPPING: {}", projectMetadata);
+            return false;
+        }
+        return true;
+    }
+
+    public Role extractRole(StudyMetaData projectMetadata) {
+        String projectId = projectMetadata.getStudyIdentifier();
+        String consentCode = projectMetadata.getConsentGroupCode();
+        String newRoleName = org.apache.commons.lang3.StringUtils.isNotBlank(consentCode) ? "MANAGED_" + projectId + "_" + consentCode : "MANAGED_" + projectId;
+        Role role = this.createRole(newRoleName, "MANAGED role " + newRoleName);
+        if (projectMetadata.getStudyType().equalsIgnoreCase("public")) {
+            publicAccessRoles.add(role);
+        }
+        return role;
     }
 
     public Optional<Role> getRoleById(String roleId) {

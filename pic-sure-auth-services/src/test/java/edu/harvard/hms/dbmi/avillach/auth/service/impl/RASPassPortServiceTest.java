@@ -27,14 +27,13 @@ public class RASPassPortServiceTest {
     @Mock
     private RestClientUtil restClientUtil;
 
-    @InjectMocks
     private RASPassPortService rasPassPortService;
 
     private String visa;
 
     @Before
     public void setUp() throws Exception {
-        rasPassPortService.setRasURI("https://test.com/");
+        this.rasPassPortService = new RASPassPortService(restClientUtil, null, "https://test.com/");
 
         // Parse the passport and get the visa so we can mock the validateVisa method
         Optional<Passport> passport = JWTUtil.parsePassportJWTV11(exampleRasPassport);

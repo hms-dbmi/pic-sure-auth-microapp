@@ -32,8 +32,7 @@ public class RASPassPortService {
     private final Logger logger = LoggerFactory.getLogger(RASPassPortService.class);
     private final RestClientUtil restClientUtil;
     private final UserService userService;
-
-    private String rasURI;
+    private final String rasURI;
 
     @Autowired
     public RASPassPortService(RestClientUtil restClientUtil,
@@ -41,13 +40,8 @@ public class RASPassPortService {
                               @Value("${ras.idp.uri}") String rasURI) {
         this.restClientUtil = restClientUtil;
         this.userService = userService;
-        this.rasURI = rasURI;
-    }
+        this.rasURI = rasURI.replaceAll("/$", "");
 
-    @PostConstruct
-    public void init() {
-        // remove any trailing / from the rasURI if it was included.
-        rasURI = rasURI.replaceAll("/$", "");
         logger.info("RASPassPortService initialized with rasURI: {}", rasURI);
     }
 
@@ -131,7 +125,6 @@ public class RASPassPortService {
      * @return true if the user was successfully updated
      */
     private boolean handleFailedValidationResponse(String validateResponse, User user) {
-        user.setPassport(null);
         this.userService.save(user);
         this.userService.logoutUser(user);
         this.logger.info("handleFailedValidationResponse - {} - USER LOGGED OUT - {}", validateResponse, user.getSubject());
@@ -183,10 +176,6 @@ public class RASPassPortService {
         });
 
         return rasDbgapPermissions;
-    }
-
-    public void setRasURI(String rasURI) {
-        this.rasURI = rasURI;
     }
 
     public Optional<Passport> extractPassport(JsonNode introspectResponse) {

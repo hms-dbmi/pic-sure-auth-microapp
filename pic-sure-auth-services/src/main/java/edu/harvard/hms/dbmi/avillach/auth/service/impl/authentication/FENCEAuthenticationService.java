@@ -119,15 +119,15 @@ public class FENCEAuthenticationService implements AuthenticationService {
                     "from the Gen3 authentication provider." + ex.getMessage());
         }
 
-        User current_user;
+        User currentUser;
         try {
             // Create or retrieve the user profile from our database, based on the the key
             // in the Gen3/FENCE profile
-            current_user = createUserFromFENCEProfile(fence_user_profile);
-            logger.info("getFENCEProfile() saved details for user with e-mail:{} and subject:{}", current_user.getEmail(), current_user.getSubject());
+            currentUser = createUserFromFENCEProfile(fence_user_profile);
+            logger.info("getFENCEProfile() saved details for user with e-mail:{} and subject:{}", currentUser.getEmail(), currentUser.getSubject());
 
-            if (!current_user.getEmail().isEmpty()) {
-                String subject = current_user.getSubject();
+            if (!currentUser.getEmail().isEmpty()) {
+                String subject = currentUser.getSubject();
                 accessRuleService.evictFromCache(subject);
                 userService.evictFromCache(subject);
             }
@@ -154,13 +154,13 @@ public class FENCEAuthenticationService implements AuthenticationService {
             roleNames.add(newRoleName);
         });
 
-        current_user = userService.updateUserRoles(current_user, roleNames);
+        currentUser = userService.updateUserRoles(currentUser, roleNames);
         HashMap<String, Object> claims = new HashMap<String, Object>();
         claims.put("name", fence_user_profile.get("name"));
-        claims.put("email", current_user.getEmail());
-        claims.put("sub", current_user.getSubject());
+        claims.put("email", currentUser.getEmail());
+        claims.put("sub", currentUser.getSubject());
         HashMap<String, String> responseMap = userService.getUserProfileResponse(claims);
-        logger.info("LOGIN SUCCESS ___ {}:{}:{} ___ Authorization will expire at  ___ {}___", current_user.getEmail(), current_user.getUuid().toString(), current_user.getSubject(), responseMap.get("expirationDate"));
+        logger.info("LOGIN SUCCESS ___ {}:{}:{} ___ Authorization will expire at  ___ {}___", currentUser.getEmail(), currentUser.getUuid().toString(), currentUser.getSubject(), responseMap.get("expirationDate"));
         logger.debug("getFENCEProfile() UserProfile response object has been generated");
         logger.debug("getFENCEToken() finished");
 
@@ -245,19 +245,19 @@ public class FENCEAuthenticationService implements AuthenticationService {
     private User createUserFromFENCEProfile(JsonNode node) {
         logger.debug("createUserFromFENCEProfile() starting...");
 
-        User new_user = new User();
-        new_user.setSubject("fence|" + node.get("user_id").asText());
+        User newUser = new User();
+        newUser.setSubject("fence|" + node.get("user_id").asText());
         // This is not always an email address, but it is the only attribute other than the sub claim
         // that is guaranteed to be populated by Fence and which makes sense as a display name for a
         // user.
-        new_user.setEmail(node.get("username").asText());
-        new_user.setGeneralMetadata(node.toString());
+        newUser.setEmail(node.get("username").asText());
+        newUser.setGeneralMetadata(node.toString());
         // This is a hack, but someone has to do it.
-        new_user.setAcceptedTOS(new Date());
-        new_user.setConnection(fenceConnection);
+        newUser.setAcceptedTOS(new Date());
+        newUser.setConnection(fenceConnection);
         logger.debug("createUserFromFENCEProfile() finished setting fields");
 
-        User actual_user = userService.findOrCreate(new_user);
+        User actual_user = userService.findOrCreate(newUser);
 
         if (actual_user.getRoles() == null) {
             actual_user.setRoles(new HashSet<>());
