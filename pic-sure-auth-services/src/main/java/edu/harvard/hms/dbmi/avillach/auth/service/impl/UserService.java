@@ -41,6 +41,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static edu.harvard.hms.dbmi.avillach.auth.service.impl.RoleService.managed_open_access_role_name;
+import static edu.harvard.hms.dbmi.avillach.auth.service.impl.RoleService.managed_role_named_dataset;
 
 @Service
 public class UserService {
@@ -673,14 +674,18 @@ public class UserService {
             current_user.getRoles().addAll(newRoles);
         }
 
-        final String idp = extractIdp(current_user);
-        if (!current_user.getRoles().isEmpty() || openAccessIdpValues.contains(idp.toLowerCase())) {
-            Role openAccessRole = roleService.findByName(managed_open_access_role_name);
-            if (openAccessRole != null) {
-                current_user.getRoles().add(openAccessRole);
-            } else {
-                logger.warn("Unable to find fence OPEN ACCESS role");
-            }
+        Role openAccessRole = roleService.findByName(managed_open_access_role_name);
+        if (openAccessRole != null) {
+            current_user.getRoles().add(openAccessRole);
+        } else {
+            logger.warn("Unable to find fence OPEN ACCESS role");
+        }
+
+        Role role = roleService.findByName(managed_role_named_dataset);
+        if (role != null) {
+            current_user.getRoles().add(role);
+        } else {
+            logger.warn("upsertRole() Unable to find role named {}", managed_role_named_dataset);
         }
 
         // Every user has access to public datasets by default.
