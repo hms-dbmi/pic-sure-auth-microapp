@@ -31,8 +31,8 @@ public class RoleService {
     private final RoleRepository roleRepository;
     private final PrivilegeService privilegeService;
     private final FenceMappingUtility fenceMappingUtility;
-    public static final String managed_open_access_role_name = "MANUAL_ROLE_OPEN_ACCESS";
-    public static final String managed_role_named_dataset = "MANUAL_ROLE_NAMED_DATASET";
+    public static final String MANAGED_OPEN_ACCESS_ROLE_NAME = "MANUAL_ROLE_OPEN_ACCESS";
+    public static final String MANAGED_ROLE_NAMED_DATASET = "MANUAL_ROLE_NAMED_DATASET";
     private final Set<Role> publicAccessRoles = new HashSet<>();
 
     @Autowired

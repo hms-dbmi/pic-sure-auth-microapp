@@ -19,7 +19,6 @@ import edu.harvard.hms.dbmi.avillach.auth.utils.JsonUtils;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import jakarta.mail.MessagingException;
-import jakarta.persistence.NoResultException;
 import jakarta.validation.constraints.NotNull;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -40,8 +39,8 @@ import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static edu.harvard.hms.dbmi.avillach.auth.service.impl.RoleService.managed_open_access_role_name;
-import static edu.harvard.hms.dbmi.avillach.auth.service.impl.RoleService.managed_role_named_dataset;
+import static edu.harvard.hms.dbmi.avillach.auth.service.impl.RoleService.MANAGED_OPEN_ACCESS_ROLE_NAME;
+import static edu.harvard.hms.dbmi.avillach.auth.service.impl.RoleService.MANAGED_ROLE_NAMED_DATASET;
 
 @Service
 public class UserService {
@@ -650,7 +649,7 @@ public class UserService {
                 .collect(Collectors.toSet());
 
         Set<Role> rolesToRemove = current_user.getRoles().stream()
-                .filter(role -> !roleNames.contains(role.getName()) && !role.getName().equals(managed_open_access_role_name)
+                .filter(role -> !roleNames.contains(role.getName()) && !role.getName().equals(MANAGED_OPEN_ACCESS_ROLE_NAME)
                         && !role.getName().startsWith("MANUAL_") && !role.getName().equals("PIC-SURE Top Admin")
                         && !role.getName().equals("Admin"))
                 .collect(Collectors.toSet());
@@ -674,18 +673,18 @@ public class UserService {
             current_user.getRoles().addAll(newRoles);
         }
 
-        Role openAccessRole = roleService.findByName(managed_open_access_role_name);
+        Role openAccessRole = roleService.findByName(MANAGED_OPEN_ACCESS_ROLE_NAME);
         if (openAccessRole != null) {
             current_user.getRoles().add(openAccessRole);
         } else {
             logger.warn("Unable to find fence OPEN ACCESS role");
         }
 
-        Role role = roleService.findByName(managed_role_named_dataset);
+        Role role = roleService.findByName(MANAGED_ROLE_NAMED_DATASET);
         if (role != null) {
             current_user.getRoles().add(role);
         } else {
-            logger.warn("upsertRole() Unable to find role named {}", managed_role_named_dataset);
+            logger.warn("upsertRole() Unable to find role named {}", MANAGED_ROLE_NAMED_DATASET);
         }
 
         // Every user has access to public datasets by default.
