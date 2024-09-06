@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.event.ApplicationContextEvent;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.security.core.context.SecurityContext;
@@ -67,7 +68,7 @@ public class PrivilegeService {
         logger.info("variantAnnotationColumns: {}", variantAnnotationColumns);
     }
 
-    @EventListener(ContextRefreshedEvent.class)
+    @EventListener(ApplicationContextEvent.class)
     protected void onContextRefreshedEvent() {
         updateAllPrivilegesOnStartup();
     }
@@ -427,10 +428,15 @@ public class PrivilegeService {
      * you will need to create a migration script.
      */
     protected void updateAllPrivilegesOnStartup() {
-        Set<AccessRule> standardAccessRules = this.accessRuleService.addStandardAccessRules();
         List<Privilege> privileges = this.getPrivilegesAll();
+        Set<AccessRule> standardAccessRules = this.accessRuleService.addStandardAccessRules();
+        if (standardAccessRules.isEmpty()) {
+            logger.error("No standard access rules found.");
+            return;
+        } else {
+            privileges.forEach(privilege -> this.privilegeRepository.addSubAccessRuleToPrivilege(privilege.getUuid(), standardAccessRules));
+        }
 
-        privileges.forEach(privilege -> this.privilegeRepository.addSubAccessRuleToPrivilege(privilege.getUuid(), standardAccessRules));
         List<UUID> privilegeIds = privileges.stream().map(Privilege::getUuid).toList();
         List<AccessRule> accessRules = this.accessRuleService.getAccessRulesByPrivilegeIds(privilegeIds);
 
