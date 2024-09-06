@@ -9,7 +9,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -22,10 +21,5 @@ import java.util.UUID;
 public interface PrivilegeRepository extends JpaRepository<Privilege, UUID> {
 
     Privilege findByName(String name);
-
-    @Transactional
-    @Modifying
-    @Query("UPDATE privilege p SET p.accessRules = :subRules WHERE p.uuid = :uuid")
-    void addSubAccessRuleToPrivilege(@Param("uuid") UUID uuid, @Param("subRules") Set<AccessRule> subRules);
 
 }

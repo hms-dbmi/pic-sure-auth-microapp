@@ -68,6 +68,7 @@ public class PrivilegeService {
         logger.info("variantAnnotationColumns: {}", variantAnnotationColumns);
     }
 
+    @Transactional
     @EventListener(ApplicationContextEvent.class)
     protected void onContextRefreshedEvent() {
         updateAllPrivilegesOnStartup();
@@ -434,7 +435,11 @@ public class PrivilegeService {
             logger.error("No standard access rules found.");
             return;
         } else {
-            privileges.forEach(privilege -> this.privilegeRepository.addSubAccessRuleToPrivilege(privilege.getUuid(), standardAccessRules));
+            privileges.forEach(privilege ->
+            {
+                privilege.getAccessRules().addAll(standardAccessRules);
+                this.save(privilege);
+            });
         }
 
         List<UUID> privilegeIds = privileges.stream().map(Privilege::getUuid).toList();
