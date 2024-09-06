@@ -453,7 +453,8 @@ public class PrivilegeService {
                     subAccessRules.removeIf(subAccessRule -> subAccessRule.getName().startsWith("AR_ALLOW_"));
 
                     // Add the currently allowed query types
-                    accessRule.getSubAccessRule().addAll(this.accessRuleService.getAllowedQueryTypeRules());
+                    subAccessRules.addAll(this.accessRuleService.getAllowedQueryTypeRules());
+                    accessRule.setSubAccessRule(subAccessRules);
                     this.accessRuleService.save(accessRule);
                 });
     }
