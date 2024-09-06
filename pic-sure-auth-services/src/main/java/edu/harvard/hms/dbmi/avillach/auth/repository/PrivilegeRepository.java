@@ -2,6 +2,7 @@ package edu.harvard.hms.dbmi.avillach.auth.repository;
 
 import edu.harvard.hms.dbmi.avillach.auth.entity.AccessRule;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
+import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -22,10 +23,9 @@ public interface PrivilegeRepository extends JpaRepository<Privilege, UUID> {
 
     Privilege findByName(String name);
 
-
-
+    @Transactional
     @Modifying
-    @Query("UPDATE access_rule ar SET ar.subAccessRule = :subRules WHERE ar.uuid = :uuid")
+    @Query("UPDATE privilege p SET p.accessRules = :subRules WHERE p.uuid = :uuid")
     void addSubAccessRuleToPrivilege(@Param("uuid") UUID uuid, @Param("subRules") Set<AccessRule> subRules);
 
 }
