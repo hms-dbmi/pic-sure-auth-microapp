@@ -292,8 +292,8 @@ public class AccessRuleService {
     }
 
     public boolean evaluateAccessRule(Object parsedRequestBody, AccessRule accessRule) {
-        logger.debug("evaluateAccessRule() starting with: {}", parsedRequestBody);
-        logger.debug("evaluateAccessRule() access rule: {}", accessRule.getName());
+        logger.trace("evaluateAccessRule() starting with: {}", parsedRequestBody);
+        logger.trace("evaluateAccessRule() access rule: {}", accessRule.getName());
 
         Set<AccessRule> gates = accessRule.getGates();
         boolean gatesPassed = true;
