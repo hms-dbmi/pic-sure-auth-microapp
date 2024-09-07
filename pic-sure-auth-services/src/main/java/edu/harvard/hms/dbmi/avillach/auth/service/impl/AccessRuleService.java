@@ -925,7 +925,15 @@ public class AccessRuleService {
     protected AccessRule upsertTopmedAccessRule(String project_name, String consent_group, String label) {
         String ar_name = (consent_group != null && !consent_group.isEmpty()) ? "AR_TOPMED_" + project_name + "_" + consent_group + "_" + label : "AR_TOPMED_" + project_name + "_" + label;
         String description = "MANAGED AR for " + project_name + "." + consent_group + " Topmed data";
-        String ruleText = "$.query.query.categoryFilters." + fence_topmed_consent_group_concept_path + "[*]";
+
+        String conceptPath = fence_topmed_consent_group_concept_path;
+        // Check if the conceptPath has `\\\\` present. This technically represents `\\`.
+        if(conceptPath != null && conceptPath.contains("\\\\")) {
+            // This will convert all `\\\\` to `\\`.
+            conceptPath = conceptPath.replaceAll("\\\\\\\\", "\\\\");
+        }
+
+        String ruleText = "$.query.query.categoryFilters." + conceptPath + "[*]";
         String arValue = (consent_group != null && !consent_group.isEmpty()) ? project_name + "." + consent_group : project_name;
 
         return getOrCreateAccessRule(
