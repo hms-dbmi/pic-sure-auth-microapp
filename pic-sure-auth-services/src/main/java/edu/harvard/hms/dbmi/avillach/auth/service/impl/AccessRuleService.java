@@ -426,8 +426,8 @@ public class AccessRuleService {
     }
 
     private boolean evaluateMap(Object requestBodyValue, AccessRule accessRule) {
-        logger.debug("evaluateMap() access rule:{}", accessRule.getName());
-        logger.debug("evaluateMap() request body value:{}", requestBodyValue);
+        logger.trace("evaluateMap() access rule:{}", accessRule.getName());
+        logger.trace("evaluateMap() request body value:{}", requestBodyValue);
 
         switch (accessRule.getType()) {
             case (AccessRule.TypeNaming.ANY_EQUALS):
@@ -471,8 +471,8 @@ public class AccessRuleService {
     }
 
     private Boolean evaluateCollection(Collection requestBodyValue, AccessRule accessRule) {
-        logger.debug("evaluateCollection() access rule:{}", accessRule.getName());
-        logger.debug("evaluateCollection() request body value:{}", requestBodyValue);
+        logger.trace("evaluateCollection() access rule:{}", accessRule.getName());
+        logger.trace("evaluateCollection() request body value:{}", requestBodyValue);
 
         switch (accessRule.getType()) {
             case (AccessRule.TypeNaming.ANY_EQUALS):
@@ -558,11 +558,11 @@ public class AccessRuleService {
     }
 
     private boolean _decisionMaker(AccessRule accessRule, String requestBodyValue, String value) {
-        logger.debug("_decisionMaker() starting");
-        logger.debug("_decisionMaker() access rule:{}", accessRule.getName());
-        logger.debug("_decisionMaker() request body value:{}", requestBodyValue);
-        logger.debug("_decisionMaker() value:{}", value);
-        logger.debug("_decisionMaker() access rule type:{}", accessRule.getType());
+        logger.trace("_decisionMaker() starting");
+        logger.trace("_decisionMaker() access rule:{}", accessRule.getName());
+        logger.trace("_decisionMaker() request body value:{}", requestBodyValue);
+        logger.trace("_decisionMaker() value:{}", value);
+        logger.trace("_decisionMaker() access rule type:{}", accessRule.getType());
 
         return switch (accessRule.getType()) {
             case AccessRule.TypeNaming.NOT_CONTAINS -> !requestBodyValue.contains(value);
