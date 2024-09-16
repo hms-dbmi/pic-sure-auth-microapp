@@ -183,7 +183,10 @@ public class TokenService {
                 errorMsg = "User doesn't have enough privileges.";
         }
 
-        if (isAuthorizationPassed) {
+        if (isLongTermToken) {
+            // The long term token is not automatically refreshed, so we don't need to check the expiration time
+            tokenInspection.addField("active", true);
+        } else if (isAuthorizationPassed) {
             tokenInspection.addField("active", true);
             ArrayList<String> roles = new ArrayList<>();
             for (Privilege p : user.getTotalPrivilege()) {
