@@ -183,7 +183,7 @@ public class TokenService {
                 errorMsg = "User doesn't have enough privileges.";
         }
 
-        if (isLongTermToken) {
+        if (isLongTermToken && isAuthorizationPassed) {
             // The long term token is not automatically refreshed, so we don't need to check the expiration time
             tokenInspection.addField("active", true);
         } else if (isAuthorizationPassed) {
@@ -197,6 +197,7 @@ public class TokenService {
             // Refresh Token
             Date expiration = jws.getPayload().getExpiration();
             if (jwtUtil.shouldRefreshToken(expiration, tokenExpirationTime)) {
+                logger.info("_inspectToken() Token is about to expire, refreshing token...");
                 RefreshToken refreshResponse = refreshToken(token);
                 if (refreshResponse instanceof ValidRefreshToken validRefreshToken) {
                     tokenInspection.addField("token", validRefreshToken.token());
