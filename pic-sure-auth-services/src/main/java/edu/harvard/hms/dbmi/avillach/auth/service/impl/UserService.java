@@ -416,10 +416,8 @@ public class UserService {
     private String openMergeTemplate(Application application) {
         Set<Privilege> applicationPrivileges = application.getPrivileges();
         Role openAccessRole = roleService.findByName(MANAGED_OPEN_ACCESS_ROLE_NAME);
-        // get all of the privileges for the open access role
         Set<Privilege> privileges = openAccessRole.getPrivileges();
         privileges.addAll(applicationPrivileges);
-        // get the query template for each privilege
         Map mergedTemplateMap = getMergedQueryTemplateMap(privileges);
         String resultJSON;
         try {

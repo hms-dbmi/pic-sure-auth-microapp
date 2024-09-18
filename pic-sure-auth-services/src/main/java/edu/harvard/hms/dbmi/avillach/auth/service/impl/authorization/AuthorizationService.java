@@ -217,12 +217,6 @@ public class AuthorizationService {
 
 
     public boolean openAccessRequestIsValid(Map<String, Object> inputMap) {
-        /*
-         * 1. Validate input map
-         * 2. Load the set of open access_rules for the application
-         * 3. Evaluate the input map request object against the open access_rules inputMap.get("request")
-         * 4. Return the result
-         */
 
         if (inputMap == null || inputMap.isEmpty()) {
             logger.info("ACCESS_LOG ___ AN OPEN ACCESS USER ___ has been denied access to application ___ NO REQUEST BODY FORWARDED BY APPLICATION");
