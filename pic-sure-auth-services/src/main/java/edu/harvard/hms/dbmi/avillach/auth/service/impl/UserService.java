@@ -444,8 +444,8 @@ public class UserService {
     @Cacheable(value = "mergedTemplateCache", keyGenerator = "customKeyGenerator")
     public String mergeTemplate(User user, Application application) {
         String resultJSON;
-        Set<Privilege> privilegesByApplication = user.getPrivilegesByApplication(application);
-        Map mergedTemplateMap = getMergedQueryTemplateMap(privilegesByApplication);
+        Set<Privilege> privileges = user.getPrivilegesByApplication(application);
+        Map mergedTemplateMap = getMergedQueryTemplateMap(privileges);
 
         try {
             resultJSON = objectMapper.writeValueAsString(mergedTemplateMap);
