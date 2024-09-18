@@ -459,9 +459,9 @@ public class UserService {
         return resultJSON;
     }
 
-    private Map getMergedQueryTemplateMap(Set<Privilege> privilegesByApplication) {
+    private Map getMergedQueryTemplateMap(Set<Privilege> privileges) {
         Map mergedTemplateMap = null;
-        for (Privilege privilege : privilegesByApplication) {
+        for (Privilege privilege : privileges) {
             String template = privilege.getQueryTemplate();
             logger.debug("mergeTemplate() processing template:{}", template);
             if (template == null || template.trim().isEmpty()) {
