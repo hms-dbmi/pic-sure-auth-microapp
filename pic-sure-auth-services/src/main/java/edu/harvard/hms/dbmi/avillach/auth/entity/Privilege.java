@@ -24,7 +24,7 @@ public class Privilege extends BaseEntity {
     @JoinColumn(name = "application_id")
     private Application application;
 
-    @ManyToMany(fetch = FetchType.LAZY)
+    @ManyToMany(cascade = {CascadeType.DETACH, CascadeType.MERGE, CascadeType.PERSIST, CascadeType.REFRESH})
     @JoinTable(name = "accessRule_privilege",
             joinColumns = {@JoinColumn(name = "privilege_id")},
             inverseJoinColumns = {@JoinColumn(name = "accessRule_id")})
