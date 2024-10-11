@@ -61,7 +61,8 @@ public class SecurityConfig {
                                     "/user/me/queryTemplate",
                                     "/user/me/queryTemplate/**",
                                     "/open/validate",
-                                    "/logout"
+                                    "/logout",
+                                    "/cache/**"
                             ).permitAll()
                             .anyRequest().authenticated()
                 )

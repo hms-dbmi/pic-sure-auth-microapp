@@ -33,7 +33,7 @@ public class RASPassPortServiceTest {
 
     @Before
     public void setUp() throws Exception {
-        this.rasPassPortService = new RASPassPortService(restClientUtil, null, "https://test.com/");
+        this.rasPassPortService = new RASPassPortService(restClientUtil, null, "https://test.com/", null);
 
         // Parse the passport and get the visa so we can mock the validateVisa method
         Optional<Passport> passport = JWTUtil.parsePassportJWTV11(exampleRasPassport);

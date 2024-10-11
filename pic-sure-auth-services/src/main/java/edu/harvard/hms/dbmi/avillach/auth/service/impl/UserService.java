@@ -665,7 +665,6 @@ public class UserService {
      * @param user
      */
     public void logoutUser(User user) {
-        evictFromCache(user.getSubject());
         this.removeUserPassport(user.getSubject());
         this.sessionService.endSession(user.getSubject());
     }

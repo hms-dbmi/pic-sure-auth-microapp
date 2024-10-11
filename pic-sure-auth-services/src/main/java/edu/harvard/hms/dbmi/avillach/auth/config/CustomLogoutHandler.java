@@ -49,7 +49,8 @@ public class CustomLogoutHandler implements LogoutHandler {
             logger.info("logout() Logging out User: {}", subject);
             this.sessionService.endSession(subject);
             this.userService.evictFromCache(subject);
-            this.accessRuleService.evictFromCache(subject);
+            this.accessRuleService.evictFromMergedAccessRuleCache(subject);
+            this.accessRuleService.evictFromPreProcessedAccessRules(subject);
             this.userService.removeUserPassport(subject);
         }
     }

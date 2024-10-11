@@ -3,6 +3,7 @@ package edu.harvard.hms.dbmi.avillach.auth.service.impl.authentication;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import edu.harvard.hms.dbmi.avillach.auth.entity.Application;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Connection;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
@@ -38,6 +39,9 @@ public class FENCEAuthenticationService implements AuthenticationService {
     private final ConnectionWebService connectionService; // We will need to investigate if the ConnectionWebService will need to be versioned as well.
     private final AccessRuleService accessRuleService;
     private final FenceMappingUtility fenceMappingUtility;
+    private final String applicationUUID;
+    private final ApplicationService applicationService;
+    private final CacheEvictionService cacheEvictionService;
 
     private Connection fenceConnection;
 
@@ -57,8 +61,9 @@ public class FENCEAuthenticationService implements AuthenticationService {
                                       @Value("${fence.idp.provider.uri}") String idpProviderUri,
                                       @Value("${fence.client.id}") String fenceClientId,
                                       @Value("${fence.client.secret}") String fenceClientSecret,
+                                      @Value("${application.default.uuid}") String applicationUUID,
                                       AccessRuleService accessRuleService,
-                                      FenceMappingUtility fenceMappingUtility) {
+                                      FenceMappingUtility fenceMappingUtility, ApplicationService applicationService, CacheEvictionService cacheEvictionService) {
         this.userService = userService;
         this.connectionService = connectionService;
         this.idp_provider_uri = idpProviderUri;
@@ -68,6 +73,9 @@ public class FENCEAuthenticationService implements AuthenticationService {
         this.accessRuleService = accessRuleService;
         this.fenceMappingUtility = fenceMappingUtility;
         this.isFenceEnabled = isFenceEnabled;
+        this.applicationUUID = applicationUUID;
+        this.applicationService = applicationService;
+        this.cacheEvictionService = cacheEvictionService;
     }
 
     @PostConstruct
@@ -119,12 +127,8 @@ public class FENCEAuthenticationService implements AuthenticationService {
             // in the Gen3/FENCE profile
             currentUser = createUserFromFENCEProfile(fence_user_profile);
             logger.info("getFENCEProfile() saved details for user with e-mail:{} and subject:{}", currentUser.getEmail(), currentUser.getSubject());
+            cacheEvictionService.evictCache(currentUser);
 
-            if (!currentUser.getEmail().isEmpty()) {
-                String subject = currentUser.getSubject();
-                accessRuleService.evictFromCache(subject);
-                userService.evictFromCache(subject);
-            }
         } catch (Exception ex) {
             logger.error("getFENCEToken() Could not persist the user information, because {}", ex.getMessage());
             throw new NotAuthorizedException("The user details could not be persisted. Please contact the administrator.");
@@ -165,7 +169,6 @@ public class FENCEAuthenticationService implements AuthenticationService {
 
         return responseMap;
     }
-
 
 
     @Override
