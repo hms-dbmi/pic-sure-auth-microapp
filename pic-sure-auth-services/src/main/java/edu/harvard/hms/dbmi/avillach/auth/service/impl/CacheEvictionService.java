@@ -23,7 +23,6 @@ public class CacheEvictionService {
         this.userService.evictFromCache(userSubject);
         this.accessRuleService.evictFromMergedAccessRuleCache(userSubject);
         this.accessRuleService.evictFromPreProcessedAccessRules(userSubject);
-        this.userService.removeUserPassport(userSubject);
     }
 
     public void evictCache(User user) {

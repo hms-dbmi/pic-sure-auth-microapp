@@ -128,8 +128,8 @@ public class RASPassPortService {
      */
     private boolean handleFailedValidationResponse(String validateResponse, User user) {
         this.userService.save(user);
-        this.userService.evictFromCache(user.getSubject());
         this.userService.logoutUser(user);
+        this.cacheEvictionService.evictCache(user);
         this.logger.info("handleFailedValidationResponse - {} - USER LOGGED OUT - {}", validateResponse, user.getSubject());
         return false;
     }
