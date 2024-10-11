@@ -3,9 +3,7 @@ package edu.harvard.hms.dbmi.avillach.auth.service.impl.authentication;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import edu.harvard.hms.dbmi.avillach.auth.entity.Application;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Connection;
-import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.exceptions.NotAuthorizedException;
 import edu.harvard.hms.dbmi.avillach.auth.model.fenceMapping.StudyMetaData;
@@ -37,10 +35,7 @@ public class FENCEAuthenticationService implements AuthenticationService {
 
     private final UserService userService;
     private final ConnectionWebService connectionService; // We will need to investigate if the ConnectionWebService will need to be versioned as well.
-    private final AccessRuleService accessRuleService;
     private final FenceMappingUtility fenceMappingUtility;
-    private final String applicationUUID;
-    private final ApplicationService applicationService;
     private final CacheEvictionService cacheEvictionService;
 
     private Connection fenceConnection;
@@ -61,20 +56,15 @@ public class FENCEAuthenticationService implements AuthenticationService {
                                       @Value("${fence.idp.provider.uri}") String idpProviderUri,
                                       @Value("${fence.client.id}") String fenceClientId,
                                       @Value("${fence.client.secret}") String fenceClientSecret,
-                                      @Value("${application.default.uuid}") String applicationUUID,
-                                      AccessRuleService accessRuleService,
-                                      FenceMappingUtility fenceMappingUtility, ApplicationService applicationService, CacheEvictionService cacheEvictionService) {
+                                      FenceMappingUtility fenceMappingUtility, CacheEvictionService cacheEvictionService) {
         this.userService = userService;
         this.connectionService = connectionService;
         this.idp_provider_uri = idpProviderUri;
         this.fence_client_id = fenceClientId;
         this.fence_client_secret = fenceClientSecret;
         this.restClientUtil = restClientUtil;
-        this.accessRuleService = accessRuleService;
         this.fenceMappingUtility = fenceMappingUtility;
         this.isFenceEnabled = isFenceEnabled;
-        this.applicationUUID = applicationUUID;
-        this.applicationService = applicationService;
         this.cacheEvictionService = cacheEvictionService;
     }
 
