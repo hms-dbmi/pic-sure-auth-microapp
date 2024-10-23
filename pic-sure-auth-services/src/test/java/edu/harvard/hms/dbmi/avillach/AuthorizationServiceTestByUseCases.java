@@ -1,11 +1,17 @@
 package edu.harvard.hms.dbmi.avillach;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import edu.harvard.hms.dbmi.avillach.auth.data.entity.AccessRule;
-import edu.harvard.hms.dbmi.avillach.auth.service.auth.AuthorizationService;
+import edu.harvard.hms.dbmi.avillach.auth.entity.AccessRule;
+import edu.harvard.hms.dbmi.avillach.auth.repository.AccessRuleRepository;
+import edu.harvard.hms.dbmi.avillach.auth.service.impl.RoleService;
+import edu.harvard.hms.dbmi.avillach.auth.service.impl.SessionService;
+import edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization.AuthorizationService;
+import edu.harvard.hms.dbmi.avillach.auth.service.impl.AccessRuleService;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -403,6 +409,10 @@ public class AuthorizationServiceTestByUseCases extends AuthorizationService{
             "  \"resourceCredentials\": {}\n" +
             "}";
 
+    public AuthorizationServiceTestByUseCases(AccessRuleService accessRuleService, SessionService sessionService, RoleService roleService, String strictConnections) {
+        super(accessRuleService, sessionService, roleService, strictConnections);
+    }
+
     @BeforeClass
     public static void init() {
         initialTestCaseA();
@@ -413,10 +423,16 @@ public class AuthorizationServiceTestByUseCases extends AuthorizationService{
         initialTestCaseF();
     }
 
+    @Before
+    public void setUp() {
+        AccessRuleRepository accessRuleRepository = Mockito.mock(AccessRuleRepository.class);
+        accessRuleService = new AccessRuleService(accessRuleRepository, "false", "false", "false", "false","false", "false");
+    }
+
     @Test
     public void testCaseA() throws IOException {
-        Assert.assertTrue(evaluateAccessRule(mapper.readValue(sample_caseAB_pass, Map.class), rule_caseA));
-        Assert.assertFalse(evaluateAccessRule(mapper.readValue(sample_caseAB_fail, Map.class), rule_caseA));
+        Assert.assertTrue(accessRuleService.evaluateAccessRule(mapper.readValue(sample_caseAB_pass, Map.class), rule_caseA));
+        Assert.assertFalse(accessRuleService.evaluateAccessRule(mapper.readValue(sample_caseAB_fail, Map.class), rule_caseA));
     }
 
     private static void initialTestCaseA(){
@@ -431,8 +447,8 @@ public class AuthorizationServiceTestByUseCases extends AuthorizationService{
 
     @Test
     public void testCaseB() throws IOException {
-        Assert.assertTrue(evaluateAccessRule(mapper.readValue(sample_caseAB_pass, Map.class), rule_caseB));
-        Assert.assertFalse(evaluateAccessRule(mapper.readValue(sample_caseAB_fail, Map.class), rule_caseB));
+        Assert.assertTrue(accessRuleService.evaluateAccessRule(mapper.readValue(sample_caseAB_pass, Map.class), rule_caseB));
+        Assert.assertFalse(accessRuleService.evaluateAccessRule(mapper.readValue(sample_caseAB_fail, Map.class), rule_caseB));
     }
 
     private static void initialTestCaseB(){
@@ -457,9 +473,9 @@ public class AuthorizationServiceTestByUseCases extends AuthorizationService{
 
     @Test
     public void testCaseC() throws IOException {
-        Assert.assertTrue(evaluateAccessRule(mapper.readValue(sample_caseCD_pass, Map.class), rule_caseC));
-        Assert.assertFalse(evaluateAccessRule(mapper.readValue(sample_caseCD_fail, Map.class), rule_caseC));
-        Assert.assertFalse(evaluateAccessRule(mapper.readValue(sample_caseCD_fail_2, Map.class), rule_caseC));
+        Assert.assertTrue(accessRuleService.evaluateAccessRule(mapper.readValue(sample_caseCD_pass, Map.class), rule_caseC));
+        Assert.assertFalse(accessRuleService.evaluateAccessRule(mapper.readValue(sample_caseCD_fail, Map.class), rule_caseC));
+        Assert.assertFalse(accessRuleService.evaluateAccessRule(mapper.readValue(sample_caseCD_fail_2, Map.class), rule_caseC));
     }
 
     private static void initialTestCaseC(){
@@ -520,9 +536,9 @@ public class AuthorizationServiceTestByUseCases extends AuthorizationService{
 
     @Test
     public void testCaseD() throws IOException {
-        Assert.assertTrue(evaluateAccessRule(mapper.readValue(sample_caseCD_pass, Map.class), rule_caseD));
-        Assert.assertFalse(evaluateAccessRule(mapper.readValue(sample_caseCD_fail, Map.class), rule_caseD));
-        Assert.assertFalse(evaluateAccessRule(mapper.readValue(sample_caseCD_fail_2, Map.class), rule_caseD));
+        Assert.assertTrue(accessRuleService.evaluateAccessRule(mapper.readValue(sample_caseCD_pass, Map.class), rule_caseD));
+        Assert.assertFalse(accessRuleService.evaluateAccessRule(mapper.readValue(sample_caseCD_fail, Map.class), rule_caseD));
+        Assert.assertFalse(accessRuleService.evaluateAccessRule(mapper.readValue(sample_caseCD_fail_2, Map.class), rule_caseD));
     }
 
     private static void initialTestCaseD(){
@@ -547,23 +563,23 @@ public class AuthorizationServiceTestByUseCases extends AuthorizationService{
     @Test
     public void testCaseE() throws IOException {
         Assert.assertTrue(
-                evaluateAccessRule(mapper.readValue(sample_caseE_pass, Map.class), rule_caseE)
-                || evaluateAccessRule(mapper.readValue(sample_caseE_pass, Map.class), rule_caseE_2)
+                accessRuleService.evaluateAccessRule(mapper.readValue(sample_caseE_pass, Map.class), rule_caseE)
+                || accessRuleService.evaluateAccessRule(mapper.readValue(sample_caseE_pass, Map.class), rule_caseE_2)
         );
 
         Assert.assertTrue(
-                evaluateAccessRule(mapper.readValue(sample_caseE_2_pass, Map.class), rule_caseE)
-                        || evaluateAccessRule(mapper.readValue(sample_caseE_2_pass, Map.class), rule_caseE_2)
+                accessRuleService.evaluateAccessRule(mapper.readValue(sample_caseE_2_pass, Map.class), rule_caseE)
+                        || accessRuleService.evaluateAccessRule(mapper.readValue(sample_caseE_2_pass, Map.class), rule_caseE_2)
         );
 
         Assert.assertFalse(
-                evaluateAccessRule(mapper.readValue(sample_caseE_fail, Map.class), rule_caseE)
-                        || evaluateAccessRule(mapper.readValue(sample_caseE_fail, Map.class), rule_caseE_2)
+                accessRuleService.evaluateAccessRule(mapper.readValue(sample_caseE_fail, Map.class), rule_caseE)
+                        || accessRuleService.evaluateAccessRule(mapper.readValue(sample_caseE_fail, Map.class), rule_caseE_2)
         );
 
         Assert.assertFalse(
-                evaluateAccessRule(mapper.readValue(sample_caseE_2_fail, Map.class), rule_caseE)
-                        || evaluateAccessRule(mapper.readValue(sample_caseE_2_fail, Map.class), rule_caseE_2)
+                accessRuleService.evaluateAccessRule(mapper.readValue(sample_caseE_2_fail, Map.class), rule_caseE)
+                        || accessRuleService.evaluateAccessRule(mapper.readValue(sample_caseE_2_fail, Map.class), rule_caseE_2)
         );
 
     }
@@ -609,12 +625,12 @@ public class AuthorizationServiceTestByUseCases extends AuthorizationService{
 
     @Test
     public void testCaseF() throws IOException {
-        Assert.assertTrue(evaluateAccessRule(mapper.readValue(sample_caseF_pass, Map.class), rule_caseF));
-        Assert.assertFalse(evaluateAccessRule(mapper.readValue(sample_caseF_fail, Map.class), rule_caseF));
-        Assert.assertFalse(evaluateAccessRule(mapper.readValue(sample_caseF_fail_2, Map.class), rule_caseF));
-        Assert.assertFalse(evaluateAccessRule(mapper.readValue(sample_caseF_fail_3, Map.class), rule_caseF));
-        Assert.assertFalse(evaluateAccessRule(mapper.readValue(sample_caseF_fail_4, Map.class), rule_caseF));
-        Assert.assertFalse(evaluateAccessRule(mapper.readValue(sample_caseF_fail_5, Map.class), rule_caseF));
+        Assert.assertTrue(accessRuleService.evaluateAccessRule(mapper.readValue(sample_caseF_pass, Map.class), rule_caseF));
+        Assert.assertFalse(accessRuleService.evaluateAccessRule(mapper.readValue(sample_caseF_fail, Map.class), rule_caseF));
+        Assert.assertFalse(accessRuleService.evaluateAccessRule(mapper.readValue(sample_caseF_fail_2, Map.class), rule_caseF));
+        Assert.assertFalse(accessRuleService.evaluateAccessRule(mapper.readValue(sample_caseF_fail_3, Map.class), rule_caseF));
+        Assert.assertFalse(accessRuleService.evaluateAccessRule(mapper.readValue(sample_caseF_fail_4, Map.class), rule_caseF));
+        Assert.assertFalse(accessRuleService.evaluateAccessRule(mapper.readValue(sample_caseF_fail_5, Map.class), rule_caseF));
     }
 
     private static void initialTestCaseF(){

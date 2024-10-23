@@ -1,40 +1,26 @@
-FROM jboss/wildfly:17.0.0.Final AS production
+FROM maven:3.9.6-amazoncorretto-21 as build
 
-# TODO: It'd be nice if wildfly used alpine -Andre
+# Copy the source code into the container
+COPY ./ /app
 
-LABEL maintainer="avillach_lab_developers@googlegroups.com"
+# Pull in global maven settings
+COPY ./.m2/*.xml /root/.m2/
 
-# mysql database
-ENV AUTH_DB_CONNECTION_USER root
-ENV AUTH_MYSQLADDRESS localhost
-ENV AUTH_DB_PORT 3306
-ENV AUTH_MYSQLPASS password
+# Change the working directory
+WORKDIR /app
 
-# JWT Token
-ENV AUTH_CLIENT_SECRET secret
-ENV AUTH_USER_ID_CLAIM sub
+# Build the jar
+RUN mvn clean install -DskipTests
 
-# root required to create default scratch directory - Andre
-USER root
+FROM amazoncorretto:21.0.1-alpine3.18
 
-# Add certs for AWS to trust store
-COPY aws_certs/certificate.der certificate.der
-RUN keytool -noprompt -import -alias root_cert -keystore $JAVA_HOME/lib/security/cacerts -storepass changeit -file certificate.der
+# Copy jar and access token from maven build
+COPY --from=build /app/pic-sure-auth-services/target/pic-sure-auth-services.jar /pic-sure-auth-service.jar
 
-# copy modules
-COPY target/modules/system/layers/base/com/sql/mysql/main/* /modules/
-COPY src/main/resources/emailTemplates/accessEmail.mustache /usr/local/share/applications/
+# Copy the AWS certificate
+COPY  pic-sure-auth-services/aws_certs/certificate.der /certificate.der
 
-# install modules
-RUN wildfly/bin/jboss-cli.sh --command="module add --name=com.sql.mysql \
-    --resources=/modules/mysql-connector-java-5.1.38.jar --dependencies=javax.api"
+# Import the certificate into the Java trust store
+RUN keytool -noprompt -import -alias aws_cert -keystore $JAVA_HOME/lib/security/cacerts -storepass changeit -file /certificate.der
 
-# Copy standalone.xml
-COPY src/main/resources/wildfly-configuration/standalone.xml wildfly/standalone/configuration/
-
-# Copy war file
-COPY target/pic-sure-auth-services.war wildfly/standalone/deployments/pic-sure-auth-services.war
-
-#USER jboss
-
-ENTRYPOINT ["/opt/jboss/wildfly/bin/standalone.sh", "-b", "0.0.0.0"]
+ENTRYPOINT ["sh", "-c", "java ${JAVA_OPTS} -jar /pic-sure-auth-service.jar"]
