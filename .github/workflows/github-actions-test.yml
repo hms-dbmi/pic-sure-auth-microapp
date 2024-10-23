@@ -2,9 +2,9 @@ name: Maven Run Tests
 
 on:
   push:
-    branches: [release]
+    branches: [ "master", "release" ]
   pull_request:
-    branches: [release]
+    branches: [ "master", "release" ]
 
 jobs:
   build:
