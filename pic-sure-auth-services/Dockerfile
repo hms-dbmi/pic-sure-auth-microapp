@@ -23,4 +23,4 @@ COPY  pic-sure-auth-services/aws_certs/certificate.der /certificate.der
 # Import the certificate into the Java trust store
 RUN keytool -noprompt -import -alias aws_cert -keystore $JAVA_HOME/lib/security/cacerts -storepass changeit -file /certificate.der
 
-ENTRYPOINT ["sh", "-c", "java ${JAVA_OPTS} -jar /pic-sure-auth-service.jar"]
+ENTRYPOINT ["sh", "-c", "java -jar /pic-sure-auth-service.jar ${JAVA_OPTS}"]
