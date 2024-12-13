@@ -235,7 +235,8 @@ public class UserService {
                 try {
                     logger.info("Parsing metadata for email address");
                     HashMap<String, String> metadata = new HashMap<String, String>(new ObjectMapper().readValue(user.getGeneralMetadata(), Map.class));
-                    List<String> emailKeys = metadata.keySet().stream().filter((key) -> key.toLowerCase().contains("email")).toList();
+                    List<String> emailKeys =
+                            metadata.keySet().stream().filter((key) -> key.toLowerCase(Locale.ROOT).contains("email")).toList();
                     if (!emailKeys.isEmpty()) {
                         user.setEmail(metadata.get(emailKeys.getFirst()));
                     }
