@@ -125,6 +125,7 @@ public class FENCEAuthenticationService implements AuthenticationService {
 
         // Update the user's roles (or create them if none exists)
         Iterator<String> project_access_names = fence_user_profile.get("authz").fieldNames();
+        logger.info("User Permissions: {}", project_access_names);
         Set<String> roleNames = new HashSet<>();
         project_access_names.forEachRemaining(roleName -> {
             // We need to add/remove the users roles based on what is in the project_access_names list
@@ -141,6 +142,7 @@ public class FENCEAuthenticationService implements AuthenticationService {
             roleNames.add(newRoleName);
         });
 
+        logger.info("Roles Names: {}", roleNames);
         currentUser = userService.updateUserRoles(currentUser, roleNames);
         HashMap<String, Object> claims = new HashMap<String, Object>();
         claims.put("name", fence_user_profile.get("name"));
