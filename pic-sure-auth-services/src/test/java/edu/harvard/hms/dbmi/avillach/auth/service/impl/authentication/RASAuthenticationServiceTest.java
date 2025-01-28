@@ -114,7 +114,6 @@ public class RASAuthenticationServiceTest {
         String introspectionResponse =
                 "{\"active\":true,\"sub\":\"example_email@test.com\",\"client_id\":\"test_client_id\",\"passport_jwt_v11\":\""+ exampleRasPassport +"\"}";
         JsonNode introspectionResponseParsed = new ObjectMapper().readTree(introspectionResponse);
-        String code = "AlphaNumericCode";
         User user = createTestUser();
         Optional<Passport> passport = this.rasPassPortService.extractPassport(introspectionResponseParsed);
         assertTrue(passport.isPresent());
