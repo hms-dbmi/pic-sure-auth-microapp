@@ -197,10 +197,7 @@ public class JWTFilter extends OncePerRequestFilter {
             }
         }
 
-        // Get the user's roles
         Set<Role> userRoles = authenticatedUser.getUser().getRoles();
-
-        // Check if the user has any roles and privileges associated with them
         if (userRoles == null || userRoles.isEmpty() || userRoles.stream().allMatch(role -> CollectionUtils.isEmpty(role.getPrivileges()))) {
             logger.error("User doesn't have any roles or privileges.");
             try {
