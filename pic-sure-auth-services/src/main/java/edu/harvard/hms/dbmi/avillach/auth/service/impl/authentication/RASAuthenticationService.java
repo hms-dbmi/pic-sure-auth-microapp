@@ -106,7 +106,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
         User user = initializedUser.get();
         Optional<Passport> rasPassport = extractAndVerifyPassport(authRequest, introspectResponse, user);
         if (rasPassport.isEmpty()) return null;
-        user = updateUserRoles(authRequest.get("code"), user, rasPassport.get());
+        user = updateRasUserRoles(authRequest.get("code"), user, rasPassport.get());
         setUserPassport(authRequest, introspectResponse, user);
         HashMap<String, String> responseMap = createUserClaims(user, idToken);
 
@@ -140,7 +140,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
         return rasPassport;
     }
 
-    protected User updateUserRoles(String code, User user, Passport rasPassport) {
+    protected User updateRasUserRoles(String code, User user, Passport rasPassport) {
         logger.info("RAS PASSPORT FOUND ___ USER: {} ___ PASSPORT: {} ___ CODE {}", user.getSubject(), rasPassport, code);
         Set<RasDbgapPermission> dbgapPermissions = this.rasPassPortService.ga4gpPassportToRasDbgapPermissions(rasPassport.getGa4ghPassportV1());
         Set<String> dbgapRoleNames = this.roleService.getRoleNamesForDbgapPermissions(dbgapPermissions);
