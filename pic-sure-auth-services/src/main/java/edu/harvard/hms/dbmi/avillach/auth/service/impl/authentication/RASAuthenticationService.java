@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Connection;
-import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.model.ras.Passport;
 import edu.harvard.hms.dbmi.avillach.auth.model.ras.RasDbgapPermission;
@@ -105,39 +104,12 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
         }
 
         User user = initializedUser.get();
-        Optional<Passport> rasPassport = this.rasPassPortService.extractPassport(introspectResponse);
-        if (rasPassport.isEmpty()) {
-            logger.info("LOGIN FAILED ___ NO RAS PASSPORT FOUND ___ USER: {} ___ CODE {}", user.getSubject(), authRequest.get("code"));
-            return null;
-        }
-
-        if (rasPassPortService.isExpired(rasPassport.get())) {
-            logger.error("validateRASPassport() LOGIN FAILED ___ PASSPORT IS EXPIRED ___ USER: {} ___ CODE {}", user.getSubject(), authRequest.get("code"));
-            return null;
-        }
-
-        if (!rasPassport.get().getIss().equals(this.rasPassportIssuer)) {
-            logger.error("validateRASPassport() LOGIN FAILED ___ PASSPORT ISSUER IS NOT CORRECT ___ USER: {} ___ " +
-                         "EXPECTED ISSUER {} ___ ACTUAL ISSUER {} ___ CODE {}",
-                    user.getSubject(), this.rasPassportIssuer, rasPassport.get().getIss(), authRequest.get("code"));
-            return null;
-        }
-
-        logger.info("RAS PASSPORT FOUND ___ USER: {} ___ PASSPORT: {} ___ CODE {}", user.getSubject(), rasPassport.get(), authRequest.get("code"));
-
-        Set<RasDbgapPermission> dbgapPermissions = this.rasPassPortService.ga4gpPassportToRasDbgapPermissions(rasPassport.get().getGa4ghPassportV1());
-        Set<String> dbgapRoleNames = this.roleService.getRoleNamesForDbgapPermissions(dbgapPermissions);
-        user = userService.updateUserRoles(user, dbgapRoleNames);
-        logger.debug("USER {} ROLES UPDATED {} ___ CODE {}",
-                user.getSubject(),
-                user.getRoles().stream().map(role -> role.getName().replace("MANAGED_", "")).toArray(),
-                authRequest.get("code"));
-
-        String passport = introspectResponse.get("passport_jwt_v11").toString();
-        user.setPassport(passport);
-        logger.info("RAS PASSPORT SUCCESSFULLY ADDED TO USER: {} ___ CODE {}", user.getSubject(), authRequest.get("code"));
-        userService.save(user);
+        Optional<Passport> rasPassport = extractAndVerifyPassport(authRequest, introspectResponse, user);
+        if (rasPassport.isEmpty()) return null;
+        user = updateRasUserRoles(authRequest.get("code"), user, rasPassport.get());
+        setUserPassport(authRequest, introspectResponse, user);
         HashMap<String, String> responseMap = createUserClaims(user, idToken);
+
         responseMap.put("oktaIdToken", idToken);
         logger.info("LOGIN SUCCESS ___ USER {}:{} ___ WITH ROLES ___ {} ___ AUTHORIZATION WILL EXPIRE AT  ___ {} ___ CODE {}",
                 user.getSubject(), user.getUuid().toString(),
@@ -145,6 +117,39 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
                 responseMap.get("expirationDate"), authRequest.get("code"));
 
         return responseMap;
+    }
+
+    private Optional<Passport> extractAndVerifyPassport(Map<String, String> authRequest, JsonNode introspectResponse, User user) {
+        Optional<Passport> rasPassport = this.rasPassPortService.extractPassport(introspectResponse);
+        if (rasPassport.isEmpty()) {
+            logger.info("LOGIN FAILED ___ NO RAS PASSPORT FOUND ___ USER: {} ___ CODE {}", user.getSubject(), authRequest.get("code"));
+            return Optional.empty();
+        }
+
+        if (rasPassPortService.isExpired(rasPassport.get())) {
+            logger.error("validateRASPassport() LOGIN FAILED ___ PASSPORT IS EXPIRED ___ USER: {} ___ CODE {}", user.getSubject(), authRequest.get("code"));
+            return Optional.empty();
+        }
+
+        if (!rasPassport.get().getIss().equals(this.rasPassportIssuer)) {
+            logger.error("validateRASPassport() LOGIN FAILED ___ PASSPORT ISSUER IS NOT CORRECT ___ USER: {} ___ " +
+                         "EXPECTED ISSUER {} ___ ACTUAL ISSUER {} ___ CODE {}",
+                    user.getSubject(), this.rasPassportIssuer, rasPassport.get().getIss(), authRequest.get("code"));
+            return Optional.empty();
+        }
+        return rasPassport;
+    }
+
+    protected User updateRasUserRoles(String code, User user, Passport rasPassport) {
+        logger.info("RAS PASSPORT FOUND ___ USER: {} ___ PASSPORT: {} ___ CODE {}", user.getSubject(), rasPassport, code);
+        Set<RasDbgapPermission> dbgapPermissions = this.rasPassPortService.ga4gpPassportToRasDbgapPermissions(rasPassport.getGa4ghPassportV1());
+        Set<String> dbgapRoleNames = this.roleService.getRoleNamesForDbgapPermissions(dbgapPermissions);
+        user = userService.updateUserRoles(user, dbgapRoleNames);
+        logger.debug("USER {} ROLES UPDATED {} ___ CODE {}",
+                user.getSubject(),
+                user.getRoles().stream().map(role -> role.getName().replace("MANAGED_", "")).toArray(),
+                code);
+        return user;
     }
 
     private Optional<User> initializeUser(JsonNode introspectResponse) {
@@ -197,7 +202,13 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
 
         return objectNode;
     }
-
+    
+    private void setUserPassport(Map<String, String> authRequest, JsonNode introspectResponse, User user) {
+        String passport = introspectResponse.get("passport_jwt_v11").toString();
+        user.setPassport(passport);
+        userService.save(user);
+        logger.info("RAS PASSPORT SUCCESSFULLY ADDED TO USER: {} ___ CODE {}", user.getSubject(), authRequest.get("code"));
+    }
 
     @Override
     public String getProvider() {
@@ -212,5 +223,6 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
     public void setRasConnection(Connection rasConnection) {
         this.rasConnection = rasConnection;
     }
+
 
 }
