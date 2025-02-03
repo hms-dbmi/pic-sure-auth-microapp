@@ -8,7 +8,7 @@ pipeline {
         string(name: 'DATASOURCE_USERNAME', description: 'Datasource username', defaultValue: '${database_app_user_secret_name}')
         string(name: 'STACK_SPECIFIC_APPLICATION_ID', description: 'Application ID for base query', defaultValue: '${application_id_for_base_query}')
         string(name: 'TARGET_STACK', description: 'Target stack for application deployment.')
-        string(name: 'STACK_S3_BUCKET', description: 'The s3 bucket', defaultValue: '${stack_s3_bucket')
+        string(name: 'STACK_S3_BUCKET', description: 'The s3 bucket', defaultValue: '${stack_s3_bucket}')
     }
 
     environment {
