@@ -1,6 +1,7 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.impl;
 
 import edu.harvard.hms.dbmi.avillach.auth.enums.PassportValidationResponse;
+import edu.harvard.hms.dbmi.avillach.auth.model.ras.Ga4ghPassportV1;
 import edu.harvard.hms.dbmi.avillach.auth.model.ras.Passport;
 import edu.harvard.hms.dbmi.avillach.auth.model.ras.RasDbgapPermission;
 import edu.harvard.hms.dbmi.avillach.auth.utils.JWTUtil;
@@ -13,8 +14,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ContextConfiguration;
 
+import java.util.Date;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -57,16 +61,34 @@ public class RASPassPortServiceTest {
     }
 
     @Test
-    public void testGa4gpPassportStudies_IsNotNull() {
+    public void testGa4gpPassportStudies_IsNotNull_And_ExpiredPermissionsExcluded() {
         Optional<Passport> passport = JWTUtil.parsePassportJWTV11(exampleRasPassport);
-        Set<RasDbgapPermission> permissions = rasPassPortService.ga4gpPassportToRasDbgapPermissions(passport.get().getGa4ghPassportV1());
+        Set<Optional<Ga4ghPassportV1>> ga4ghPassports = passport.get().getGa4ghPassportV1().stream().map(JWTUtil::parseGa4ghPassportV1).filter(Optional::isPresent).collect(Collectors.toSet());
+        Set<RasDbgapPermission> permissions = rasPassPortService.ga4gpPassportToRasDbgapPermissions(ga4ghPassports);
         assertNotNull(permissions);
+        assertTrue(permissions.isEmpty());
     }
 
     @Test
     public void testGa4gpPassportStudies_HasCorrectStudies() {
         Optional<Passport> passport = JWTUtil.parsePassportJWTV11(exampleRasPassport);
-        Set<RasDbgapPermission> permissions = rasPassPortService.ga4gpPassportToRasDbgapPermissions(passport.get().getGa4ghPassportV1());
+        long futureDate = new Date().toInstant().toEpochMilli() + 100000;
+
+        // Update the expiry date of each permission in our test passport. All permissions in the example passport
+        // expired in 2022.
+        Set<Optional<Ga4ghPassportV1>> ga4ghPassports = passport.get().getGa4ghPassportV1().stream()
+                .map(JWTUtil::parseGa4ghPassportV1)
+                .filter(Optional::isPresent)
+                .map(optionalPassport -> {
+                    Ga4ghPassportV1 ga4ghPassportV1 = optionalPassport.get();
+                    List<RasDbgapPermission> rasDbgagPermissions = ga4ghPassportV1.getRasDbgagPermissions();
+                    List<RasDbgapPermission> newExpires = rasDbgagPermissions.stream().peek(rasDbgapPermission -> rasDbgapPermission.setExpiration(futureDate)).toList();
+                    ga4ghPassportV1.setRasDbgagPermissions(newExpires);
+                    return Optional.of(ga4ghPassportV1);
+                })
+                .collect(Collectors.toSet());
+
+        Set<RasDbgapPermission> permissions = rasPassPortService.ga4gpPassportToRasDbgapPermissions(ga4ghPassports);
 
         assertEquals(2, permissions.size());
         assertTrue(permissions.stream().anyMatch(p -> p.getPhsId().equals("phs000300")));
