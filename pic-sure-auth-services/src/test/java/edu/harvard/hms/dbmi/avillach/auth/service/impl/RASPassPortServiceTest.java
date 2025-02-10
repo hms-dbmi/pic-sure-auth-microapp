@@ -14,16 +14,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ContextConfiguration;
 
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
@@ -94,6 +89,59 @@ public class RASPassPortServiceTest {
         assertTrue(permissions.stream().anyMatch(p -> p.getPhsId().equals("phs000300")));
         assertTrue(permissions.stream().anyMatch(p -> p.getPhsId().equals("phs000006")));
     }
+
+    @Test
+    public void testGa4gpPassportStudies_HalfAreExpired() {
+        Optional<Passport> passport = JWTUtil.parsePassportJWTV11(exampleRasPassport);
+        long futureDate = new Date().toInstant().toEpochMilli() + 100000;
+        long pastDate = new Date().toInstant().toEpochMilli() - 100000;
+
+        List<String> expiredPHS = new ArrayList<>();
+        List<String> validPHS = new ArrayList<>();
+        // Update the expiry date of each permission in our test passport.
+        // We alternate: even-indexed permissions become valid, odd-indexed ones remain (or become) invalid.
+        Set<Optional<Ga4ghPassportV1>> ga4ghPassports = passport.get().getGa4ghPassportV1().stream()
+                .map(JWTUtil::parseGa4ghPassportV1)
+                .filter(Optional::isPresent)
+                .map(optionalPassport -> {
+                    Ga4ghPassportV1 ga4ghPassportV1 = optionalPassport.get();
+                    List<RasDbgapPermission> rasDbgagPermissions = ga4ghPassportV1.getRasDbgagPermissions();
+
+                    AtomicInteger index = new AtomicInteger();
+                    List<RasDbgapPermission> updatedPermissions = rasDbgagPermissions.stream()
+                            .peek(permission -> {
+                                if (index.getAndIncrement() % 2 == 0) {
+                                    // For even indices, use a valid future expiration.
+                                    permission.setExpiration(futureDate);
+                                    validPHS.add(permission.getPhsId());
+                                } else {
+                                    // For odd indices, use an expired (invalid) timestamp.
+                                    permission.setExpiration(pastDate);
+                                    expiredPHS.add(permission.getPhsId());
+                                }
+                            })
+                            .collect(Collectors.toList());
+
+                    ga4ghPassportV1.setRasDbgagPermissions(updatedPermissions);
+                    return Optional.of(ga4ghPassportV1);
+                })
+                .collect(Collectors.toSet());
+
+        // Convert the GA4GH passports to RAS DbGaP permissions. The underlying conversion
+        // should filter out the ones with invalid expiration dates.
+        Set<RasDbgapPermission> permissions = rasPassPortService.ga4gpPassportToRasDbgapPermissions(ga4ghPassports);
+
+        // We expect only the valid (future-dated) permissions to be returned.
+        assertEquals(validPHS.size(), permissions.size());
+
+        // verify only expected values are in permissions set
+        List<String> finalPHS = permissions.stream().map(RasDbgapPermission::getPhsId).toList();
+        assertEquals(finalPHS, validPHS, "The valid phs ids do not match the expected values.");
+
+        // verify no expired permissions are in the passport.
+        expiredPHS.forEach(phs -> assertFalse(finalPHS.contains(phs), "Expired phs id " + phs + " should not appear in the valid permissions."));
+    }
+
 
     @Test
     public void testValidateVisa_Valid() {
