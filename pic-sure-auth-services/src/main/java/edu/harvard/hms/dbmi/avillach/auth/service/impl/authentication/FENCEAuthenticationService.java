@@ -126,15 +126,7 @@ public class FENCEAuthenticationService implements AuthenticationService {
 
         // Update the user's roles (or create them if none exists)
         Iterator<String> project_access_names = fence_user_profile.get("authz").fieldNames();
-
-        // TODO: Remove after testing
         List<String> tempList = new ArrayList<>();
-        while (project_access_names.hasNext()) {
-            String name = project_access_names.next();
-            tempList.add(name);
-        }
-
-        logger.debug("Project Access Names: {}", tempList);
 
         Set<String> roleNames = new HashSet<>();
         project_access_names.forEachRemaining(roleName -> {
@@ -150,8 +142,13 @@ public class FENCEAuthenticationService implements AuthenticationService {
             String newRoleName = StringUtils.isNotBlank(consentCode) ? "MANAGED_" + projectId + "_" + consentCode : "MANAGED_" + projectId;
 
             roleNames.add(newRoleName);
+            tempList.add(projectMetadata.getStudyIdentifier() + "."
+                         + projectMetadata.getStudyVersion() + "."
+                         + projectMetadata.getStudyPhase() + "."
+                         + projectMetadata.getConsentGroupCode());
         });
 
+        logger.debug("Project Access Names: {}", tempList);
         logger.debug("Derived Fence Roles: {}", roleNames);
         currentUser = userService.updateUserRoles(currentUser, roleNames);
         logger.debug("User roles: {}", currentUser.getRoles().stream().map(Role::getName).collect(Collectors.joining(",")));
