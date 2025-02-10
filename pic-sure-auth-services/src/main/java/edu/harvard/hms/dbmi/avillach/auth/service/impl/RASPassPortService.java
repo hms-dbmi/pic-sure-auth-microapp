@@ -166,12 +166,10 @@ public class RASPassPortService {
 
         logger.debug("Converting ga4ghPassports to RasDbgapPermissions");
         HashSet<RasDbgapPermission> rasDbgapPermissions = new HashSet<>();
-        long date = Instant.now().toEpochMilli();
+        long date = Instant.now().toEpochMilli() / 1000;
         ga4ghPassports.forEach(ga4ghPassport -> {
             if (ga4ghPassport.isPresent()) {
                 Ga4ghPassportV1 ga4ghPassportV1 = ga4ghPassport.get();
-                logger.info("ga4gh_passport_v1: {}", ga4ghPassportV1);
-
                 rasDbgapPermissions.addAll(ga4ghPassportV1.getRasDbgagPermissions().stream().filter(rasDbgapPermission -> date <= rasDbgapPermission.getExpiration()).collect(Collectors.toSet()));
             }
         });

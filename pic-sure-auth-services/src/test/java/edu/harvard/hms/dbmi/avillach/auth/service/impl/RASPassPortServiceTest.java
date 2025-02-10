@@ -68,7 +68,7 @@ public class RASPassPortServiceTest {
     @Test
     public void testGa4gpPassportStudies_HasCorrectStudies() {
         Optional<Passport> passport = JWTUtil.parsePassportJWTV11(exampleRasPassport);
-        long futureDate = Instant.now().toEpochMilli() + 100000;
+        long futureDate = (Instant.now().toEpochMilli() / 1000) + 100000;
 
         // Update the expiry date of each permission in our test passport. All permissions in the example passport
         // expired in 2022.
@@ -94,8 +94,8 @@ public class RASPassPortServiceTest {
     @Test
     public void testGa4gpPassportStudies_HalfAreExpired() {
         Optional<Passport> passport = JWTUtil.parsePassportJWTV11(exampleRasPassport);
-        long futureDate = Instant.now().toEpochMilli() + 100000;
-        long pastDate = Instant.now().toEpochMilli() - 100000;
+        long futureDate = (Instant.now().toEpochMilli() / 1000) + 100000;
+        long pastDate = (Instant.now().toEpochMilli() / 1000) - 100000;
 
         List<String> expiredPHS = new ArrayList<>();
         List<String> validPHS = new ArrayList<>();
