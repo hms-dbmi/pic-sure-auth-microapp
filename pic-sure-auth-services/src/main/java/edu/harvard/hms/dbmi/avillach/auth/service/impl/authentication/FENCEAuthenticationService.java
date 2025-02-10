@@ -125,7 +125,7 @@ public class FENCEAuthenticationService implements AuthenticationService {
 
         // Update the user's roles (or create them if none exists)
         Iterator<String> project_access_names = fence_user_profile.get("authz").fieldNames();
-        logger.debug("Project Access Names: {}", project_access_names);
+        logger.debug("Project Access Names: {}", List.of(project_access_names));
 
         Set<String> roleNames = new HashSet<>();
         project_access_names.forEachRemaining(roleName -> {
