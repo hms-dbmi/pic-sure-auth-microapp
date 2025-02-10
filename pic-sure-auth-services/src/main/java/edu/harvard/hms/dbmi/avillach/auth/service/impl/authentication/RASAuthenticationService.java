@@ -145,9 +145,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
     protected User updateRasUserRoles(String code, User user, Passport rasPassport) {
         logger.info("RAS PASSPORT FOUND ___ USER: {} ___ PASSPORT: {} ___ CODE {}", user.getSubject(), rasPassport, code);
         Set<Optional<Ga4ghPassportV1>> ga4ghPassports = rasPassport.getGa4ghPassportV1().stream().map(JWTUtil::parseGa4ghPassportV1).filter(Optional::isPresent).collect(Collectors.toSet());
-        ga4ghPassports.forEach(ga4ghPassport -> logger.info(ga4ghPassport.toString()));
         Set<RasDbgapPermission> dbgapPermissions = this.rasPassPortService.ga4gpPassportToRasDbgapPermissions(ga4ghPassports);
-        dbgapPermissions.forEach(dbgapPermission -> logger.info(dbgapPermission.toString()));
         Set<String> dbgapRoleNames = this.roleService.getRoleNamesForDbgapPermissions(dbgapPermissions);
         user = userService.updateUserRoles(user, dbgapRoleNames);
         logger.debug("USER {} ROLES UPDATED {} ___ CODE {}",
