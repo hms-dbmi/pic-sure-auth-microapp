@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Connection;
+import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.exceptions.NotAuthorizedException;
 import edu.harvard.hms.dbmi.avillach.auth.model.fenceMapping.StudyMetaData;
@@ -153,8 +154,7 @@ public class FENCEAuthenticationService implements AuthenticationService {
 
         logger.debug("Derived Fence Roles: {}", roleNames);
         currentUser = userService.updateUserRoles(currentUser, roleNames);
-
-        logger.debug("User roles: {}", currentUser.getRoles());
+        logger.debug("User roles: {}", currentUser.getRoles().stream().map(Role::getName).collect(Collectors.joining(",")));
         HashMap<String, Object> claims = new HashMap<String, Object>();
         claims.put("name", fence_user_profile.get("name"));
         claims.put("email", currentUser.getEmail());
