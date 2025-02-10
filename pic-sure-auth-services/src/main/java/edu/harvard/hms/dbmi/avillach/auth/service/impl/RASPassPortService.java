@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -165,7 +166,7 @@ public class RASPassPortService {
 
         logger.debug("Converting ga4ghPassports to RasDbgapPermissions");
         HashSet<RasDbgapPermission> rasDbgapPermissions = new HashSet<>();
-        long date = new Date().toInstant().toEpochMilli();
+        long date = Instant.now().toEpochMilli();
         ga4ghPassports.forEach(ga4ghPassport -> {
             if (ga4ghPassport.isPresent()) {
                 Ga4ghPassportV1 ga4ghPassportV1 = ga4ghPassport.get();
