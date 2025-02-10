@@ -3,6 +3,12 @@
 ### Local Development
 At present, local development is conducted using our [All-In-One](https://github.com/hms-dbmi/pic-sure-all-in-one) Virtual Box. We offer implementations for both [CentOS](https://github.com/hms-dbmi/pic-sure-all-in-one/tree/master) and [Redhat](https://github.com/hms-dbmi/pic-sure-all-in-one/tree/feature/redhat)  based operating systems. To get started, please consult the [README](https://github.com/hms-dbmi/pic-sure-all-in-one/tree/master#readme) section of the [All-In-One](https://github.com/hms-dbmi/pic-sure-all-in-one) repository.
 
+Before contributing code, please set up our git hook:  
+`cp code-formatting/pre-commit.sh .git/hooks/pre-commit`  
+To skip formatting on a block of code, wrap in `spotless:off`, `spotless:on` comments
+
+
+
 #### To add an initial top admin user in the system
 If you follow the steps above, spins up the docker containers and you can see the login page in the browser, you are almost there.
 
