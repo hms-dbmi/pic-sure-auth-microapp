@@ -44,16 +44,18 @@ public class UserController {
     public ResponseEntity<User> getUserById(
             @Parameter(required = true, description = "The UUID of the user to fetch information about")
             @PathVariable("userId") String userId) {
-        User userById = this.userService.getUserById(userId);
-        return PICSUREResponse.success(userById);
+//        User userById = this.userService.getUserById(userId);
+//        return PICSUREResponse.success(userById);
+        return PICSUREResponse.error(null);
     }
 
     @Operation(description = "GET a list of existing users, requires ADMIN or SUPER_ADMIN roles")
     @RolesAllowed({ADMIN, SUPER_ADMIN})
     @GetMapping(produces = "application/json")
     public ResponseEntity<List<User>> getUserAll() {
-        List<User> entityAll = this.userService.getAllUsers();
-        return PICSUREResponse.success(entityAll);
+//        List<User> entityAll = this.userService.getAllUsers();
+//        return PICSUREResponse.success(entityAll);
+        return PICSUREResponse.error(List.of());
     }
 
     @Operation(description = "POST a list of users, requires ADMIN role")
@@ -62,17 +64,18 @@ public class UserController {
     public ResponseEntity<?> addUser(
             @Parameter(required = true, description = "A list of user in JSON format")
             @RequestBody List<User> users) {
-        List<User> addedUsers = this.userService.addUsers(users);
-        if (addedUsers == null) {
-            return PICSUREResponse.applicationError("Inner application error, please contact admin.");
-        }
-
-        String message = this.userService.sendUserUpdateEmailsFromResponse(addedUsers);
-        if (message != null) {
-            return PICSUREResponse.success(message, addedUsers);
-        }
-
-        return PICSUREResponse.success(addedUsers);
+//        List<User> addedUsers = this.userService.addUsers(users);
+//        if (addedUsers == null) {
+//            return PICSUREResponse.applicationError("Inner application error, please contact admin.");
+//        }
+//
+//        String message = this.userService.sendUserUpdateEmailsFromResponse(addedUsers);
+//        if (message != null) {
+//            return PICSUREResponse.success(message, addedUsers);
+//        }
+//
+//        return PICSUREResponse.success(addedUsers);
+        return PICSUREResponse.error("disabled");
     }
 
     @Operation(description = "Update a list of users, will only update the fields listed, requires ADMIN role")
@@ -80,17 +83,18 @@ public class UserController {
     @PutMapping(produces = "application/json")
     public ResponseEntity<?> updateUser(
             @RequestBody List<User> users) {
-        List<User> updatedUsers = this.userService.updateUser(users);
-        if (updatedUsers == null) {
-            return PICSUREResponse.applicationError("Inner application error, please contact admin.");
-        }
-
-        String message = this.userService.sendUserUpdateEmailsFromResponse(updatedUsers);
-        if (message != null) {
-            return PICSUREResponse.success(message, updatedUsers);
-        }
-
-        return PICSUREResponse.success(updatedUsers);
+//        List<User> updatedUsers = this.userService.updateUser(users);
+//        if (updatedUsers == null) {
+//            return PICSUREResponse.applicationError("Inner application error, please contact admin.");
+//        }
+//
+//        String message = this.userService.sendUserUpdateEmailsFromResponse(updatedUsers);
+//        if (message != null) {
+//            return PICSUREResponse.success(message, updatedUsers);
+//        }
+//
+//        return PICSUREResponse.success(updatedUsers);
+        return PICSUREResponse.error("disabled");
     }
 
     /**

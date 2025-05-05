@@ -56,11 +56,12 @@ public class TermsOfServiceController {
     @PostMapping(path = "/update", consumes = "text/html", produces = "application/json")
     public ResponseEntity<?> updateTermsOfService(
             @Parameter(required = true, description = "A html page for updating") String html){
-        Optional<TermsOfService> termsOfService = tosService.updateTermsOfService(html);
-        if (termsOfService.isEmpty()){
-            return PICSUREResponse.success();
-        }
-        return PICSUREResponse.success(termsOfService.get());
+//        Optional<TermsOfService> termsOfService = tosService.updateTermsOfService(html);
+//        if (termsOfService.isEmpty()){
+//            return PICSUREResponse.success();
+//        }
+//        return PICSUREResponse.success(termsOfService.get());
+        return PICSUREResponse.error("disabled");
     }
 
     @Operation(description = "GET if current user has acceptted his TOS or not")

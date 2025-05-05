@@ -38,21 +38,23 @@ public class PrivilegeController {
     public ResponseEntity<?> getPrivilegeById(
             @Parameter(description="The UUID of the privilege to fetch information about")
             @PathVariable("privilegeId") String privilegeId) {
-        Privilege privilegeById = this.privilegeService.getPrivilegeById(privilegeId);
-
-        if (privilegeById == null) {
-            return PICSUREResponse.protocolError("Privilege not found");
-        }
-
-        return PICSUREResponse.success(privilegeById);
+//        Privilege privilegeById = this.privilegeService.getPrivilegeById(privilegeId);
+//
+//        if (privilegeById == null) {
+//            return PICSUREResponse.protocolError("Privilege not found");
+//        }
+//
+//        return PICSUREResponse.success(privilegeById);
+        return PICSUREResponse.error("disabled");
     }
 
     @Operation(description = "GET a list of existing privileges, requires ADMIN or SUPER_ADMIN role")
     @RolesAllowed({ADMIN, SUPER_ADMIN})
     @GetMapping(produces = "application/json")
     public ResponseEntity<List<Privilege>> getPrivilegeAll() {
-        List<Privilege> privilegesAll = this.privilegeService.getPrivilegesAll();
-        return PICSUREResponse.success(privilegesAll);
+//        List<Privilege> privilegesAll = this.privilegeService.getPrivilegesAll();
+//        return PICSUREResponse.success(privilegesAll);
+        return PICSUREResponse.error(List.of());
     }
 
     @Operation(description = "POST a list of privileges, requires SUPER_ADMIN role")
@@ -61,8 +63,9 @@ public class PrivilegeController {
     public ResponseEntity<List<Privilege>> addPrivilege(
             @Parameter(required = true, description = "A list of privileges in JSON format")
             @RequestBody List<Privilege> privileges){
-        privileges = this.privilegeService.addPrivileges(privileges);
-        return PICSUREResponse.success(privileges);
+//        privileges = this.privilegeService.addPrivileges(privileges);
+//        return PICSUREResponse.success(privileges);
+        return PICSUREResponse.error(List.of());
     }
 
     @Operation(description = "Update a list of privileges, will only update the fields listed, requires SUPER_ADMIN role")
@@ -71,8 +74,9 @@ public class PrivilegeController {
     public ResponseEntity<List<Privilege>> updatePrivilege(
             @Parameter(required = true, description = "A list of privilege with fields to be updated in JSON format")
             @RequestBody List<Privilege> privileges){
-            privileges = this.privilegeService.updatePrivileges(privileges);
-            return ResponseEntity.ok(privileges);
+//            privileges = this.privilegeService.updatePrivileges(privileges);
+//            return ResponseEntity.ok(privileges);
+        return PICSUREResponse.error(List.of());
     }
 
     @Operation(description = "DELETE an privilege by Id only if the privilege is not associated by others, requires SUPER_ADMIN role")
@@ -81,8 +85,9 @@ public class PrivilegeController {
     public ResponseEntity<List<Privilege>> removeById(
             @Parameter(required = true, description = "A valid privilege Id")
             @PathVariable("privilegeId") final String privilegeId) {
-        List<Privilege> privileges = this.privilegeService.deletePrivilegeByPrivilegeId(privilegeId);
-        return ResponseEntity.ok(privileges);
+//        List<Privilege> privileges = this.privilegeService.deletePrivilegeByPrivilegeId(privilegeId);
+//        return ResponseEntity.ok(privileges);
+        return PICSUREResponse.error(List.of());
     }
 
 }
