@@ -61,8 +61,9 @@ public class ApplicationController {
     public ResponseEntity<List<Application>> addApplication(
             @Parameter(required = true, description = "A list of AccessRule in JSON format")
             @RequestBody List<Application> applications) {
-        applications = applicationService.addNewApplications(applications);
-        return PICSUREResponse.success(applications);
+//        applications = applicationService.addNewApplications(applications);
+//        return PICSUREResponse.success(applications);
+        return PICSUREResponse.error(List.of());
     }
 
     @Operation(description = "Update a list of Applications, will only update the fields listed, requires SUPER_ADMIN role")
@@ -71,8 +72,9 @@ public class ApplicationController {
     public ResponseEntity<List<Application>> updateApplication(
             @Parameter(required = true, description = "A list of AccessRule with fields to be updated in JSON format")
             @RequestBody List<Application> applications) {
-        applications = applicationService.updateApplications(applications);
-        return PICSUREResponse.success(applications);
+//        applications = applicationService.updateApplications(applications);
+//        return PICSUREResponse.success(applications);
+        return PICSUREResponse.error(List.of());
     }
 
     @Operation(description = "Refresh a token of an application by application Id, requires SUPER_ADMIN role")
@@ -81,8 +83,9 @@ public class ApplicationController {
     public ResponseEntity<Map<String, String>> refreshApplicationToken(
             @Parameter(required = true, description = "A valid application Id")
             @PathVariable("applicationId") String applicationId) {
-        String newApplicationToken = applicationService.refreshApplicationToken(applicationId);
-        return PICSUREResponse.success(Map.of("token", newApplicationToken));
+//        String newApplicationToken = applicationService.refreshApplicationToken(applicationId);
+//        return PICSUREResponse.success(Map.of("token", newApplicationToken));
+        return PICSUREResponse.error(Map.of());
     }
 
     @Operation(description = "DELETE an Application by Id only if the application is not associated by others, requires SUPER_ADMIN role")
@@ -91,12 +94,13 @@ public class ApplicationController {
     public ResponseEntity<?> removeById(
             @Parameter(required = true, description = "A valid accessRule Id")
             @PathVariable("applicationId") final String applicationId) {
-        try {
-            List<Application> applications = applicationService.deleteApplicationById(applicationId);
-            return PICSUREResponse.success(applications);
-        } catch (IllegalArgumentException e) {
-            return PICSUREResponse.protocolError(e.getMessage());
-        }
+//        try {
+//            List<Application> applications = applicationService.deleteApplicationById(applicationId);
+//            return PICSUREResponse.success(applications);
+//        } catch (IllegalArgumentException e) {
+//            return PICSUREResponse.protocolError(e.getMessage());
+//        }
+        return PICSUREResponse.error("disabled");
     }
 
 }

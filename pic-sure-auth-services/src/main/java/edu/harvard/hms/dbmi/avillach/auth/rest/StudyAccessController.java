@@ -39,11 +39,12 @@ public class StudyAccessController {
     @PostMapping(consumes = "application/json")
     public ResponseEntity<String> addStudyAccess(@Parameter(description = "The Study Identifier of the new study from the metadata.json")
                                             @RequestBody String studyIdentifier) {
-        String status = studyAccessService.addStudyAccess(studyIdentifier);
-        if (status.contains("Error:")) {
-            return PICSUREResponse.error(status);
-        } else {
-            return PICSUREResponse.success(status);
-        }
+//        String status = studyAccessService.addStudyAccess(studyIdentifier);
+//        if (status.contains("Error:")) {
+//            return PICSUREResponse.error(status);
+//        } else {
+//            return PICSUREResponse.success(status);
+//        }
+        return PICSUREResponse.error("disabled");
     }
 }

@@ -44,21 +44,23 @@ public class AccessRuleController {
     public ResponseEntity<?> getAccessRuleById(
             @Parameter(description = "The UUID of the accessRule to fetch information about")
             @PathVariable("accessRuleId") String accessRuleId) {
-        Optional<AccessRule> entityById = this.accessRuleService.getAccessRuleById(accessRuleId);
-
-        if (entityById.isEmpty()) {
-            return PICSUREResponse.error("AccessRule not found", 404);
-        }
-
-        return PICSUREResponse.success(entityById.get());
+//        Optional<AccessRule> entityById = this.accessRuleService.getAccessRuleById(accessRuleId);
+//
+//        if (entityById.isEmpty()) {
+//            return PICSUREResponse.error("AccessRule not found", 404);
+//        }
+//
+//        return PICSUREResponse.success(entityById.get());
+        return PICSUREResponse.error("disabled");
     }
 
     @Operation(description = "GET a list of existing AccessRules, requires ADMIN or SUPER_ADMIN role")
     @Secured({ADMIN, SUPER_ADMIN})
     @GetMapping("")
     public ResponseEntity<List<AccessRule>> getAccessRuleAll() {
-        List<AccessRule> allAccessRules = this.accessRuleService.getAllAccessRules();
-        return PICSUREResponse.success(allAccessRules);
+//        List<AccessRule> allAccessRules = this.accessRuleService.getAllAccessRules();
+//        return PICSUREResponse.success(allAccessRules);
+        return PICSUREResponse.error(List.of());
     }
 
     @Operation(description = "POST a list of AccessRules, requires SUPER_ADMIN role")
@@ -67,13 +69,14 @@ public class AccessRuleController {
     public ResponseEntity<?> addAccessRule(
             @Parameter(required = true, description = "A list of AccessRule in JSON format")
             @RequestBody List<AccessRule> accessRules) {
-        accessRules = this.accessRuleService.addAccessRule(accessRules);
-
-        if (accessRules.isEmpty()) {
-            return PICSUREResponse.protocolError("No access rules added", 400);
-        }
-
-        return PICSUREResponse.success(accessRules);
+//        accessRules = this.accessRuleService.addAccessRule(accessRules);
+//
+//        if (accessRules.isEmpty()) {
+//            return PICSUREResponse.protocolError("No access rules added", 400);
+//        }
+//
+//        return PICSUREResponse.success(accessRules);
+        return PICSUREResponse.error("disabled");
     }
 
     @Operation(description = "Update a list of AccessRules, will only update the fields listed, requires SUPER_ADMIN role")
@@ -82,8 +85,9 @@ public class AccessRuleController {
     public ResponseEntity<List<AccessRule>> updateAccessRule(
             @Parameter(required = true, description = "A list of AccessRule with fields to be updated in JSON format")
             @RequestBody List<AccessRule> accessRules) {
-        accessRules = this.accessRuleService.updateAccessRules(accessRules);
-        return PICSUREResponse.success(accessRules);
+//        accessRules = this.accessRuleService.updateAccessRules(accessRules);
+//        return PICSUREResponse.success(accessRules);
+        return PICSUREResponse.error(List.of());
     }
 
     @Operation(description = "DELETE an AccessRule by Id only if the accessRule is not associated by others, requires SUPER_ADMIN role")
@@ -92,14 +96,16 @@ public class AccessRuleController {
     public ResponseEntity<List<AccessRule>> removeById(
             @Parameter(required = true, description = "A valid accessRule Id")
             @PathVariable("accessRuleId") final String accessRuleId) {
-        return PICSUREResponse.success(this.accessRuleService.removeAccessRuleById(accessRuleId));
+//        return PICSUREResponse.success(this.accessRuleService.removeAccessRuleById(accessRuleId));
+        return PICSUREResponse.error(List.of());
     }
 
     @Operation(description = "GET all types listed for the rule in accessRule that could be used, requires SUPER_ADMIN role")
     @RolesAllowed(SUPER_ADMIN)
     @GetMapping(path = "/allTypes", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, Integer>> getAllTypes() {
-        return PICSUREResponse.success(AccessRule.TypeNaming.getTypeNameMap());
+//        return PICSUREResponse.success(AccessRule.TypeNaming.getTypeNameMap());
+        return PICSUREResponse.error(Map.of());
     }
 
 }

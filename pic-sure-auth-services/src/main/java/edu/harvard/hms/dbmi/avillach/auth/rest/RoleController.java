@@ -41,19 +41,21 @@ public class RoleController {
     public ResponseEntity<?> getRoleById(
             @Parameter(description = "The UUID of the Role to fetch information about")
             @PathVariable("roleId") String roleId) {
-        Optional<Role> optionalRole = this.roleService.getRoleById(roleId);
-        if (optionalRole.isEmpty()) {
-            return PICSUREResponse.protocolError("Role is not found by given role ID: " + roleId);
-        }
-        return PICSUREResponse.success(optionalRole.get());
+//        Optional<Role> optionalRole = this.roleService.getRoleById(roleId);
+//        if (optionalRole.isEmpty()) {
+//            return PICSUREResponse.protocolError("Role is not found by given role ID: " + roleId);
+//        }
+//        return PICSUREResponse.success(optionalRole.get());
+        return PICSUREResponse.error("disabled");
     }
 
     @Operation(description = "GET a list of existing Roles, requires ADMIN or SUPER_ADMIN role")
     @RolesAllowed({ADMIN, SUPER_ADMIN})
     @GetMapping
     public ResponseEntity<List<Role>> getRoleAll() {
-        List<Role> allRoles = this.roleService.getAllRoles();
-        return PICSUREResponse.success(allRoles);
+//        List<Role> allRoles = this.roleService.getAllRoles();
+//        return PICSUREResponse.success(allRoles);
+        return PICSUREResponse.error(List.of());
     }
 
     @Operation(description = "POST a list of Roles, requires SUPER_ADMIN role")
@@ -62,8 +64,9 @@ public class RoleController {
     public ResponseEntity<?> addRole(
             @Parameter(required = true, description = "A list of Roles in JSON format")
             @RequestBody List<Role> roles) {
-        List<Role> savedRoles = this.roleService.addRoles(roles);
-        return PICSUREResponse.success("All roles are added.", savedRoles);
+//        List<Role> savedRoles = this.roleService.addRoles(roles);
+//        return PICSUREResponse.success("All roles are added.", savedRoles);
+        return PICSUREResponse.error("disabled");
     }
 
     @Operation(description = "Update a list of Roles, will only update the fields listed, requires SUPER_ADMIN role")
@@ -72,12 +75,13 @@ public class RoleController {
     public ResponseEntity<?> updateRole(
             @Parameter(required = true, description = "A list of Roles with fields to be updated in JSON format")
             @RequestBody List<Role> roles) {
-        List<Role> updatedRoles = this.roleService.updateRoles(roles);
-        if (updatedRoles.isEmpty()) {
-            return PICSUREResponse.protocolError("No Role(s) has been updated.");
-        }
-
-        return PICSUREResponse.success("All Roles are updated.", updatedRoles);
+//        List<Role> updatedRoles = this.roleService.updateRoles(roles);
+//        if (updatedRoles.isEmpty()) {
+//            return PICSUREResponse.protocolError("No Role(s) has been updated.");
+//        }
+//
+//        return PICSUREResponse.success("All Roles are updated.", updatedRoles);
+        return PICSUREResponse.error("disabled");
     }
 
     @Operation(description = "DELETE an Role by Id only if the Role is not associated by others, requires SUPER_ADMIN role")
@@ -86,12 +90,13 @@ public class RoleController {
     public ResponseEntity<?> removeById(
             @Parameter(required = true, description = "A valid Role Id")
             @PathVariable("roleId") final String roleId) {
-        Optional<List<Role>> roles = this.roleService.removeRoleById(roleId);
-        if (roles.isEmpty()) {
-            return PICSUREResponse.protocolError("Role not found - uuid: " + roleId);
-        }
-
-        return PICSUREResponse.success(MessageFormat.format("Successfully deleted role by id: {0}, listing rest of the role(s) as below", roleId), roles.get());
+//        Optional<List<Role>> roles = this.roleService.removeRoleById(roleId);
+//        if (roles.isEmpty()) {
+//            return PICSUREResponse.protocolError("Role not found - uuid: " + roleId);
+//        }
+//
+//        return PICSUREResponse.success(MessageFormat.format("Successfully deleted role by id: {0}, listing rest of the role(s) as below", roleId), roles.get());
+        return PICSUREResponse.error("disabled");
     }
 
 

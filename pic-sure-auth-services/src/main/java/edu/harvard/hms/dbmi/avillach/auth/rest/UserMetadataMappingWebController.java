@@ -38,16 +38,18 @@ public class UserMetadataMappingWebController {
     @RolesAllowed({ADMIN, SUPER_ADMIN})
     @GetMapping(path = "{connectionId}", produces = "application/json")
     public ResponseEntity<Connection> getMappingsForConnection(@PathVariable("connectionId") String connection) {
-        Connection allMappingsForConnection = this.mappingService.getAllMappingsForConnection(connection);
-        return PICSUREResponse.success(allMappingsForConnection);
+//        Connection allMappingsForConnection = this.mappingService.getAllMappingsForConnection(connection);
+//        return PICSUREResponse.success(allMappingsForConnection);
+        return PICSUREResponse.error(null);
     }
 
     @Operation(description = "GET a list of existing UserMetadataMappings, requires ADMIN or SUPER_ADMIN role")
     @RolesAllowed({ADMIN, SUPER_ADMIN})
     @GetMapping(produces = "application/json")
     public ResponseEntity<List<UserMetadataMapping>> getAllMappings() {
-        List<UserMetadataMapping> allMappings = mappingService.getAllMappings();
-        return PICSUREResponse.success(allMappings);
+//        List<UserMetadataMapping> allMappings = mappingService.getAllMappings();
+//        return PICSUREResponse.success(allMappings);
+        return PICSUREResponse.error(List.of());
     }
 
     @Operation(description = "POST a list of UserMetadataMappings, requires SUPER_ADMIN role")
@@ -57,12 +59,13 @@ public class UserMetadataMappingWebController {
             @Parameter(required = true, description = "A list of UserMetadataMapping in JSON format")
             @RequestBody List<UserMetadataMapping> mappings) {
 
-        try {
-            List<UserMetadataMapping> userMetadataMappings = mappingService.addMappings(mappings);
-            return PICSUREResponse.success(userMetadataMappings);
-        } catch (IllegalArgumentException e) {
-            return PICSUREResponse.error(e.getMessage());
-        }
+//        try {
+//            List<UserMetadataMapping> userMetadataMappings = mappingService.addMappings(mappings);
+//            return PICSUREResponse.success(userMetadataMappings);
+//        } catch (IllegalArgumentException e) {
+//            return PICSUREResponse.error(e.getMessage());
+//        }
+        return PICSUREResponse.error("disabled");
     }
 
     @Operation(description = "Update a list of UserMetadataMappings, will only update the fields listed, requires SUPER_ADMIN role")
@@ -71,13 +74,14 @@ public class UserMetadataMappingWebController {
     public ResponseEntity<?> updateMapping(
             @Parameter(required = true, description = "A list of UserMetadataMapping with fields to be updated in JSON format")
             @RequestBody List<UserMetadataMapping> mappings) {
-        List<UserMetadataMapping> userMetadataMappings = this.mappingService.updateUserMetadataMappings(mappings);
-
-        if (userMetadataMappings == null || userMetadataMappings.isEmpty()) {
-            return PICSUREResponse.error("No UserMetadataMapping found with the given Ids");
-        }
-
-        return PICSUREResponse.success(userMetadataMappings);
+//        List<UserMetadataMapping> userMetadataMappings = this.mappingService.updateUserMetadataMappings(mappings);
+//
+//        if (userMetadataMappings == null || userMetadataMappings.isEmpty()) {
+//            return PICSUREResponse.error("No UserMetadataMapping found with the given Ids");
+//        }
+//
+//        return PICSUREResponse.success(userMetadataMappings);
+        return PICSUREResponse.error("disabled");
     }
 
     @Operation(description = "DELETE an UserMetadataMapping by Id only if the UserMetadataMapping is not associated by others, requires SUPER_ADMIN role")
@@ -86,7 +90,8 @@ public class UserMetadataMappingWebController {
     public ResponseEntity<List<UserMetadataMapping>> removeById(
             @Parameter(required = true, description = "A valid UserMetadataMapping Id")
             @PathVariable("mappingId") final String mappingId) {
-        List<UserMetadataMapping> userMetadataMappings = this.mappingService.removeMetadataMappingByIdAndRetrieveAll(mappingId);
-        return PICSUREResponse.success(userMetadataMappings);
+//        List<UserMetadataMapping> userMetadataMappings = this.mappingService.removeMetadataMappingByIdAndRetrieveAll(mappingId);
+//        return PICSUREResponse.success(userMetadataMappings);
+        return PICSUREResponse.error(List.of());
     }
 }
