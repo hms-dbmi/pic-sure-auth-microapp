@@ -192,6 +192,8 @@ public class JWTFilter extends OncePerRequestFilter {
             //If user has not accepted terms of service and is attempted to get information other than the terms of service, don't authenticate
             try {
                 response.sendError(HttpServletResponse.SC_FORBIDDEN, "User must accept terms of service");
+                // Return early to prevent setting up security context
+                return;
             } catch (IOException e) {
                 logger.error("Failed to send response.", e);
             }
@@ -202,6 +204,8 @@ public class JWTFilter extends OncePerRequestFilter {
             logger.error("User doesn't have any roles or privileges.");
             try {
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User doesn't have any roles or privileges.");
+                // Return early to prevent setting up security context
+                return;
             } catch (IOException e) {
                 logger.error("Failed to send response.", e);
             }
