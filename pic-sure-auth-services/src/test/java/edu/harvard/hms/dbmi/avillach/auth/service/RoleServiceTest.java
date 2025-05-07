@@ -9,6 +9,7 @@ import edu.harvard.hms.dbmi.avillach.auth.repository.PrivilegeRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.RoleRepository;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.PrivilegeService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.RoleService;
+import edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming;
 import edu.harvard.hms.dbmi.avillach.auth.utils.FenceMappingUtility;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -231,7 +232,7 @@ public class RoleServiceTest {
 
     private Role createTopAdminRole() {
         Role role = new Role();
-        role.setName(SecurityRoles.PIC_SURE_TOP_ADMIN.getRole());
+        role.setName(AuthNaming.AuthRoleNaming.PIC_SURE_TOP_ADMIN);
         role.setUuid(UUID.randomUUID());
         role.setPrivileges(Collections.singleton(createSuperAdminPrivilege()));
         return role;
@@ -239,7 +240,7 @@ public class RoleServiceTest {
 
     private Privilege createSuperAdminPrivilege() {
         Privilege privilege = new Privilege();
-        privilege.setName(SecurityRoles.PIC_SURE_TOP_ADMIN.getRole());
+        privilege.setName(AuthNaming.AuthRoleNaming.PIC_SURE_TOP_ADMIN);
         privilege.setUuid(UUID.randomUUID());
         return privilege;
     }

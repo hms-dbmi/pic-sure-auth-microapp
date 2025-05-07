@@ -7,6 +7,7 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.enums.SecurityRoles;
 import edu.harvard.hms.dbmi.avillach.auth.model.CustomApplicationDetails;
 import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
+import edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockitoAnnotations;
@@ -68,7 +69,7 @@ public class CustomUserDetailServiceTest {
         // Set roles for the user
         Role role = new Role();
         role.setUuid(java.util.UUID.randomUUID());
-        role.setName(SecurityRoles.ADMIN.getRole());
+        role.setName(AuthNaming.AuthRoleNaming.ADMIN);
         user.setRoles(Set.of(role));
 
         Privilege privilege = new Privilege();

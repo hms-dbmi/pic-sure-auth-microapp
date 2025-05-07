@@ -631,7 +631,7 @@ public class UserServiceTest {
 
     private Role createSuperAdminRole() {
         Role role = new Role();
-        role.setName(SecurityRoles.SUPER_ADMIN.name());
+        role.setName(AuthNaming.AuthRoleNaming.SUPER_ADMIN);
         role.setUuid(UUID.randomUUID());
         role.setPrivileges(Collections.singleton(createSuperAdminPrivilege()));
         return role;

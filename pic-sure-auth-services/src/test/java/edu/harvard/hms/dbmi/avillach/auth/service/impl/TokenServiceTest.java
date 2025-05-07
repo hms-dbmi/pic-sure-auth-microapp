@@ -476,7 +476,7 @@ public class TokenServiceTest {
 
     private Role createTestRole() {
         Role role = new Role();
-        role.setName(SecurityRoles.ADMIN.name());
+        role.setName(AuthNaming.AuthRoleNaming.ADMIN);
         role.setUuid(UUID.randomUUID());
         role.setPrivileges(Collections.singleton(createTestPrivilege()));
         return role;

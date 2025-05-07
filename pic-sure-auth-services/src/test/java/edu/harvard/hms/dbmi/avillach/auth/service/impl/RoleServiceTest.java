@@ -236,7 +236,7 @@ public class RoleServiceTest {
 
     private Role createTopAdminRole() {
         Role role = new Role();
-        role.setName(SecurityRoles.PIC_SURE_TOP_ADMIN.getRole());
+        role.setName(AuthNaming.AuthRoleNaming.PIC_SURE_TOP_ADMIN);
         role.setUuid(UUID.randomUUID());
         role.setPrivileges(Collections.singleton(createSuperAdminPrivilege()));
         return role;
@@ -282,7 +282,7 @@ public class RoleServiceTest {
 
     private Role createTopAdminRoleWithoutPrivs() {
         Role role = new Role();
-        role.setName(SecurityRoles.PIC_SURE_TOP_ADMIN.getRole());
+        role.setName(AuthNaming.AuthRoleNaming.PIC_SURE_TOP_ADMIN);
         role.setUuid(UUID.randomUUID());
         role.setPrivileges(Collections.emptySet());
         return role;

@@ -17,8 +17,9 @@ public class AuthNaming {
      * <p>Note: Only users with super admin access can edit these role names.</p>
      */
     public static class AuthRoleNaming {
-        public static final String ADMIN = "ADMIN";
-        public static final String SUPER_ADMIN = "SUPER_ADMIN";
+        public static final String ADMIN = "ROLE_ADMIN";
+        public static final String SUPER_ADMIN = "ROLE_SUPER_ADMIN";
+        public static final String PIC_SURE_TOP_ADMIN = "ROLE_PIC_SURE_TOP_ADMIN";
 
         public static List<String> allRoles(){
             List<String> roles = new ArrayList<>();
