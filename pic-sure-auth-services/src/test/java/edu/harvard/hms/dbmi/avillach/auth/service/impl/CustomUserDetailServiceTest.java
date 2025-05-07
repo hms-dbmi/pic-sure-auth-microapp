@@ -67,10 +67,12 @@ public class CustomUserDetailServiceTest {
         User user = new User();
         // Set roles for the user
         Role role = new Role();
+        role.setUuid(java.util.UUID.randomUUID());
         role.setName(SecurityRoles.ADMIN.getRole());
         user.setRoles(Set.of(role));
 
         Privilege privilege = new Privilege();
+        privilege.setUuid(java.util.UUID.randomUUID());
         privilege.setName("testPrivilege");
         role.setPrivileges(Set.of(privilege));
 
