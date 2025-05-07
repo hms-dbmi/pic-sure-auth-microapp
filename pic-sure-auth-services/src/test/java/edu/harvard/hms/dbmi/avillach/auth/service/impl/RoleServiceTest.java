@@ -3,7 +3,7 @@ package edu.harvard.hms.dbmi.avillach.auth.service.impl;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
-import edu.harvard.hms.dbmi.avillach.auth.enums.SecurityRoles;
+
 import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
 import edu.harvard.hms.dbmi.avillach.auth.model.ras.RasDbgapPermission;
 import edu.harvard.hms.dbmi.avillach.auth.repository.PrivilegeRepository;
