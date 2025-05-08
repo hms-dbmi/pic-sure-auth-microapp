@@ -3,11 +3,9 @@ package edu.harvard.hms.dbmi.avillach.auth.service.impl;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
-import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
 import edu.harvard.hms.dbmi.avillach.auth.model.fenceMapping.StudyMetaData;
 import edu.harvard.hms.dbmi.avillach.auth.model.ras.RasDbgapPermission;
 import edu.harvard.hms.dbmi.avillach.auth.repository.RoleRepository;
-import edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming;
 import edu.harvard.hms.dbmi.avillach.auth.utils.FenceMappingUtility;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -15,8 +13,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -139,17 +135,7 @@ public class RoleService {
     @Transactional
     public Optional<List<Role>> removeRoleById(String roleId) {
         Optional<Role> optionalRole = roleRepository.findById(UUID.fromString(roleId));
-
         if (optionalRole.isEmpty()) {
-            return Optional.empty();
-        }
-
-        SecurityContext context = SecurityContextHolder.getContext();
-        CustomUserDetails current_user = (CustomUserDetails) context.getAuthentication().getPrincipal();
-        Set<String> roleNames = current_user.getUser().getRoles().stream().map(Role::getName).collect(Collectors.toSet());
-
-        if (!roleNames.contains(AuthNaming.AuthRoleNaming.PIC_SURE_TOP_ADMIN)){
-            logger.info("User doesn't have PIC-SURE Top Admin role, can't remove any role");
             return Optional.empty();
         }
 
