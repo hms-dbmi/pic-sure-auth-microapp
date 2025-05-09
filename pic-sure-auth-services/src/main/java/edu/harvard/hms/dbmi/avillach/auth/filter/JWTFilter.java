@@ -70,9 +70,9 @@ public class JWTFilter extends OncePerRequestFilter {
     }
 
     /**
-     * Filter implementation that performs authentication and authorization checks based on the provided request headers.
+     * Filter that performs authentication and authorization checks based on the provided request headers.
      * The filter checks for the presence of the "Authorization" header and validates the token.
-     * It sets the appropriate security context based on the type of token (long term token or PSAMA application token) and
+     * It sets the appropriate security context based on the type of token (long-term token or PSAMA application token) and
      * performs the necessary checks to ensure that the user or application is authorized to access the requested resource.
      * This filter is called by the configured security filter chain in the SecurityConfig class.
      *
@@ -91,16 +91,12 @@ public class JWTFilter extends OncePerRequestFilter {
             // without any authentication or authorization checks
             filterChain.doFilter(request, response);
         } else {
-            // If the header is present, we need to check the token
             String token = authorizationHeader.substring(6).trim();
-
-            // Parse the token
             Jws<Claims> jws = this.jwtUtil.parseToken(token);
             String userId = jws.getPayload().get(this.userClaimId, String.class);
 
             if (userId.startsWith(AuthNaming.LONG_TERM_TOKEN_PREFIX)) {
-                // For profile information, we do indeed allow long term token
-                // to be a valid token.
+                // For profile information, we do indeed allow a long-term token to be a valid token.
                 if (request.getRequestURI().startsWith("/auth/user/me")) {
                     String realClaimsSubject = jws.getPayload().getSubject().substring(AuthNaming.LONG_TERM_TOKEN_PREFIX.length() + 1);
 
@@ -112,7 +108,7 @@ public class JWTFilter extends OncePerRequestFilter {
             } else if (userId.startsWith(AuthNaming.PSAMA_APPLICATION_TOKEN_PREFIX)) {
                 logger.info("User Authentication Starts with {}", AuthNaming.PSAMA_APPLICATION_TOKEN_PREFIX);
 
-                // Check if user is attempting to access the correct introspect endpoint. If not reject the request
+                // Check if the user is attempting to access the correct introspection endpoint. If not reject the request,
                 // log an error indicating the user's token may be being used by a malicious actor.
                 if (!request.getRequestURI().endsWith("token/inspect") && !request.getRequestURI().endsWith("open/validate")) {
                     logger.error("{} attempted to perform request {} token may be compromised.", userId, request.getRequestURI());
@@ -122,7 +118,7 @@ public class JWTFilter extends OncePerRequestFilter {
                 String applicationId = userId.split("\\|")[1];
                 logger.info("Application ID: {}", applicationId);
 
-                // Authenticate as Application
+                // Create custom application details. Will be used to set the correct security context.
                 CustomApplicationDetails customApplicationDetails = (CustomApplicationDetails) this.customUserDetailService.loadUserByUsername("application:" + applicationId);
                 if (customApplicationDetails.getApplication() == null) {
                     logger.error("Cannot find an application by userId: {}", applicationId);
@@ -160,9 +156,9 @@ public class JWTFilter extends OncePerRequestFilter {
 
     /**
      * Sets the security context for the given user.
-     * This method is responsible for validating the user claims, checking if the user is active,
-     * ensuring that the user has accepted the terms of service (if enabled), validating user roles and privileges,
-     * and setting the user object as an attribute in the request.
+     * This method is responsible for validating the user claims. It checks if the user is active,
+     * ensuring the user has accepted the terms of service (if enabled), validating user roles and privileges,
+     * and setting the user object as an attribute in the security context.
      *
      * @param request           the HttpServletRequest object
      * @param response          the HttpServletResponse object
@@ -192,6 +188,8 @@ public class JWTFilter extends OncePerRequestFilter {
             //If user has not accepted terms of service and is attempted to get information other than the terms of service, don't authenticate
             try {
                 response.sendError(HttpServletResponse.SC_FORBIDDEN, "User must accept terms of service");
+                // Return early to prevent setting up security context
+                return;
             } catch (IOException e) {
                 logger.error("Failed to send response.", e);
             }
@@ -202,6 +200,8 @@ public class JWTFilter extends OncePerRequestFilter {
             logger.error("User doesn't have any roles or privileges.");
             try {
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User doesn't have any roles or privileges.");
+                // Return early to prevent setting up security context
+                return;
             } catch (IOException e) {
                 logger.error("Failed to send response.", e);
             }
