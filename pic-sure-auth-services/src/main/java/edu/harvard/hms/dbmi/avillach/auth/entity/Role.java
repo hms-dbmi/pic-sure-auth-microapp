@@ -23,6 +23,8 @@ public class Role extends BaseEntity {
             inverseJoinColumns = {@JoinColumn(name = "privilege_id")})
     private Set<Privilege> privileges;
 
+    private int version;
+
     public String getName() {
         return name;
     }
@@ -46,9 +48,17 @@ public class Role extends BaseEntity {
     public void setPrivileges(Set<Privilege> privileges) {
         this.privileges = privileges;
     }
-    
+
+    public int getRoleVersion() {
+        return version;
+    }
+
+    public void setRoleVersion(int roleVersion) {
+        this.version = roleVersion;
+    }
+
     public String toString() {
-    		return uuid.toString() + " ___ " + name + " ___ " + description + " ___ (" + (privileges==null?"NO PRIVILEGES DEFINED":privileges.stream().map(Privilege::toString).collect(Collectors.joining("},{"))) + ")";
+    		return uuid.toString() + " ___ " + name + " ___ " + description + " ___ " + version + " ___(" + (privileges==null?"NO PRIVILEGES DEFINED":privileges.stream().map(Privilege::toString).collect(Collectors.joining("},{"))) + ")";
     }
 
 }

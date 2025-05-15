@@ -1,0 +1,1 @@
+ALTER TABLE user ADD COLUMN id int default 0;

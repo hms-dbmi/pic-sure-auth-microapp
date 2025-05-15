@@ -75,6 +75,9 @@ public class StudyMetaData {
     @JsonProperty("additional_information")
     private String additionalInformation;
 
+    @JsonProperty("studyMetaDataVersion")
+    private int studyMetaDataVersion;
+
     public String getStudyIdentifier() {
         return studyIdentifier;
     }
@@ -257,5 +260,21 @@ public class StudyMetaData {
 
     public void setAdditionalInformation(String additionalInformation) {
         this.additionalInformation = additionalInformation;
+    }
+
+    public int getStudyMetaDataVersion() {
+        return studyMetaDataVersion;
+    }
+
+    public void setStudyMetaDataVersion(int studyMetaDataVersion) {
+        this.studyMetaDataVersion = studyMetaDataVersion;
+    }
+
+    public Boolean getHarmonized() {
+        return isHarmonized;
+    }
+
+    public void setHarmonized(Boolean harmonized) {
+        isHarmonized = harmonized;
     }
 }

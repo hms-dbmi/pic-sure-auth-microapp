@@ -78,7 +78,7 @@ public class RoleService {
         String projectId = projectMetadata.getStudyIdentifier();
         String consentCode = projectMetadata.getConsentGroupCode();
         String newRoleName = org.apache.commons.lang3.StringUtils.isNotBlank(consentCode) ? "MANAGED_" + projectId + "_" + consentCode : "MANAGED_" + projectId;
-        Role role = this.createRole(newRoleName, "MANAGED role " + newRoleName);
+        Role role = this.createRole(newRoleName, "MANAGED role " + newRoleName, projectMetadata.getStudyMetaDataVersion());
         if (projectMetadata.getStudyType().equalsIgnoreCase("public")) {
             publicAccessRoles.add(role);
         }
@@ -177,7 +177,7 @@ public class RoleService {
         return this.roleRepository.findByName(roleName);
     }
 
-    public Role createRole(String roleName, String roleDescription) {
+    public Role createRole(String roleName, String roleDescription, int version) {
         if (roleName.isEmpty()) {
             logger.info("createRole() roleName is empty");
             return null;
@@ -185,10 +185,7 @@ public class RoleService {
         logger.info("createRole() New PSAMA role name:{}", roleName);
         // Create the Role in the repository, if it does not exist. Otherwise, add it.
         Role role = findByName(roleName);
-        if (role != null) {
-            // Role already exists
-            logger.debug("upsertRole() role already exists");
-        } else {
+        if (role == null) {
             logger.info("createRole() New PSAMA role name:{}", roleName);
             // This is a new Role
             role = new Role();
@@ -198,6 +195,13 @@ public class RoleService {
             // corresponding Privilege (with gates) and AccessRule is added.
             role.setPrivileges(privilegeService.addPrivileges(role, this.fenceMappingUtility.getFENCEMapping()));
             logger.info("upsertRole() created new role");
+        } else if (role.getRoleVersion() != version) {
+            role.setName(roleName);
+            role.setDescription(roleDescription);
+            role.setPrivileges(privilegeService.addPrivileges(role, this.fenceMappingUtility.getFENCEMapping()));
+            role.setRoleVersion(version);
+        } else {
+            logger.debug("upsertRole() role already exists");
         }
 
         return role;
@@ -207,7 +211,7 @@ public class RoleService {
      * Only use this service if you know this is a new role. Otherwise, use createRole().
      * @param roleName The name of the role to be created.
      * @param roleDescription Description of the role.
-     * @return
+     * @return Role
      */
     public Role createNewRole(String roleName, String roleDescription) {
         if(roleName.isEmpty()){
