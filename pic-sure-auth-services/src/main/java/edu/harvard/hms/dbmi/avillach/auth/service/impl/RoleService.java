@@ -182,23 +182,25 @@ public class RoleService {
             logger.info("createRole() roleName is empty");
             return null;
         }
-        logger.info("createRole() New PSAMA role name:{}", roleName);
-        // Create the Role in the repository, if it does not exist. Otherwise, add it.
+
         Role role = findByName(roleName);
         if (role != null) {
             // Role already exists
-            logger.debug("upsertRole() role already exists");
+            logger.debug("upsertRole() role: {} already exists", role.getName());
         } else {
             logger.info("createRole() New PSAMA role name:{}", roleName);
             // This is a new Role
             role = new Role();
             role.setName(roleName);
             role.setDescription(roleDescription);
-            // Since this is a new Role, we need to ensure that the
-            // corresponding Privilege (with gates) and AccessRule is added.
-            role.setPrivileges(privilegeService.addPrivileges(role, this.fenceMappingUtility.getFENCEMapping()));
-            logger.info("upsertRole() created new role");
+            logger.info("createRole() created new role");
         }
+
+        /*
+         * Even if a role already exists, there is a chance the privileges have changed. We need to update all
+         * roles' privileges out of precaution.
+         */
+        role.setPrivileges(privilegeService.addPrivileges(role, this.fenceMappingUtility.getFENCEMapping()));
 
         return role;
     }

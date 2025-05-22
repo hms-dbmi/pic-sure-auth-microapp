@@ -7,6 +7,7 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.model.fenceMapping.StudyMetaData;
 import edu.harvard.hms.dbmi.avillach.auth.repository.PrivilegeRepository;
 import jakarta.annotation.PostConstruct;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -124,7 +125,7 @@ public class PrivilegeService {
         logger.info("addFENCEPrivileges() starting, adding privilege(s) to role {}", roleName);
 
         //each project can have up to three privileges: Parent  |  Harmonized  | Topmed
-        //harmonized has 2 ARs for parent + harminized and harmonized only
+        //harmonized has 2 ARs for parent + harmonized and harmonized only
         //Topmed has up to three ARs for topmed / topmed + parent / topmed + harmonized
         Set<Privilege> privs = r.getPrivileges();
         if (privs == null) {
@@ -151,15 +152,13 @@ public class PrivilegeService {
             return privs;
         }
 
-        logger.info("addPrivileges() This is a new privilege");
-
         String dataType = projectMetadata.getDataType();
         Boolean isHarmonized = projectMetadata.getIsHarmonized();
         String concept_path = projectMetadata.getTopLevelPath();
         String projectAlias = projectMetadata.getAbbreviatedName();
 
-        // we need to add escape sequence back in to the path for parsing later (also need to double escape the regex)
-        // we need to do this for the query Template and scopes, but should NOT do this for the rules.
+        // Need to add the escape sequence back in to the path for parsing later (also need to doubly escape the regex).
+        // Need to do this for the query Template and scopes, but should NOT do this for the rules.
         if (concept_path != null) {
             concept_path = concept_path.replaceAll("\\\\", "\\\\\\\\");
         }
@@ -285,12 +284,9 @@ public class PrivilegeService {
         String privilegeName = "PRIV_MANAGED_" + studyIdentifier + "_" + consentGroup + "_TOPMED";
         Privilege priv = this.findByName(privilegeName);
 
-        if (priv != null) {
-            logger.info("upsertTopmedPrivilege() {} already exists", privilegeName);
-            return priv;
+        if (priv == null) {
+            priv = new Privilege();
         }
-
-        priv = new Privilege();
 
         try {
             buildPrivilegeObject(priv, privilegeName, studyIdentifier, consentGroup);
@@ -345,12 +341,14 @@ public class PrivilegeService {
     private void buildPrivilegeObject(Privilege priv, String privilegeName, String studyIdentifier, String consentGroup) {
         priv.setApplication(picSureApp);
         priv.setName(privilegeName);
-        priv.setDescription("MANAGED privilege for Topmed " + studyIdentifier + "." + consentGroup);
+        String consent = studyIdentifier + (StringUtils.isNotBlank(consentGroup) ? "." + consentGroup : "");
+        priv.setDescription("MANAGED privilege for Topmed " + consent);
 
         String consentConceptPath = escapePath(fence_topmed_consent_group_concept_path);
         fence_harmonized_concept_path = escapePath(fence_harmonized_concept_path);
 
-        String queryTemplateText = "{\"categoryFilters\": {\"" + consentConceptPath + "\":[\"" + studyIdentifier + "." + consentGroup + "\"]},"
+
+        String queryTemplateText = "{\"categoryFilters\": {\"" + consentConceptPath + "\":[\"" + consent + "\"]},"
                 + "\"numericFilters\":{},\"requiredFields\":[],"
                 + "\"fields\":[\"" + topmedAccessionField + "\"],"
                 + "\"variantInfoFilters\":[{\"categoryVariantInfoFilters\":{},\"numericVariantInfoFilters\":{}}],"
