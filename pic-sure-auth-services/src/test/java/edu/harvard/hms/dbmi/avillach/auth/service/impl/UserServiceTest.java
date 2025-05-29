@@ -484,7 +484,7 @@ public class UserServiceTest {
         configureUserSecurityContext(user);
         when(userRepository.saveAll(List.of(user))).thenReturn(List.of(user));
 
-        assertThrows(NullPointerException.class, () -> {
+        assertThrows(IllegalArgumentException.class, () -> {
             List<User> result = userService.addUsers(List.of(user));
             assertNull(result.getFirst().getRoles());
         });
