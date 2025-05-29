@@ -477,7 +477,7 @@ public class UserServiceTest {
     }
 
     @Test
-    public void testAddUsers_withUserHavingNullRoleSet() {
+    public void testAddUsers_withUserHavingEmptyRoleSet() {
         User user = createTestUser();
         user.setRoles(null);
 
