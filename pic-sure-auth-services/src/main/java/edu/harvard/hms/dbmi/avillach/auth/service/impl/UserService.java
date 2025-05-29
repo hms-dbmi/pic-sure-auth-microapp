@@ -250,9 +250,9 @@ public class UserService {
     }
 
     /**
-     * check all referenced field if they are already in database. If
-     * they are in database, then retrieve it by id, and attach it to
-     * user object.
+     * Check all referenced fields if they are already in a database. If
+     * they are in the database, then retrieve it by id and attach it to
+     * a user object.
      *
      * @param users A list of users
      */
