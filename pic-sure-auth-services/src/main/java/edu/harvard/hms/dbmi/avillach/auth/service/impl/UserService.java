@@ -694,7 +694,7 @@ public class UserService {
         Map<String, Role> existingRoles = roleService.findByNames(roleNames);
         List<Role> newRoles = roleNames.stream()
                 .filter(roleName -> !currentRoleNames.contains(roleName))
-                .map(roleName -> existingRoles.getOrDefault(roleName, this.roleService.createNewRole(roleName, "MANAGED role " + roleName)))
+                .map(roleName -> existingRoles.getOrDefault(roleName, this.roleService.getOrCreateRole(roleName, "MANAGED role " + roleName)))
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
 
