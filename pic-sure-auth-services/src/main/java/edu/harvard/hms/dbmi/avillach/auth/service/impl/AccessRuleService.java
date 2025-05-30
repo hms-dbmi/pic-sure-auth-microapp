@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 @Service
 public class AccessRuleService {
@@ -587,10 +588,11 @@ public class AccessRuleService {
         if (ar.getSubAccessRule() == null) {
             ar.setSubAccessRule(new HashSet<>());
         }
-        ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
-        ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, conceptPath, projectAlias));
-        ar.getSubAccessRule().addAll(getTopmedRestrictedSubRules());
+        addUniqueSubRules(ar, getAllowedQueryTypeRules());
+        addUniqueSubRules(ar, getPhenotypeSubRules(studyIdentifier, conceptPath, projectAlias));
+        addUniqueSubRules(ar, getTopmedRestrictedSubRules());
     }
+
 
     /**
      * Configures the harmonized AccessRule with gates and sub-rules.
@@ -607,9 +609,10 @@ public class AccessRuleService {
         if (ar.getSubAccessRule() == null) {
             ar.setSubAccessRule(new HashSet<>());
         }
-        ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
-        ar.getSubAccessRule().addAll(getHarmonizedSubRules());
-        ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, conceptPath, projectAlias));
+
+        addUniqueSubRules(ar, getAllowedQueryTypeRules());
+        addUniqueSubRules(ar, getHarmonizedSubRules());
+        addUniqueSubRules(ar, getPhenotypeSubRules(studyIdentifier, conceptPath, projectAlias));
     }
 
     protected AccessRule configureClinicalAccessRuleWithPhenoSubRule(AccessRule ar, String studyIdentifier, String consent_group, String conceptPath, String projectAlias) {
@@ -619,9 +622,10 @@ public class AccessRuleService {
         if (ar.getSubAccessRule() == null) {
             ar.setSubAccessRule(new HashSet<>());
         }
-        ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
-        ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, conceptPath, projectAlias));
-        ar.getSubAccessRule().add(createPhenotypeSubRule(fence_topmed_consent_group_concept_path, "ALLOW_TOPMED_CONSENT", "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
+
+        addUniqueSubRules(ar, getAllowedQueryTypeRules());
+        addUniqueSubRules(ar, getPhenotypeSubRules(studyIdentifier, conceptPath, projectAlias));
+        addUniqueSubRules(ar, Collections.singleton(createPhenotypeSubRule(fence_topmed_consent_group_concept_path, "ALLOW_TOPMED_CONSENT", "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true)));
 
         return ar;
     }
@@ -714,7 +718,6 @@ public class AccessRuleService {
     }
 
     protected Collection<? extends AccessRule> getPhenotypeSubRules(String studyIdentifier, String conceptPath, String alias) {
-
         Set<AccessRule> rules = new HashSet<AccessRule>();
         //categorical filters will always contain at least one entry (for the consent groups); it will never be empty
         rules.add(createPhenotypeSubRule(fence_parent_consent_group_concept_path, "ALLOW_PARENT_CONSENT", "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
@@ -814,11 +817,7 @@ public class AccessRuleService {
             rule.getGates().addAll(getGates(includeParent, false, true));
         }
 
-        if (rule.getSubAccessRule() == null) {
-            rule.setSubAccessRule(new HashSet<>(getAllowedQueryTypeRules()));
-        } else {
-            rule.getSubAccessRule().addAll(getAllowedQueryTypeRules());
-        }
+        addUniqueSubRules(rule, getAllowedQueryTypeRules());
 
         return rule;
     }
@@ -830,11 +829,9 @@ public class AccessRuleService {
             )));
         }
 
-        if (rule.getSubAccessRule() == null) {
-            rule.setSubAccessRule(new HashSet<>(getAllowedQueryTypeRules()));
-            rule.getSubAccessRule().addAll(getHarmonizedSubRules());
-            rule.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, parentConceptPath, projectAlias));
-        }
+        addUniqueSubRules(rule, getAllowedQueryTypeRules());
+        addUniqueSubRules(rule, getHarmonizedSubRules());
+        addUniqueSubRules(rule, getPhenotypeSubRules(studyIdentifier, parentConceptPath, projectAlias));
 
         return rule;
     }
@@ -1048,4 +1045,29 @@ public class AccessRuleService {
     public List<AccessRule> getAccessRulesByPrivilegeIds(List<UUID> privilegeIds) {
         return this.accessRuleRepo.getAccessRulesByPrivilegeIds(privilegeIds);
     }
+
+    /**
+     * Adds unique sub-rules to the provided parent access rule. This method ensures that duplicate sub-rules,
+     * based on their names, are not added to the parent access rule.
+     *
+     * @param accessRule the parent access rule to which the sub-rules are added
+     * @param subRulesToAdd the collection of sub-rules to be added to the parent access rule
+     */
+    private void addUniqueSubRules(AccessRule accessRule, Collection<? extends AccessRule> subRulesToAdd) {
+        if (accessRule.getSubAccessRule() == null) {
+            accessRule.setSubAccessRule(new HashSet<>());
+        }
+
+        Set<String> existingRuleNames = accessRule.getSubAccessRule().stream()
+                .map(AccessRule::getName)
+                .collect(Collectors.toSet());
+
+        for (AccessRule subRule : subRulesToAdd) {
+            if (!existingRuleNames.contains(subRule.getName())) {
+                accessRule.getSubAccessRule().add(subRule);
+                existingRuleNames.add(subRule.getName());
+            }
+        }
+    }
+
 }
