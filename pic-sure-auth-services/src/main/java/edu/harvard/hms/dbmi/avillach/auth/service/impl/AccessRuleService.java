@@ -581,7 +581,6 @@ public class AccessRuleService {
      * @param projectAlias    The project alias.
      */
     protected void configureAccessRule(AccessRule ar, String studyIdentifier, String consent_group, String conceptPath, String projectAlias) {
-        if (ar.getGates() == null) {
         ar.setGates(new HashSet<>());
         ar.getGates().addAll(getGates(true, false, false));
 
@@ -591,7 +590,6 @@ public class AccessRuleService {
         ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
         ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, conceptPath, projectAlias));
         ar.getSubAccessRule().addAll(getTopmedRestrictedSubRules());
-        }
     }
 
     /**
@@ -601,10 +599,8 @@ public class AccessRuleService {
      * @param studyIdentifier The study identifier.
      * @param conceptPath     The concept path.
      * @param projectAlias    The project alias.
-     * @return
      */
     protected void configureHarmonizedAccessRule(AccessRule ar, String studyIdentifier, String conceptPath, String projectAlias) {
-        if (ar.getGates() == null) {
         ar.setGates(new HashSet<>());
         ar.getGates().add(upsertConsentGate("HARMONIZED_CONSENT", "$.query.query.categoryFilters." + fence_harmonized_consent_group_concept_path + "[*]", true, "harmonized data"));
 
@@ -614,11 +610,9 @@ public class AccessRuleService {
         ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
         ar.getSubAccessRule().addAll(getHarmonizedSubRules());
         ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, conceptPath, projectAlias));
-        }
     }
 
     protected AccessRule configureClinicalAccessRuleWithPhenoSubRule(AccessRule ar, String studyIdentifier, String consent_group, String conceptPath, String projectAlias) {
-        if (ar.getGates() == null) {
         ar.setGates(new HashSet<>());
         ar.getGates().addAll(getGates(true, false, true));
 
@@ -628,7 +622,6 @@ public class AccessRuleService {
         ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
         ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, conceptPath, projectAlias));
         ar.getSubAccessRule().add(createPhenotypeSubRule(fence_topmed_consent_group_concept_path, "ALLOW_TOPMED_CONSENT", "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
-        }
 
         return ar;
     }
@@ -676,7 +669,6 @@ public class AccessRuleService {
         // Return the set of AccessRules
         return rules;
     }
-
 
 
     private Collection<? extends AccessRule> getTopmedRestrictedSubRules() {
@@ -839,9 +831,9 @@ public class AccessRuleService {
         }
 
         if (rule.getSubAccessRule() == null) {
-        rule.setSubAccessRule(new HashSet<>(getAllowedQueryTypeRules()));
-        rule.getSubAccessRule().addAll(getHarmonizedSubRules());
-        rule.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, parentConceptPath, projectAlias));
+            rule.setSubAccessRule(new HashSet<>(getAllowedQueryTypeRules()));
+            rule.getSubAccessRule().addAll(getHarmonizedSubRules());
+            rule.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, parentConceptPath, projectAlias));
         }
 
         return rule;
