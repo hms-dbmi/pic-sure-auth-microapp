@@ -727,6 +727,7 @@ public class AccessRuleService {
             rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true));
             rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQ_FIELDS", false));
             rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.anyRecordOf.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "ANY_RECORD_OF", false));
+            rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.anyRecordOfMulti.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "ANY_RECORD_OF_MULTI", false));
         }
 
         rules.add(createPhenotypeSubRule(conceptPath, alias + "_" + studyIdentifier, "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true));
@@ -734,6 +735,7 @@ public class AccessRuleService {
         rules.add(createPhenotypeSubRule(conceptPath, alias + "_" + studyIdentifier, "$.query.query.fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false));
         rules.add(createPhenotypeSubRule(conceptPath, alias + "_" + studyIdentifier, "$.query.query.requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQUIRED_FIELDS", false));
         rules.add(createPhenotypeSubRule(conceptPath, alias + "_" + studyIdentifier, "$.query.query.anyRecordOf.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "ANY_RECORD_OF", false));
+        rules.add(createPhenotypeSubRule(conceptPath, alias + "_" + studyIdentifier, "$.query.query.anyRecordOfMulti.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "ANY_RECORD_OF_MULTI", false));
 
         return rules;
     }
@@ -757,6 +759,7 @@ public class AccessRuleService {
             rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true));
             rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQ_FIELDS", false));
             rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.anyRecordOf.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "ANY_RECORD_OF", false));
+            rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.anyRecordOfMulti.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "ANY_RECORD_OF_MULTI", false));
         }
 
         rules.add(createPhenotypeSubRule(fence_harmonized_concept_path, "HARMONIZED", "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true));
@@ -764,6 +767,7 @@ public class AccessRuleService {
         rules.add(createPhenotypeSubRule(fence_harmonized_concept_path, "HARMONIZED", "$.query.query.fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false));
         rules.add(createPhenotypeSubRule(fence_harmonized_concept_path, "HARMONIZED", "$.query.query.requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQUIRED_FIELDS", false));
         rules.add(createPhenotypeSubRule(fence_harmonized_concept_path, "HARMONIZED", "$.query.query.anyRecordOf.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "ANY_RECORD_OF", false));
+        rules.add(createPhenotypeSubRule(fence_harmonized_concept_path, "HARMONIZED", "$.query.query.anyRecordOfMulti.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "ANY_RECORD_OF_MULTI", false));
 
         return rules;
     }
@@ -784,6 +788,7 @@ public class AccessRuleService {
             rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true));
             rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQ_FIELDS", false));
             rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.anyRecordOf.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "ANY_RECORD_OF", false));
+            rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.anyRecordOfMulti.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "ANY_RECORD_OF_MULTI", false));
         }
 
         rules.add(createPhenotypeSubRule(null, alias + "_" + studyIdentifier + "_" + consentCode, "$.query.query.numericFilters.[*]", AccessRule.TypeNaming.IS_EMPTY, "DISALLOW_NUMERIC", false));
