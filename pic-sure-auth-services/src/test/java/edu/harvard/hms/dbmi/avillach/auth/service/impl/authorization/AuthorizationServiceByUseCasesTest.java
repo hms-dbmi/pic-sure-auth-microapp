@@ -421,9 +421,6 @@ public class AuthorizationServiceByUseCasesTest {
     public static String sample_caseG_pass = "{\n" +
             "  \"query\": {\n" +
             "    \"categoryFilters\": {\n" +
-            "      \"\\\\_consents\\\\\": [\n" +
-            "        \"phs000956.c2\",\"phs001189.c1\",\"tutorial-biolincc_digitalis\",\"phs001143.c1\",\"phs001032.c1\",\"phs001013.c1\",\"phs001013.c2\",\"phs000280.c1\",\"phs000284.c1\",\"phs000200.c1\",\"phs000280.c2\",\"phs001040.c1\",\"phs000951.c1\",\"phs000974.c1\",\"tutorial-biolincc_camp\",\"phs000997.c1\",\"phs000200.c2\",\"phs000007.c2\",\"phs000974.c2\",\"phs000007.c1\",\"phs000993.c1\",\"phs000179.c1\",\"phs000993.c2\",\"phs001062.c1\",\"phs000964.c3\",\"phs000964.c4\",\"phs000285.c2\",\"phs000285.c1\",\"tutorial-biolincc_framingham\",\"phs000964.c1\",\"phs000964.c2\",\"phs000287.c1\",\"phs001211.c2\",\"phs001211.c1\",\"phs000287.c2\",\"phs000287.c3\",\"phs000287.c4\",\"open_access-1000Genomes\",\"phs001024.c1\",\"phs000209.c1\",\"phs000209.c2\"\n" +
-            "      ]\n" +
             "    },\n" +
             "    \"numericFilters\": {},\n" +
             "    \"requiredFields\": [],\n" +
