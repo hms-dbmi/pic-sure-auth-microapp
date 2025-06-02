@@ -378,10 +378,17 @@ public class AccessRuleService {
             }
         } catch (PathNotFoundException ex) {
             if (accessRuleType == AccessRule.TypeNaming.IS_EMPTY) {
-                // We could return accessRuleType == AccessRule.TypeNaming.IS_EMPTY directly, but we want to log the reason
-                logger.debug("extractAndCheckRule() -> JsonPath.parse().read() PathNotFound;  passing IS_EMPTY rule {}", rule);
+                // We could return true directly, but we want to log the reason
+                logger.debug("extractAndCheckRule() -> JsonPath.parse().read() PathNotFound;  passing rule {} for type {}", rule, accessRuleType);
                 return true;
             }
+
+            if(accessRuleType == AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY ||
+            accessRuleType == AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY_IGNORE_CASE) {
+                logger.debug("extractAndCheckRule() -> JsonPath.parse().read() PathNotFound;  passing rule {} for type {}", rule, accessRuleType);
+                return true;
+            }
+
             logger.debug("extractAndCheckRule() -> JsonPath.parse().read() throws exception with parsedRequestBody - {} : {} - {}", parsedRequestBody, ex.getClass().getSimpleName(), ex.getMessage());
             return false;
         }
