@@ -699,6 +699,7 @@ public class UserService {
                 .collect(Collectors.toList());
 
         if (!newRoles.isEmpty()) {
+            logger.debug("upsertRole() updated {} roles from user", newRoles.size());
             newRoles = roleService.persistAll(newRoles);
             current_user.getRoles().addAll(newRoles);
         }
