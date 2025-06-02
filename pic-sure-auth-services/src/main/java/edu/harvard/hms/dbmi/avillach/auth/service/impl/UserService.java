@@ -694,7 +694,7 @@ public class UserService {
         Map<String, Role> existingRoles = roleService.findByNames(roleNames);
         List<Role> newRoles = roleNames.stream()
                 .filter(roleName -> !currentRoleNames.contains(roleName))
-                .map(roleName -> existingRoles.getOrDefault(roleName, this.roleService.getOrCreateRole(roleName, "MANAGED role " + roleName)))
+                .map(roleName -> existingRoles.getOrDefault(roleName, this.roleService.createRole(roleName, "MANAGED role " + roleName)))
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
 
@@ -720,6 +720,7 @@ public class UserService {
         // Every user has access to public datasets by default.
         current_user.getRoles().addAll(roleService.getPublicAccessRoles());
 
+        logger.debug("User roles: {}", current_user.getRoles().stream().filter(Objects::nonNull).map(Role::getName).collect(Collectors.joining(", ")));
         try {
             current_user = this.changeRole(current_user, current_user.getRoles());
             logger.debug("upsertRole() updated user, who now has {} roles.", current_user.getRoles().size());
