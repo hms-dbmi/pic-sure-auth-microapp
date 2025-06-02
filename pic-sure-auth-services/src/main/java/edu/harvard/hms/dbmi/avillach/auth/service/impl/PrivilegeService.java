@@ -207,12 +207,10 @@ public class PrivilegeService {
 
         // Check if the Privilege already exists
         Privilege priv = this.findByName(privilegeName);
-        if (priv != null) {
-            logger.info("{} already exists", privilegeName);
-            return priv;
+        if (priv == null) {
+            priv = new Privilege();
         }
 
-        priv = new Privilege();
         try {
             priv.setApplication(picSureApp);
             priv.setName(privilegeName);

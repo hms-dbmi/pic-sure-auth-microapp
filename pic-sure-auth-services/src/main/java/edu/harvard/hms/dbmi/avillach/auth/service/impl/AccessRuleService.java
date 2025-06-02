@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 @Service
 public class AccessRuleService {
@@ -386,11 +387,11 @@ public class AccessRuleService {
         }
 
         if (accessRuleType == AccessRule.TypeNaming.IS_EMPTY
-                || accessRuleType == AccessRule.TypeNaming.IS_NOT_EMPTY) {
+            || accessRuleType == AccessRule.TypeNaming.IS_NOT_EMPTY) {
             if (requestBodyValue == null
-                    || (requestBodyValue instanceof String && ((String) requestBodyValue).isEmpty())
-                    || (requestBodyValue instanceof Collection && ((Collection) requestBodyValue).isEmpty())
-                    || (requestBodyValue instanceof Map && ((Map) requestBodyValue).isEmpty())) {
+                || (requestBodyValue instanceof String && ((String) requestBodyValue).isEmpty())
+                || (requestBodyValue instanceof Collection && ((Collection) requestBodyValue).isEmpty())
+                || (requestBodyValue instanceof Map && ((Map) requestBodyValue).isEmpty())) {
                 return accessRuleType == AccessRule.TypeNaming.IS_EMPTY;
             } else {
                 return accessRuleType == AccessRule.TypeNaming.IS_NOT_EMPTY;
@@ -428,7 +429,7 @@ public class AccessRuleService {
                         return true;
 
                     if ((accessRule.getCheckMapKeyOnly() == null || !accessRule.getCheckMapKeyOnly())
-                            && evaluateNode(entry.getValue(), accessRule))
+                        && evaluateNode(entry.getValue(), accessRule))
                         return true;
                 }
                 return false;
@@ -451,7 +452,7 @@ public class AccessRuleService {
                         return false;
 
                     if ((accessRule.getCheckMapKeyOnly() == null || !accessRule.getCheckMapKeyOnly())
-                            && !evaluateNode(entry.getValue(), accessRule))
+                        && !evaluateNode(entry.getValue(), accessRule))
                         return false;
                 }
 
@@ -581,18 +582,17 @@ public class AccessRuleService {
      * @param projectAlias    The project alias.
      */
     protected void configureAccessRule(AccessRule ar, String studyIdentifier, String consent_group, String conceptPath, String projectAlias) {
-        if (ar.getGates() == null) {
-            ar.setGates(new HashSet<>());
-            ar.getGates().addAll(getGates(true, false, false));
+        ar.setGates(new HashSet<>());
+        ar.getGates().addAll(getGates(true, false, false));
 
-            if (ar.getSubAccessRule() == null) {
-                ar.setSubAccessRule(new HashSet<>());
-            }
-            ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
-            ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, conceptPath, projectAlias));
-            ar.getSubAccessRule().addAll(getTopmedRestrictedSubRules());
+        if (ar.getSubAccessRule() == null) {
+            ar.setSubAccessRule(new HashSet<>());
         }
+        addUniqueSubRules(ar, getAllowedQueryTypeRules());
+        addUniqueSubRules(ar, getPhenotypeSubRules(studyIdentifier, conceptPath, projectAlias));
+        addUniqueSubRules(ar, getTopmedRestrictedSubRules());
     }
+
 
     /**
      * Configures the harmonized AccessRule with gates and sub-rules.
@@ -601,34 +601,31 @@ public class AccessRuleService {
      * @param studyIdentifier The study identifier.
      * @param conceptPath     The concept path.
      * @param projectAlias    The project alias.
-     * @return
      */
     protected void configureHarmonizedAccessRule(AccessRule ar, String studyIdentifier, String conceptPath, String projectAlias) {
-        if (ar.getGates() == null) {
-            ar.setGates(new HashSet<>());
-            ar.getGates().add(upsertConsentGate("HARMONIZED_CONSENT", "$.query.query.categoryFilters." + fence_harmonized_consent_group_concept_path + "[*]", true, "harmonized data"));
+        ar.setGates(new HashSet<>());
+        ar.getGates().add(upsertConsentGate("HARMONIZED_CONSENT", "$.query.query.categoryFilters." + fence_harmonized_consent_group_concept_path + "[*]", true, "harmonized data"));
 
-            if (ar.getSubAccessRule() == null) {
-                ar.setSubAccessRule(new HashSet<>());
-            }
-            ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
-            ar.getSubAccessRule().addAll(getHarmonizedSubRules());
-            ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, conceptPath, projectAlias));
+        if (ar.getSubAccessRule() == null) {
+            ar.setSubAccessRule(new HashSet<>());
         }
+
+        addUniqueSubRules(ar, getAllowedQueryTypeRules());
+        addUniqueSubRules(ar, getHarmonizedSubRules());
+        addUniqueSubRules(ar, getPhenotypeSubRules(studyIdentifier, conceptPath, projectAlias));
     }
 
     protected AccessRule configureClinicalAccessRuleWithPhenoSubRule(AccessRule ar, String studyIdentifier, String consent_group, String conceptPath, String projectAlias) {
-        if (ar.getGates() == null) {
-            ar.setGates(new HashSet<>());
-            ar.getGates().addAll(getGates(true, false, true));
+        ar.setGates(new HashSet<>());
+        ar.getGates().addAll(getGates(true, false, true));
 
-            if (ar.getSubAccessRule() == null) {
-                ar.setSubAccessRule(new HashSet<>());
-            }
-            ar.getSubAccessRule().addAll(getAllowedQueryTypeRules());
-            ar.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, conceptPath, projectAlias));
-            ar.getSubAccessRule().add(createPhenotypeSubRule(fence_topmed_consent_group_concept_path, "ALLOW_TOPMED_CONSENT", "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
+        if (ar.getSubAccessRule() == null) {
+            ar.setSubAccessRule(new HashSet<>());
         }
+
+        addUniqueSubRules(ar, getAllowedQueryTypeRules());
+        addUniqueSubRules(ar, getPhenotypeSubRules(studyIdentifier, conceptPath, projectAlias));
+        addUniqueSubRules(ar, Collections.singleton(createPhenotypeSubRule(fence_topmed_consent_group_concept_path, "ALLOW_TOPMED_CONSENT", "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true)));
 
         return ar;
     }
@@ -678,7 +675,6 @@ public class AccessRuleService {
     }
 
 
-
     private Collection<? extends AccessRule> getTopmedRestrictedSubRules() {
         Set<AccessRule> rules = new HashSet<AccessRule>();
         rules.add(upsertTopmedRestrictedSubRule("CATEGORICAL", "$.query.query.variantInfoFilters[*].categoryVariantInfoFilters.*"));
@@ -722,7 +718,6 @@ public class AccessRuleService {
     }
 
     protected Collection<? extends AccessRule> getPhenotypeSubRules(String studyIdentifier, String conceptPath, String alias) {
-
         Set<AccessRule> rules = new HashSet<AccessRule>();
         //categorical filters will always contain at least one entry (for the consent groups); it will never be empty
         rules.add(createPhenotypeSubRule(fence_parent_consent_group_concept_path, "ALLOW_PARENT_CONSENT", "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "", true));
@@ -731,12 +726,16 @@ public class AccessRuleService {
             rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false));
             rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true));
             rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQ_FIELDS", false));
+            rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.anyRecordOf.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "ANY_RECORD_OF", false));
+            rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.anyRecordOfMulti.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "ANY_RECORD_OF_MULTI", false));
         }
 
         rules.add(createPhenotypeSubRule(conceptPath, alias + "_" + studyIdentifier, "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true));
         rules.add(createPhenotypeSubRule(conceptPath, alias + "_" + studyIdentifier, "$.query.query.numericFilters", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "NUMERIC", true));
         rules.add(createPhenotypeSubRule(conceptPath, alias + "_" + studyIdentifier, "$.query.query.fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false));
         rules.add(createPhenotypeSubRule(conceptPath, alias + "_" + studyIdentifier, "$.query.query.requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQUIRED_FIELDS", false));
+        rules.add(createPhenotypeSubRule(conceptPath, alias + "_" + studyIdentifier, "$.query.query.anyRecordOf.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "ANY_RECORD_OF", false));
+        rules.add(createPhenotypeSubRule(conceptPath, alias + "_" + studyIdentifier, "$.query.query.anyRecordOfMulti.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "ANY_RECORD_OF_MULTI", false));
 
         return rules;
     }
@@ -759,12 +758,16 @@ public class AccessRuleService {
             rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false));
             rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true));
             rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQ_FIELDS", false));
+            rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.anyRecordOf.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "ANY_RECORD_OF", false));
+            rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.anyRecordOfMulti.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "ANY_RECORD_OF_MULTI", false));
         }
 
         rules.add(createPhenotypeSubRule(fence_harmonized_concept_path, "HARMONIZED", "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true));
         rules.add(createPhenotypeSubRule(fence_harmonized_concept_path, "HARMONIZED", "$.query.query.numericFilters", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "NUMERIC", true));
         rules.add(createPhenotypeSubRule(fence_harmonized_concept_path, "HARMONIZED", "$.query.query.fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false));
         rules.add(createPhenotypeSubRule(fence_harmonized_concept_path, "HARMONIZED", "$.query.query.requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQUIRED_FIELDS", false));
+        rules.add(createPhenotypeSubRule(fence_harmonized_concept_path, "HARMONIZED", "$.query.query.anyRecordOf.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "ANY_RECORD_OF", false));
+        rules.add(createPhenotypeSubRule(fence_harmonized_concept_path, "HARMONIZED", "$.query.query.anyRecordOfMulti.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "ANY_RECORD_OF_MULTI", false));
 
         return rules;
     }
@@ -784,6 +787,8 @@ public class AccessRuleService {
             rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.fields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "FIELDS", false));
             rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.categoryFilters", AccessRule.TypeNaming.ALL_CONTAINS, "CATEGORICAL", true));
             rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.requiredFields.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "REQ_FIELDS", false));
+            rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.anyRecordOf.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "ANY_RECORD_OF", false));
+            rules.add(createPhenotypeSubRule(underscorePath, "ALLOW " + underscorePath, "$.query.query.anyRecordOfMulti.[*]", AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY, "ANY_RECORD_OF_MULTI", false));
         }
 
         rules.add(createPhenotypeSubRule(null, alias + "_" + studyIdentifier + "_" + consentCode, "$.query.query.numericFilters.[*]", AccessRule.TypeNaming.IS_EMPTY, "DISALLOW_NUMERIC", false));
@@ -817,11 +822,7 @@ public class AccessRuleService {
             rule.getGates().addAll(getGates(includeParent, false, true));
         }
 
-        if (rule.getSubAccessRule() == null) {
-            rule.setSubAccessRule(new HashSet<>(getAllowedQueryTypeRules()));
-        } else {
-            rule.getSubAccessRule().addAll(getAllowedQueryTypeRules());
-        }
+        addUniqueSubRules(rule, getAllowedQueryTypeRules());
 
         return rule;
     }
@@ -833,11 +834,9 @@ public class AccessRuleService {
             )));
         }
 
-        if (rule.getSubAccessRule() == null) {
-            rule.setSubAccessRule(new HashSet<>(getAllowedQueryTypeRules()));
-            rule.getSubAccessRule().addAll(getHarmonizedSubRules());
-            rule.getSubAccessRule().addAll(getPhenotypeSubRules(studyIdentifier, parentConceptPath, projectAlias));
-        }
+        addUniqueSubRules(rule, getAllowedQueryTypeRules());
+        addUniqueSubRules(rule, getHarmonizedSubRules());
+        addUniqueSubRules(rule, getPhenotypeSubRules(studyIdentifier, parentConceptPath, projectAlias));
 
         return rule;
     }
@@ -918,7 +917,7 @@ public class AccessRuleService {
 
         String conceptPath = fence_topmed_consent_group_concept_path;
         // Check if the conceptPath has `\\\\` present. This technically represents `\\`.
-        if(conceptPath != null && conceptPath.contains("\\\\")) {
+        if (conceptPath != null && conceptPath.contains("\\\\")) {
             // This will convert all `\\\\` to `\\`.
             conceptPath = conceptPath.replaceAll("\\\\\\\\", "\\\\");
         }
@@ -1001,8 +1000,8 @@ public class AccessRuleService {
         logger.debug("createPhenotypeSubRule() Creating new access rule {}", ar_name);
 
         // Check if the conceptPath has `\\\\` present. This technically represents `\\`.
-        if(conceptPath != null && conceptPath.contains("\\\\")) {
-           // This will convert all `\\\\` to `\\`.
+        if (conceptPath != null && conceptPath.contains("\\\\")) {
+            // This will convert all `\\\\` to `\\`.
             conceptPath = conceptPath.replaceAll("\\\\\\\\", "\\\\");
         }
 
@@ -1051,4 +1050,29 @@ public class AccessRuleService {
     public List<AccessRule> getAccessRulesByPrivilegeIds(List<UUID> privilegeIds) {
         return this.accessRuleRepo.getAccessRulesByPrivilegeIds(privilegeIds);
     }
+
+    /**
+     * Adds unique sub-rules to the provided parent access rule. This method ensures that duplicate sub-rules,
+     * based on their names, are not added to the parent access rule.
+     *
+     * @param accessRule the parent access rule to which the sub-rules are added
+     * @param subRulesToAdd the collection of sub-rules to be added to the parent access rule
+     */
+    private void addUniqueSubRules(AccessRule accessRule, Collection<? extends AccessRule> subRulesToAdd) {
+        if (accessRule.getSubAccessRule() == null) {
+            accessRule.setSubAccessRule(new HashSet<>());
+        }
+
+        Set<String> existingRuleNames = accessRule.getSubAccessRule().stream()
+                .map(AccessRule::getName)
+                .collect(Collectors.toSet());
+
+        for (AccessRule subRule : subRulesToAdd) {
+            if (!existingRuleNames.contains(subRule.getName())) {
+                accessRule.getSubAccessRule().add(subRule);
+                existingRuleNames.add(subRule.getName());
+            }
+        }
+    }
+
 }

@@ -177,6 +177,15 @@ public class RoleService {
         return this.roleRepository.findByName(roleName);
     }
 
+    public Role getOrCreateRole(String roleName, String roleDescription) {
+        Role existingRole = this.roleRepository.findByName(roleName);
+        if (existingRole != null) {
+            return existingRole;
+        }
+
+        return createRole(roleName, roleDescription);
+    }
+
     public Role createRole(String roleName, String roleDescription) {
         if (roleName.isEmpty()) {
             logger.info("createRole() roleName is empty");
@@ -202,28 +211,6 @@ public class RoleService {
          */
         role.setPrivileges(privilegeService.addPrivileges(role, this.fenceMappingUtility.getFENCEMapping()));
 
-        return role;
-    }
-
-    /**
-     * Only use this service if you know this is a new role. Otherwise, use createRole().
-     * @param roleName The name of the role to be created.
-     * @param roleDescription Description of the role.
-     * @return
-     */
-    public Role createNewRole(String roleName, String roleDescription) {
-        if(roleName.isEmpty()){
-            logger.info("createNewRole() roleName is empty");
-            return null;
-        }
-
-        logger.info("createNewRole() New PSAMA role name:{}", roleName);
-        Role role = new Role();
-        role.setName(roleName);
-        role.setDescription(roleDescription);
-        // Since this is a new Role, we need to ensure that the
-        // corresponding Privilege (with gates) and AccessRule is added.
-        role.setPrivileges(privilegeService.addPrivileges(role, this.fenceMappingUtility.getFENCEMapping()));
         return role;
     }
 
