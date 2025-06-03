@@ -230,8 +230,12 @@ public class AuthorizationService {
         }
 
         // Load the open access rules
-        Role fenceOpenAccessRole = this.roleService.getRoleByName(MANAGED_OPEN_ACCESS_ROLE_NAME);
-        Set<AccessRule> allOpenAccessRules = fenceOpenAccessRole.getPrivileges().stream()
+        Role openAccessRole = this.roleService.getRoleByName(MANAGED_OPEN_ACCESS_ROLE_NAME);
+        if (openAccessRole == null) {
+            logger.info("{} has not be created for this environment. Please create the role and its permissions before attempting to use open access.", MANAGED_OPEN_ACCESS_ROLE_NAME);
+            return false;
+        }
+        Set<AccessRule> allOpenAccessRules = openAccessRole.getPrivileges().stream()
                 .map(Privilege::getAccessRules).collect(Collectors.toSet()).stream().flatMap(Collection::stream).collect(Collectors.toSet());
 
         EvaluateAccessRuleResult evaluationResult = passesAccessRuleEvaluation(requestBody, allOpenAccessRules);
@@ -240,9 +244,9 @@ public class AuthorizationService {
         Set<AccessRule> failedRules = evaluationResult.failedRules();
 
         logger.info("ACCESS_LOG ___ AN OPEN ACCESS USER ___ has been {} access to execute query ___ {} ___ in application ___ OPEN ACCESS ___ {}", (result ? "granted" : "denied"), requestBody, (result ? "passed by " + passRuleName : "failed by rules: ["
-                + failedRules.stream()
-                .map(ar -> (ar.getMergedName().isEmpty() ? ar.getName() : ar.getMergedName()))
-                .collect(Collectors.joining(", ")) + "]"));
+                                                                                                                                                                                                                                         + failedRules.stream()
+                                                                                                                                                                                                                                                 .map(ar -> (ar.getMergedName().isEmpty() ? ar.getName() : ar.getMergedName()))
+                                                                                                                                                                                                                                                 .collect(Collectors.joining(", ")) + "]"));
 
         return result;
     }

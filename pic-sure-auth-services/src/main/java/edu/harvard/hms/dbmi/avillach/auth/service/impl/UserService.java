@@ -250,19 +250,19 @@ public class UserService {
     }
 
     /**
-     * check all referenced field if they are already in database. If
-     * they are in database, then retrieve it by id, and attach it to
-     * user object.
+     * Check all referenced fields if they are already in a database. If
+     * they are in the database, then retrieve it by id and attach it to
+     * a user object.
      *
      * @param users A list of users
      */
     private void checkAssociation(List<User> users) {
         for (User user : users) {
-            if (user.getRoles() != null) {
+            if (user.getRoles() != null && !user.getRoles().isEmpty()) {
                 Set<UUID> roleUuids = user.getRoles().stream().map(Role::getUuid).collect(Collectors.toSet());
                 Set<Role> rolesFromDb = this.roleService.getRolesByIds(roleUuids);
 
-                // If the size of the roles from the database is not the same as the input role UUIDs, then
+                // If the size of the roles from the database is different from the input role UUIDs, then
                 // we cannot find all roles by the input UUIDs.
                 if (rolesFromDb.size() != roleUuids.size()) {
                     logger.error("checkAssociation() cannot find all roles by UUIDs: {}", roleUuids);
@@ -270,6 +270,8 @@ public class UserService {
                 }
 
                 user.setRoles(rolesFromDb);
+            } else {
+                throw new IllegalArgumentException("User must have at least one role.");
             }
 
             if (user.getConnection() != null) {
