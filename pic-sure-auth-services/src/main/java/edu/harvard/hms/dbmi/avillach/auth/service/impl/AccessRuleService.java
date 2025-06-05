@@ -383,11 +383,11 @@ public class AccessRuleService {
                 return true;
             }
 
-            if(accessRuleType == AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY ||
-            accessRuleType == AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY_IGNORE_CASE) {
-                logger.trace("extractAndCheckRule() -> JsonPath.parse().read() PathNotFound;  passing rule {} for type {}", rule, accessRuleType);
-                return true;
-            }
+//            if(accessRuleType == AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY ||
+//            accessRuleType == AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY_IGNORE_CASE) {
+//                logger.trace("extractAndCheckRule() -> JsonPath.parse().read() PathNotFound;  passing rule {} for type {}", rule, accessRuleType);
+//                return true;
+//            }
 
             logger.debug("extractAndCheckRule() -> JsonPath.parse().read() throws exception with parsedRequestBody - {} : {} - {}", parsedRequestBody, ex.getClass().getSimpleName(), ex.getMessage());
             return false;
