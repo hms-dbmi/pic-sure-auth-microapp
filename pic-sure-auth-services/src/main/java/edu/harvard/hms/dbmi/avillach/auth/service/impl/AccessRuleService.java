@@ -838,7 +838,7 @@ public class AccessRuleService {
         AccessRule notGenomicGate = getOrCreateAccessRule(
                 "GATE_NOT_GENOMIC_QUERY",
                 "Gate that passes if the query is not genomic",
-                "$.query.query.variantInfoFilters[*].[categoryVariantInfoFilters,numericVariantInfoFilters]",
+                "$.query.query.variantInfoFilters[*].[categoryVariantInfoFilters.*,numericVariantInfoFilters.*]",
                 AccessRule.TypeNaming.IS_EMPTY,
                 null,
                 false,
