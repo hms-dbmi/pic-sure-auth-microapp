@@ -705,7 +705,7 @@ public class AccessRuleService {
         AccessRule ar = this.getAccessRuleByName(ar_name);
         if (ar != null) {
             // Log and return the existing rule
-            logger.debug("Found existing rule: {}", ar.getName());
+            logger.trace("Found existing rule: {}", ar.getName());
             return ar;
         }
 
@@ -1004,7 +1004,7 @@ public class AccessRuleService {
 
     protected AccessRule createPhenotypeSubRule(String conceptPath, String alias, String rule, int ruleType, String label, boolean useMapKey) {
         String ar_name = "AR_PHENO_" + alias + "_" + label;
-        logger.debug("createPhenotypeSubRule() Creating new access rule {}", ar_name);
+        logger.trace("createPhenotypeSubRule() Creating new access rule {}", ar_name);
 
         // Check if the conceptPath has `\\\\` present. This technically represents `\\`.
         if (conceptPath != null && conceptPath.contains("\\\\")) {

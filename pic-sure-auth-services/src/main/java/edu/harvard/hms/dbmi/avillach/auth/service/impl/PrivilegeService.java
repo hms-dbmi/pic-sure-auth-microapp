@@ -122,7 +122,7 @@ public class PrivilegeService {
 
     public Set<Privilege> addPrivileges(Role r, Map<String, StudyMetaData> fenceMapping) {
         String roleName = r.getName();
-        logger.info("addFENCEPrivileges() starting, adding privilege(s) to role {}", roleName);
+        logger.info("addPrivileges() starting, adding privilege(s) to role {}", roleName);
 
         //each project can have up to three privileges: Parent  |  Harmonized  | Topmed
         //harmonized has 2 ARs for parent + harmonized and harmonized only
@@ -135,13 +135,13 @@ public class PrivilegeService {
         //e.g. MANAGED_phs0000xx_c2 or MANAGED_tutorial-biolinc_camp
         String project_name = extractProject(roleName);
         if (project_name.isEmpty()) {
-            logger.warn("addFENCEPrivileges() role name: {} returned an empty project name", roleName);
+            logger.warn("addPrivileges() role name: {} returned an empty project name", roleName);
         }
         String consent_group = extractConsentGroup(roleName);
         if (!consent_group.isEmpty()) {
-            logger.warn("addFENCEPrivileges() role name: {} returned an empty consent group", roleName);
+            logger.warn("addPrivileges() role name: {} returned an empty consent group", roleName);
         }
-        logger.info("addFENCEPrivileges() project name: {} consent group: {}", project_name, consent_group);
+        logger.info("addPrivileges() project name: {} consent group: {}", project_name, consent_group);
 
         // Look up the metadata by consent group.
         StudyMetaData projectMetadata = getStudyMappingForProjectAndConsent(project_name, consent_group, fenceMapping);
@@ -386,7 +386,7 @@ public class PrivilegeService {
         if (projectMatcher.find()) {
             project = projectMatcher.group(1).trim();
         } else {
-            logger.info("extractProject() Could not extract project from role name: {}", roleName);
+            logger.trace("extractProject() Could not extract project from role name: {}", roleName);
             String[] parts = roleName.split("_", 1);
             if (parts.length > 0) {
                 project = parts[1];
