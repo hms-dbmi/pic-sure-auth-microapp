@@ -564,14 +564,20 @@ public class AccessRuleService {
 
         return switch (accessRule.getType()) {
             case AccessRule.TypeNaming.NOT_CONTAINS -> !requestBodyValue.contains(value);
-            case AccessRule.TypeNaming.NOT_CONTAINS_IGNORE_CASE -> !requestBodyValue.toLowerCase().contains(value.toLowerCase());
+            case AccessRule.TypeNaming.NOT_CONTAINS_IGNORE_CASE ->
+                    !requestBodyValue.toLowerCase().contains(value.toLowerCase());
             case (AccessRule.TypeNaming.NOT_EQUALS) -> !value.equals(requestBodyValue);
-            case (AccessRule.TypeNaming.ANY_EQUALS), (AccessRule.TypeNaming.ALL_EQUALS) -> value.equals(requestBodyValue);
-            case (AccessRule.TypeNaming.ALL_CONTAINS), (AccessRule.TypeNaming.ANY_CONTAINS), (AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY) -> requestBodyValue.contains(value);
-            case (AccessRule.TypeNaming.ALL_CONTAINS_IGNORE_CASE), (AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY_IGNORE_CASE) -> requestBodyValue.toLowerCase().contains(value.toLowerCase());
+            case (AccessRule.TypeNaming.ANY_EQUALS), (AccessRule.TypeNaming.ALL_EQUALS) ->
+                    value.equals(requestBodyValue);
+            case (AccessRule.TypeNaming.ALL_CONTAINS), (AccessRule.TypeNaming.ANY_CONTAINS),
+                 (AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY) -> requestBodyValue.contains(value);
+            case (AccessRule.TypeNaming.ALL_CONTAINS_IGNORE_CASE),
+                 (AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY_IGNORE_CASE) ->
+                    requestBodyValue.toLowerCase().contains(value.toLowerCase());
             case (AccessRule.TypeNaming.NOT_EQUALS_IGNORE_CASE) -> !value.equalsIgnoreCase(requestBodyValue);
             case (AccessRule.TypeNaming.ALL_EQUALS_IGNORE_CASE) -> value.equalsIgnoreCase(requestBodyValue);
-            case (AccessRule.TypeNaming.ALL_REG_MATCH), (AccessRule.TypeNaming.ANY_REG_MATCH) -> requestBodyValue.matches(value);
+            case (AccessRule.TypeNaming.ALL_REG_MATCH), (AccessRule.TypeNaming.ANY_REG_MATCH) ->
+                    requestBodyValue.matches(value);
             default -> {
                 logger.warn("evaluateAccessRule() incoming accessRule type is out of scope. Just return true.");
                 yield true;
@@ -822,6 +828,7 @@ public class AccessRuleService {
 
     protected AccessRule populateTopmedAccessRule(AccessRule rule, boolean includeParent) {
         rule.setGates(new HashSet<>(getGates(includeParent, false, true)));
+
         addUniqueSubRules(rule, getAllowedQueryTypeRules());
 
         return rule;
@@ -1055,7 +1062,7 @@ public class AccessRuleService {
      * Adds unique sub-rules to the provided parent access rule. This method ensures that duplicate sub-rules,
      * based on their names, are not added to the parent access rule.
      *
-     * @param accessRule the parent access rule to which the sub-rules are added
+     * @param accessRule    the parent access rule to which the sub-rules are added
      * @param subRulesToAdd the collection of sub-rules to be added to the parent access rule
      */
     private void addUniqueSubRules(AccessRule accessRule, Collection<? extends AccessRule> subRulesToAdd) {
