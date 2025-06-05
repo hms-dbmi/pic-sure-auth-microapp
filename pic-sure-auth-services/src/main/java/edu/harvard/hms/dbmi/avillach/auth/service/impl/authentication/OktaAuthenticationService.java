@@ -66,7 +66,7 @@ public class OktaAuthenticationService {
             logger.error("handleCodeTokenExchange() failed to call OKTA token endpoint, {}", ex.getMessage());
         }
 
-        logger.debug("getFENCEAccessToken() finished: {}", response);
+        logger.debug("doOktaRequest() finished: {}", response);
         return response;
     }
 

@@ -379,13 +379,13 @@ public class AccessRuleService {
         } catch (PathNotFoundException ex) {
             if (accessRuleType == AccessRule.TypeNaming.IS_EMPTY) {
                 // We could return true directly, but we want to log the reason
-                logger.debug("extractAndCheckRule() -> JsonPath.parse().read() PathNotFound;  passing rule {} for type {}", rule, accessRuleType);
+                logger.trace("extractAndCheckRule() -> JsonPath.parse().read() PathNotFound;  passing rule {} for type {}", rule, accessRuleType);
                 return true;
             }
 
             if(accessRuleType == AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY ||
             accessRuleType == AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY_IGNORE_CASE) {
-                logger.debug("extractAndCheckRule() -> JsonPath.parse().read() PathNotFound;  passing rule {} for type {}", rule, accessRuleType);
+                logger.trace("extractAndCheckRule() -> JsonPath.parse().read() PathNotFound;  passing rule {} for type {}", rule, accessRuleType);
                 return true;
             }
 
@@ -955,7 +955,7 @@ public class AccessRuleService {
      */
     protected AccessRule upsertHarmonizedAccessRule(String project_name, String consent_group) {
         String ar_name = "AR_TOPMED_" + project_name + "_" + consent_group + "_" + "HARMONIZED";
-        logger.debug("upsertHarmonizedAccessRule() Creating new access rule {}", ar_name);
+        logger.trace("upsertHarmonizedAccessRule() Creating new access rule {}", ar_name);
         String description = "MANAGED AR for " + project_name + "." + consent_group + " Topmed data";
         String ruleText = "$.query.query.categoryFilters." + fence_harmonized_consent_group_concept_path + "[*]";
         String arValue = project_name + "." + consent_group;
@@ -1029,7 +1029,7 @@ public class AccessRuleService {
         return accessRuleCache.computeIfAbsent(name, key -> {
             AccessRule ar = this.getAccessRuleByName(key);
             if (ar == null) {
-                logger.debug("Creating new access rule {}", key);
+                logger.trace("Creating new access rule {}", key);
                 ar = new AccessRule();
                 ar.setName(name);
                 ar.setDescription(description);
