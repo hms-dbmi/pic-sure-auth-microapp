@@ -589,8 +589,7 @@ public class AccessRuleService {
      * @param projectAlias    The project alias.
      */
     protected void configureAccessRule(AccessRule ar, String studyIdentifier, String consent_group, String conceptPath, String projectAlias) {
-        ar.setGates(new HashSet<>());
-        ar.getGates().addAll(getGates(true, false, false));
+        ar.setGates(new HashSet<>(getGates(true, false, false)));
 
         if (ar.getSubAccessRule() == null) {
             ar.setSubAccessRule(new HashSet<>());
@@ -623,8 +622,7 @@ public class AccessRuleService {
     }
 
     protected AccessRule configureClinicalAccessRuleWithPhenoSubRule(AccessRule ar, String studyIdentifier, String consent_group, String conceptPath, String projectAlias) {
-        ar.setGates(new HashSet<>());
-        ar.getGates().addAll(getGates(true, false, true));
+        ar.setGates(new HashSet<>(getGates(true, false, true)));
 
         if (ar.getSubAccessRule() == null) {
             ar.setSubAccessRule(new HashSet<>());
@@ -823,12 +821,7 @@ public class AccessRuleService {
     }
 
     protected AccessRule populateTopmedAccessRule(AccessRule rule, boolean includeParent) {
-        if (rule.getGates() == null) {
-            rule.setGates(new HashSet<>(getGates(includeParent, false, true)));
-        } else {
-            rule.getGates().addAll(getGates(includeParent, false, true));
-        }
-
+        rule.setGates(new HashSet<>(getGates(includeParent, false, true)));
         addUniqueSubRules(rule, getAllowedQueryTypeRules());
 
         return rule;
