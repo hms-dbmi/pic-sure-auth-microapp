@@ -834,11 +834,11 @@ public class AccessRuleService {
 //    }
 
     protected AccessRule populateTopmedAccessRule(AccessRule rule, boolean includeParent) {
-        // Create a gate that passes if the query is not genomic
-        AccessRule notGenomicGate = getOrCreateAccessRule(
-                "GATE_NOT_GENOMIC_QUERY",
-                "Gate that passes if the query is not genomic",
-                "$.query.query.variantInfoFilters[*].[categoryVariantInfoFilters,numericVariantInfoFilters]",
+        // Create a gate that passes if the query has no category variant filters
+        AccessRule noCategoryVariantGate = getOrCreateAccessRule(
+                "GATE_NO_CATEGORY_VARIANT_FILTERS",
+                "Gate that passes if the query has no category variant filters",
+                "$.query.variantInfoFilters[*].categoryVariantInfoFilters[*]",
                 AccessRule.TypeNaming.IS_EMPTY,
                 null,
                 false,
@@ -847,8 +847,38 @@ public class AccessRuleService {
                 false
         );
 
-        //$.query.variantInfoFilters[*].categoryVariantInfoFilters.[*]
-        // $.query.variantInfoFilters[*].numericVariantInfoFilters.[*]
+        // Create a gate that passes if the query has no numeric variant filters
+        AccessRule noNumericVariantGate = getOrCreateAccessRule(
+                "GATE_NO_NUMERIC_VARIANT_FILTERS",
+                "Gate that passes if the query has no numeric variant filters",
+                "$.query.variantInfoFilters[*].numericVariantInfoFilters[*]",
+                AccessRule.TypeNaming.IS_EMPTY,
+                null,
+                false,
+                false,
+                false,
+                false
+        );
+
+        // Create a combined gate that passes if both category and numeric variant filters are empty
+        // This means the query is not genomic
+        AccessRule notGenomicGate = getOrCreateAccessRule(
+                "GATE_NOT_GENOMIC_QUERY",
+                "Gate that passes if the query is not genomic (no variant filters)",
+                "", // Empty rule as we'll use sub-gates
+                AccessRule.TypeNaming.IS_EMPTY, // Type doesn't matter as we'll evaluate only by gates
+                null,
+                false,
+                false,
+                true, // Evaluate only by gates
+                false // AND relationship between gates (both must be empty)
+        );
+
+        // Add the category and numeric variant gates to the not genomic gate
+        Set<AccessRule> notGenomicGates = new HashSet<>();
+        notGenomicGates.add(noCategoryVariantGate);
+        notGenomicGates.add(noNumericVariantGate);
+        notGenomicGate.setGates(notGenomicGates);
 
         // Create the topmed consent gate
         AccessRule topmedConsentGate = upsertConsentGate(
@@ -871,8 +901,8 @@ public class AccessRuleService {
                 true  // OR relationship between gates
         );
 
-        // Add the negated genomic gate and the topmed consent gate
-        // This creates: (!isGenomicGate OR topmedConsentGate)
+        // Add the not genomic gate and the topmed consent gate to the conditional gate
+        // This creates: (notGenomicGate OR topmedConsentGate)
         // Which means: "If it's not a genomic query OR if topmed consent is present"
         Set<AccessRule> conditionalGates = new HashSet<>();
         conditionalGates.add(notGenomicGate);
