@@ -355,7 +355,7 @@ public class AccessRuleService {
     }
 
     public boolean extractAndCheckRule(AccessRule accessRule, Object parsedRequestBody) {
-        logger.debug("extractAndCheckRule() starting");
+        logger.trace("extractAndCheckRule() starting");
         String rule = accessRule.getRule();
 
         if (rule == null || rule.isEmpty())
@@ -409,7 +409,7 @@ public class AccessRuleService {
     }
 
     private boolean evaluateNode(Object requestBodyValue, AccessRule accessRule) {
-        logger.debug("evaluateNode() starting: {} :: {} :: {}", accessRule.getRule(), accessRule.getType(), accessRule.getMergedValues().isEmpty() ? accessRule.getValue() : ("Merged " + Arrays.deepToString(accessRule.getMergedValues().toArray())));
+        logger.trace("evaluateNode() starting: {} :: {} :: {}", accessRule.getRule(), accessRule.getType(), accessRule.getMergedValues().isEmpty() ? accessRule.getValue() : ("Merged " + Arrays.deepToString(accessRule.getMergedValues().toArray())));
         logger.trace("evaluateNode() requestBody {}  {}", requestBodyValue.getClass().getName(), requestBodyValue instanceof Collection ?
                 Arrays.deepToString(((Collection) requestBodyValue).toArray()) :
                 requestBodyValue.toString());
