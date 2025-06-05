@@ -825,76 +825,79 @@ public class AccessRuleService {
         return gates;
     }
 
-//    protected AccessRule populateTopmedAccessRule(AccessRule rule, boolean includeParent) {
-//        rule.setGates(new HashSet<>(getGates(includeParent, false, true)));
-//
-//        addUniqueSubRules(rule, getAllowedQueryTypeRules());
-//
-//        return rule;
-//    }
-
     protected AccessRule populateTopmedAccessRule(AccessRule rule, boolean includeParent) {
-        // Create a gate that passes if the query is not genomic
-        AccessRule notGenomicGate = getOrCreateAccessRule(
-                "GATE_NOT_GENOMIC_QUERY",
-                "Gate that passes if the query is not genomic",
-                "$.query.query.variantInfoFilters[*].[categoryVariantInfoFilters.*,numericVariantInfoFilters.*]",
-                AccessRule.TypeNaming.IS_EMPTY,
-                null,
-                false,
-                false,
-                false,
-                false
-        );
-
-        // Create the topmed consent gate
-        AccessRule topmedConsentGate = upsertConsentGate(
-                "TOPMED_CONSENT",
-                "$.query.query.categoryFilters." + fence_topmed_consent_group_concept_path + "[*]",
-                true,
-                "Topmed data"
-        );
-
-        // Create a conditional gate for topmed consent
-        AccessRule conditionalTopmedGate = getOrCreateAccessRule(
-                "GATE_CONDITIONAL_TOPMED_CONSENT",
-                "Gate that enforces topmed consent only for genomic queries",
-                "", // Empty rule as we'll use sub-gates
-                AccessRule.TypeNaming.IS_EMPTY, // Type doesn't matter as we'll evaluate only by gates
-                null,
-                false,
-                false,
-                true, // Evaluate only by gates
-                true  // OR relationship between gates
-        );
-
-        // Add the negated genomic gate and the topmed consent gate
-        // This creates: (!isGenomicGate OR topmedConsentGate)
-        // Which means: "If it's not a genomic query OR if topmed consent is present"
-        Set<AccessRule> conditionalGates = new HashSet<>();
-        conditionalGates.add(notGenomicGate);
-        conditionalGates.add(topmedConsentGate);
-        conditionalTopmedGate.setGates(conditionalGates);
-
-        // Set up the main rule gates
-        Set<AccessRule> gates = new HashSet<>();
-        if (includeParent) {
-            gates.add(upsertConsentGate(
-                    "PARENT_CONSENT",
-                    "$.query.query.categoryFilters." + fence_parent_consent_group_concept_path + "[*]",
-                    true,
-                    "parent study data"
-            ));
-        }
-
-        // Add the conditional topmed gate instead of the standard topmed gate
-        gates.add(conditionalTopmedGate);
-        rule.setGates(gates);
+        rule.setGates(new HashSet<>(getGates(includeParent, false, true)));
 
         addUniqueSubRules(rule, getAllowedQueryTypeRules());
 
         return rule;
     }
+
+//    protected AccessRule populateTopmedAccessRule(AccessRule rule, boolean includeParent) {
+//        // Create a gate that passes if the query is not genomic
+//        AccessRule notGenomicGate = getOrCreateAccessRule(
+//                "GATE_NOT_GENOMIC_QUERY",
+//                "Gate that passes if the query is not genomic",
+//                "$.query.query.variantInfoFilters[*].[categoryVariantInfoFilters,numericVariantInfoFilters]",
+//                AccessRule.TypeNaming.IS_EMPTY,
+//                null,
+//                false,
+//                false,
+//                false,
+//                false
+//        );
+//
+//        //$.query.variantInfoFilters[*].categoryVariantInfoFilters.[*]
+//        // $.query.variantInfoFilters[*].numericVariantInfoFilters.[*]
+//
+//        // Create the topmed consent gate
+//        AccessRule topmedConsentGate = upsertConsentGate(
+//                "TOPMED_CONSENT",
+//                "$.query.query.categoryFilters." + fence_topmed_consent_group_concept_path + "[*]",
+//                true,
+//                "Topmed data"
+//        );
+//
+//        // Create a conditional gate for topmed consent
+//        AccessRule conditionalTopmedGate = getOrCreateAccessRule(
+//                "GATE_CONDITIONAL_TOPMED_CONSENT",
+//                "Gate that enforces topmed consent only for genomic queries",
+//                "", // Empty rule as we'll use sub-gates
+//                AccessRule.TypeNaming.IS_EMPTY, // Type doesn't matter as we'll evaluate only by gates
+//                null,
+//                false,
+//                false,
+//                true, // Evaluate only by gates
+//                true  // OR relationship between gates
+//        );
+//
+//        // Add the negated genomic gate and the topmed consent gate
+//        // This creates: (!isGenomicGate OR topmedConsentGate)
+//        // Which means: "If it's not a genomic query OR if topmed consent is present"
+//        Set<AccessRule> conditionalGates = new HashSet<>();
+//        conditionalGates.add(notGenomicGate);
+//        conditionalGates.add(topmedConsentGate);
+//        conditionalTopmedGate.setGates(conditionalGates);
+//
+//        // Set up the main rule gates
+//        Set<AccessRule> gates = new HashSet<>();
+//        if (includeParent) {
+//            gates.add(upsertConsentGate(
+//                    "PARENT_CONSENT",
+//                    "$.query.query.categoryFilters." + fence_parent_consent_group_concept_path + "[*]",
+//                    true,
+//                    "parent study data"
+//            ));
+//        }
+//
+//        // Add the conditional topmed gate instead of the standard topmed gate
+//        gates.add(conditionalTopmedGate);
+//        rule.setGates(gates);
+//
+//        addUniqueSubRules(rule, getAllowedQueryTypeRules());
+//
+//        return rule;
+//    }
 
     protected AccessRule populateHarmonizedAccessRule(AccessRule rule, String parentConceptPath, String studyIdentifier, String projectAlias) {
         if (rule.getGates() == null) {
