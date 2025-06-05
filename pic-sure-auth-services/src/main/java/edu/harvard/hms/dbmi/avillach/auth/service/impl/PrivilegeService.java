@@ -233,7 +233,7 @@ public class PrivilegeService {
             priv.setAccessRules(accessRules);
             logger.info("Added {} access_rules to privilege", accessRules.size());
 
-            priv = this.save(priv);
+        priv = this.save(priv);
             logger.info("Added new privilege {} to DB", priv.getName());
         } catch (Exception ex) {
             logger.error("Could not save privilege", ex);
