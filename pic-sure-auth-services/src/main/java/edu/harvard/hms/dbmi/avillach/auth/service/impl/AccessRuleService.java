@@ -860,7 +860,7 @@ public class AccessRuleService {
                 "GATE_CONDITIONAL_TOPMED_CONSENT",
                 "Gate that enforces topmed consent only for genomic queries",
                 "", // Empty rule as we'll use sub-gates
-                AccessRule.TypeNaming.ALL_EQUALS, // Type doesn't matter as we'll evaluate only by gates
+                AccessRule.TypeNaming.IS_EMPTY, // Type doesn't matter as we'll evaluate only by gates
                 null,
                 false,
                 false,
