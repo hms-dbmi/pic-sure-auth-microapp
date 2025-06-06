@@ -825,14 +825,6 @@ public class AccessRuleService {
         return gates;
     }
 
-//    protected AccessRule populateTopmedAccessRule(AccessRule rule, boolean includeParent) {
-//        rule.setGates(new HashSet<>(getGates(includeParent, false, true)));
-//
-//        addUniqueSubRules(rule, getAllowedQueryTypeRules());
-//
-//        return rule;
-//    }
-
     protected AccessRule populateTopmedAccessRule(AccessRule rule, boolean includeParent) {
         // Create a gate that passes if the query has no category variant filters
         AccessRule noCategoryVariantGate = getOrCreateAccessRule(
@@ -874,6 +866,8 @@ public class AccessRuleService {
                 false // AND relationship between gates (both must be empty)
         );
 
+        // These gates have an AND relationship.
+        // BOTH must pass if a query is being submitted without topmed_consents.
         // Add the category and numeric variant gates to the not genomic gate
         Set<AccessRule> notGenomicGates = new HashSet<>();
         notGenomicGates.add(noCategoryVariantGate);
@@ -892,8 +886,8 @@ public class AccessRuleService {
         AccessRule conditionalTopmedGate = getOrCreateAccessRule(
                 "GATE_CONDITIONAL_TOPMED_CONSENT",
                 "Gate that enforces topmed consent only for genomic queries",
-                "", // Empty rule as we'll use sub-gates
-                AccessRule.TypeNaming.IS_EMPTY, // Type doesn't matter as we'll evaluate only by gates
+                "", // Empty rule as we'll only use sub-gates
+                AccessRule.TypeNaming.IS_EMPTY,
                 null,
                 false,
                 false,
