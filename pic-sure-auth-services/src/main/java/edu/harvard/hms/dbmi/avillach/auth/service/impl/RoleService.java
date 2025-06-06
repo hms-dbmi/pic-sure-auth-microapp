@@ -84,9 +84,24 @@ public class RoleService {
                 logger.info("Deleted user-role associations for {} roles", roleIDs.size());
             }
 
-            // Then delete the roles
+            // Then clear privileges from each role and delete them one by one
             if (!byNameNotIn.isEmpty()) {
-                this.roleRepository.deleteAll(byNameNotIn);
+                for (Role role : byNameNotIn) {
+                    try {
+                        // Clear privileges to remove entries from role_privilege table
+                        if (role.getPrivileges() != null && !role.getPrivileges().isEmpty()) {
+                            role.setPrivileges(new HashSet<>());
+                            roleRepository.save(role);
+                            logger.debug("Cleared privileges for role: {}", role.getName());
+                        }
+
+                        // Now delete the role
+                        roleRepository.delete(role);
+                        logger.debug("Deleted role: {}", role.getName());
+                    } catch (Exception e) {
+                        logger.error("Error deleting role {}: {}", role.getName(), e.getMessage(), e);
+                    }
+                }
                 logger.info("Deleted {} roles", byNameNotIn.size());
             }
         } catch (Exception e) {
