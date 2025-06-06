@@ -331,6 +331,7 @@ public class PrivilegeService {
 
     private AccessRule createTopmedAccessRules(String studyIdentifier, String projectAlias, String consentGroup) {
         AccessRule topmedRule = this.accessRuleService.upsertTopmedAccessRule(studyIdentifier, consentGroup, "TOPMED");
+        topmedRule.setSubAccessRule(new HashSet<>());
         topmedRule = this.accessRuleService.populateTopmedAccessRule(topmedRule, false);
         topmedRule.getSubAccessRule().addAll(this.accessRuleService.getPhenotypeRestrictedSubRules(studyIdentifier, consentGroup, projectAlias));
         return this.accessRuleService.save(topmedRule);
