@@ -6,6 +6,7 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.model.ras.RasDbgapPermission;
 import edu.harvard.hms.dbmi.avillach.auth.repository.PrivilegeRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.RoleRepository;
+import edu.harvard.hms.dbmi.avillach.auth.repository.UserRepository;
 import edu.harvard.hms.dbmi.avillach.auth.utils.FenceMappingUtility;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,8 +26,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @SpringBootTest
-@ContextConfiguration(classes = {RoleService.class, PrivilegeService.class})
+@ContextConfiguration(classes = {RoleService.class, PrivilegeService.class, UserRepository.class})
 public class RoleServiceTest {
+
+    @MockBean
+    private UserRepository userRepository;
 
     @MockBean
     private ApplicationService applicationService;

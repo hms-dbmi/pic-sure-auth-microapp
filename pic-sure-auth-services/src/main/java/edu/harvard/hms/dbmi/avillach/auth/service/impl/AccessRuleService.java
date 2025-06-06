@@ -383,8 +383,8 @@ public class AccessRuleService {
                 return true;
             }
 
-            if(accessRuleType == AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY ||
-            accessRuleType == AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY_IGNORE_CASE) {
+            if (accessRuleType == AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY ||
+                accessRuleType == AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY_IGNORE_CASE) {
                 logger.debug("extractAndCheckRule() -> JsonPath.parse().read() PathNotFound;  passing rule {} for type {}", rule, accessRuleType);
                 return true;
             }
@@ -564,14 +564,20 @@ public class AccessRuleService {
 
         return switch (accessRule.getType()) {
             case AccessRule.TypeNaming.NOT_CONTAINS -> !requestBodyValue.contains(value);
-            case AccessRule.TypeNaming.NOT_CONTAINS_IGNORE_CASE -> !requestBodyValue.toLowerCase().contains(value.toLowerCase());
+            case AccessRule.TypeNaming.NOT_CONTAINS_IGNORE_CASE ->
+                    !requestBodyValue.toLowerCase().contains(value.toLowerCase());
             case (AccessRule.TypeNaming.NOT_EQUALS) -> !value.equals(requestBodyValue);
-            case (AccessRule.TypeNaming.ANY_EQUALS), (AccessRule.TypeNaming.ALL_EQUALS) -> value.equals(requestBodyValue);
-            case (AccessRule.TypeNaming.ALL_CONTAINS), (AccessRule.TypeNaming.ANY_CONTAINS), (AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY) -> requestBodyValue.contains(value);
-            case (AccessRule.TypeNaming.ALL_CONTAINS_IGNORE_CASE), (AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY_IGNORE_CASE) -> requestBodyValue.toLowerCase().contains(value.toLowerCase());
+            case (AccessRule.TypeNaming.ANY_EQUALS), (AccessRule.TypeNaming.ALL_EQUALS) ->
+                    value.equals(requestBodyValue);
+            case (AccessRule.TypeNaming.ALL_CONTAINS), (AccessRule.TypeNaming.ANY_CONTAINS),
+                 (AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY) -> requestBodyValue.contains(value);
+            case (AccessRule.TypeNaming.ALL_CONTAINS_IGNORE_CASE),
+                 (AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY_IGNORE_CASE) ->
+                    requestBodyValue.toLowerCase().contains(value.toLowerCase());
             case (AccessRule.TypeNaming.NOT_EQUALS_IGNORE_CASE) -> !value.equalsIgnoreCase(requestBodyValue);
             case (AccessRule.TypeNaming.ALL_EQUALS_IGNORE_CASE) -> value.equalsIgnoreCase(requestBodyValue);
-            case (AccessRule.TypeNaming.ALL_REG_MATCH), (AccessRule.TypeNaming.ANY_REG_MATCH) -> requestBodyValue.matches(value);
+            case (AccessRule.TypeNaming.ALL_REG_MATCH), (AccessRule.TypeNaming.ANY_REG_MATCH) ->
+                    requestBodyValue.matches(value);
             default -> {
                 logger.warn("evaluateAccessRule() incoming accessRule type is out of scope. Just return true.");
                 yield true;
@@ -589,12 +595,8 @@ public class AccessRuleService {
      * @param projectAlias    The project alias.
      */
     protected void configureAccessRule(AccessRule ar, String studyIdentifier, String consent_group, String conceptPath, String projectAlias) {
-        ar.setGates(new HashSet<>());
-        ar.getGates().addAll(getGates(true, false, false));
+        ar.setGates(new HashSet<>(getGates(true, false, false)));
 
-        if (ar.getSubAccessRule() == null) {
-            ar.setSubAccessRule(new HashSet<>());
-        }
         addUniqueSubRules(ar, getAllowedQueryTypeRules());
         addUniqueSubRules(ar, getPhenotypeSubRules(studyIdentifier, conceptPath, projectAlias));
         addUniqueSubRules(ar, getTopmedRestrictedSubRules());
@@ -610,12 +612,7 @@ public class AccessRuleService {
      * @param projectAlias    The project alias.
      */
     protected void configureHarmonizedAccessRule(AccessRule ar, String studyIdentifier, String conceptPath, String projectAlias) {
-        ar.setGates(new HashSet<>());
-        ar.getGates().add(upsertConsentGate("HARMONIZED_CONSENT", "$.query.query.categoryFilters." + fence_harmonized_consent_group_concept_path + "[*]", true, "harmonized data"));
-
-        if (ar.getSubAccessRule() == null) {
-            ar.setSubAccessRule(new HashSet<>());
-        }
+        ar.setGates(new HashSet<>(Collections.singleton(upsertConsentGate("HARMONIZED_CONSENT", "$.query.query.categoryFilters." + fence_harmonized_consent_group_concept_path + "[*]", true, "harmonized data"))));
 
         addUniqueSubRules(ar, getAllowedQueryTypeRules());
         addUniqueSubRules(ar, getHarmonizedSubRules());
@@ -623,12 +620,7 @@ public class AccessRuleService {
     }
 
     protected AccessRule configureClinicalAccessRuleWithPhenoSubRule(AccessRule ar, String studyIdentifier, String consent_group, String conceptPath, String projectAlias) {
-        ar.setGates(new HashSet<>());
-        ar.getGates().addAll(getGates(true, false, true));
-
-        if (ar.getSubAccessRule() == null) {
-            ar.setSubAccessRule(new HashSet<>());
-        }
+        ar.setGates(new HashSet<>(getGates(true, false, true)));
 
         addUniqueSubRules(ar, getAllowedQueryTypeRules());
         addUniqueSubRules(ar, getPhenotypeSubRules(studyIdentifier, conceptPath, projectAlias));
@@ -705,7 +697,7 @@ public class AccessRuleService {
         AccessRule ar = this.getAccessRuleByName(ar_name);
         if (ar != null) {
             // Log and return the existing rule
-            logger.debug("Found existing rule: {}", ar.getName());
+            logger.trace("Found existing rule: {}", ar.getName());
             return ar;
         }
 
@@ -823,12 +815,7 @@ public class AccessRuleService {
     }
 
     protected AccessRule populateTopmedAccessRule(AccessRule rule, boolean includeParent) {
-        if (rule.getGates() == null) {
-            rule.setGates(new HashSet<>(getGates(includeParent, false, true)));
-        } else {
-            rule.getGates().addAll(getGates(includeParent, false, true));
-        }
-
+        rule.setGates(new HashSet<>(getGates(includeParent, false, true)));
         addUniqueSubRules(rule, getAllowedQueryTypeRules());
 
         return rule;
@@ -955,7 +942,7 @@ public class AccessRuleService {
      */
     protected AccessRule upsertHarmonizedAccessRule(String project_name, String consent_group) {
         String ar_name = "AR_TOPMED_" + project_name + "_" + consent_group + "_" + "HARMONIZED";
-        logger.debug("upsertHarmonizedAccessRule() Creating new access rule {}", ar_name);
+        logger.trace("upsertHarmonizedAccessRule() Creating new access rule {}", ar_name);
         String description = "MANAGED AR for " + project_name + "." + consent_group + " Topmed data";
         String ruleText = "$.query.query.categoryFilters." + fence_harmonized_consent_group_concept_path + "[*]";
         String arValue = project_name + "." + consent_group;
@@ -1004,7 +991,7 @@ public class AccessRuleService {
 
     protected AccessRule createPhenotypeSubRule(String conceptPath, String alias, String rule, int ruleType, String label, boolean useMapKey) {
         String ar_name = "AR_PHENO_" + alias + "_" + label;
-        logger.debug("createPhenotypeSubRule() Creating new access rule {}", ar_name);
+        logger.trace("createPhenotypeSubRule() Creating new access rule {}", ar_name);
 
         // Check if the conceptPath has `\\\\` present. This technically represents `\\`.
         if (conceptPath != null && conceptPath.contains("\\\\")) {
@@ -1029,8 +1016,9 @@ public class AccessRuleService {
         return accessRuleCache.computeIfAbsent(name, key -> {
             AccessRule ar = this.getAccessRuleByName(key);
             if (ar == null) {
-                logger.debug("Creating new access rule {}", key);
+                logger.trace("Creating new access rule {}", key);
                 ar = new AccessRule();
+
                 ar.setName(name);
                 ar.setDescription(description);
                 ar.setRule(rule);
@@ -1062,7 +1050,7 @@ public class AccessRuleService {
      * Adds unique sub-rules to the provided parent access rule. This method ensures that duplicate sub-rules,
      * based on their names, are not added to the parent access rule.
      *
-     * @param accessRule the parent access rule to which the sub-rules are added
+     * @param accessRule    the parent access rule to which the sub-rules are added
      * @param subRulesToAdd the collection of sub-rules to be added to the parent access rule
      */
     private void addUniqueSubRules(AccessRule accessRule, Collection<? extends AccessRule> subRulesToAdd) {
