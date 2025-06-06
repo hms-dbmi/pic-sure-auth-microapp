@@ -897,6 +897,8 @@ public class AccessRuleService {
 
         // Add the not genomic gate and the topmed consent gate to the conditional gate
         // This creates: (notGenomicGate OR topmedConsentGate)
+        // notGenomicGate: (noCategoryVariantGate AND noNumericVariantGate)
+        // topmedConsent: Checks to see if the \\_topmed_consents\\ are present in the categorical filters
         // Which means: "If it's not a genomic query OR if topmed consent is present"
         Set<AccessRule> conditionalGates = new HashSet<>();
         conditionalGates.add(notGenomicGate);
