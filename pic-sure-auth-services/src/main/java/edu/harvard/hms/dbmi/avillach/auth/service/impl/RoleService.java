@@ -85,8 +85,8 @@ public class RoleService {
             }
 
             // Then clear privileges from each role and delete them one by one
-            if (!byNameNotIn.isEmpty()) {
-                for (Role role : byNameNotIn) {
+            if (!managedRoles.isEmpty()) {
+                for (Role role : managedRoles) {
                     try {
                         // Clear privileges to remove entries from role_privilege table
                         if (role.getPrivileges() != null && !role.getPrivileges().isEmpty()) {
@@ -102,7 +102,7 @@ public class RoleService {
                         logger.error("Error deleting role {}: {}", role.getName(), e.getMessage(), e);
                     }
                 }
-                logger.info("Deleted {} roles", byNameNotIn.size());
+                logger.info("Deleted {} roles", managedRoles.size());
             }
         } catch (Exception e) {
             logger.error("Error cleaning up roles not in mapping", e);
