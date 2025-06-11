@@ -296,7 +296,6 @@ public class PrivilegeService {
 
             if (parentConceptPath != null) {
                 accessRules.add(createTopmedParentAccessRule(studyIdentifier, consentGroup, parentConceptPath, projectAlias));
-
                 if (isHarmonized) {
                     accessRules.add(createHarmonizedTopmedAccessRule(studyIdentifier, projectAlias, consentGroup, parentConceptPath));
                 }

@@ -8,6 +8,7 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.AccessRule;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Application;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
+import edu.harvard.hms.dbmi.avillach.auth.model.AccessRuleEvaluationNode;
 import edu.harvard.hms.dbmi.avillach.auth.repository.AccessRuleRepository;
 import io.micrometer.common.util.StringUtils;
 import jakarta.annotation.PostConstruct;
@@ -46,6 +47,10 @@ public class AccessRuleService {
     private final String fence_harmonized_concept_path;
 
     private String[] underscoreFields;
+
+    private final ThreadLocal<Stack<AccessRuleEvaluationNode>> evaluationTreeStack = 
+        ThreadLocal.withInitial(Stack::new);
+    private final ThreadLocal<AccessRuleEvaluationNode> rootNode = new ThreadLocal<>();
 
     @Autowired
     public AccessRuleService(AccessRuleRepository accessRuleRepo,
@@ -132,6 +137,34 @@ public class AccessRuleService {
             accessRuleCache.put(accessRule.getName(), accessRule);
         }
         return this.accessRuleRepo.save(accessRule);
+    }
+
+    /**
+     * Prints the evaluation tree for the most recently evaluated access rule.
+     * This method should be called after evaluateAccessRule() has been called.
+     * 
+     * @return A string representation of the evaluation tree
+     */
+    public String printEvaluationTree() {
+        AccessRuleEvaluationNode root = rootNode.get();
+        if (root == null) {
+            return "No evaluation tree available";
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("ACCESS RULE EVALUATION TREE:\n");
+        sb.append(root.generateTreeString());
+
+        return sb.toString();
+    }
+
+    /**
+     * Clears the evaluation tree data.
+     * This should be called after processing is complete to prevent memory leaks.
+     */
+    public void clearEvaluationTree() {
+        rootNode.remove();
+        evaluationTreeStack.remove();
     }
 
     public AccessRule getAccessRuleByName(String arName) {
@@ -283,79 +316,123 @@ public class AccessRuleService {
     }
 
     public boolean evaluateAccessRule(Object parsedRequestBody, AccessRule accessRule) {
-        logger.trace("evaluateAccessRule() starting with: {}", parsedRequestBody);
-        logger.trace("evaluateAccessRule() access rule: {}", accessRule.getName());
+        // Get rule name (use merged name if available)
+        String ruleName = accessRule.getMergedName().isEmpty() ? 
+                          accessRule.getName() : 
+                          accessRule.getMergedName();
 
-        Set<AccessRule> gates = accessRule.getGates();
-        boolean gatesPassed = true;
+        // Create a node for this rule
+        boolean isGate = !evaluationTreeStack.get().isEmpty() && 
+                         evaluationTreeStack.get().peek().getRule().getGates() != null &&
+                         evaluationTreeStack.get().peek().getRule().getGates().contains(accessRule);
+        boolean isSubRule = !evaluationTreeStack.get().isEmpty() && 
+                            evaluationTreeStack.get().peek().getRule().getSubAccessRule() != null &&
+                            evaluationTreeStack.get().peek().getRule().getSubAccessRule().contains(accessRule);
+        boolean isOrRelationship = accessRule.getGateAnyRelation() != null && accessRule.getGateAnyRelation();
 
-        // depends on the flag getGateAnyRelation is true or false,
-        // the logic of checking if apply gate will be changed
-        // the following cases are gate passed:
-        // 1. if gates are null or empty
-        // 2. if getGateAnyRelation is false, all gates passed
-        // 3. if getGateAnyRelation is true, one of the gate passed
-        if (gates != null && !gates.isEmpty()) {
-            if (accessRule.getGateAnyRelation() == null || !accessRule.getGateAnyRelation()) {
-                // All gates are AND relationship
-                // means one fails all fail
-                for (AccessRule gate : gates) {
-                    if (!evaluateAccessRule(parsedRequestBody, gate)) {
-                        logger.info("evaluateAccessRule() gate {} failed: {} ____ {}", gate.getName(), gate.getRule(), gate.getValue());
-                        gatesPassed = false;
-                        break;
+        AccessRuleEvaluationNode currentNode = new AccessRuleEvaluationNode(accessRule, isGate, isSubRule, isOrRelationship);
+
+        // If this is the root node, store it
+        if (evaluationTreeStack.get().isEmpty()) {
+            rootNode.set(currentNode);
+        } else {
+            // Add this node as a child of the parent node
+            evaluationTreeStack.get().peek().addChild(currentNode);
+        }
+
+        // Push the current node onto the stack
+        evaluationTreeStack.get().push(currentNode);
+
+        try {
+            logger.trace("evaluateAccessRule() starting with: {}", parsedRequestBody);
+            logger.debug("evaluateAccessRule() evaluating rule: {}", ruleName);
+
+            Set<AccessRule> gates = accessRule.getGates();
+            boolean gatesPassed = true;
+
+            // depends on the flag getGateAnyRelation is true or false,
+            // the logic of checking if apply gate will be changed
+            // the following cases are gate passed:
+            // 1. if gates are null or empty
+            // 2. if getGateAnyRelation is false, all gates passed
+            // 3. if getGateAnyRelation is true, one of the gate passed
+            if (gates != null && !gates.isEmpty()) {
+                if (accessRule.getGateAnyRelation() == null || !accessRule.getGateAnyRelation()) {
+                    // All gates are AND relationship
+                    // means one fails all fail
+                    for (AccessRule gate : gates) {
+                        if (!evaluateAccessRule(parsedRequestBody, gate)) {
+                            logger.info("evaluateAccessRule() gate {} failed", gate.getName());
+                            gatesPassed = false;
+                            break;
+                        }
                     }
-                }
-            } else {
-                // All gates are OR relationship
-                // means one passes all pass
-                gatesPassed = false;
-                for (AccessRule gate : gates) {
-                    if (evaluateAccessRule(parsedRequestBody, gate)) {
-                        logger.debug("evaluateAccessRule() gate {} passed ", gate.getName());
-                        gatesPassed = true;
-                        break;
+                } else {
+                    // All gates are OR relationship
+                    // means one passes all pass
+                    gatesPassed = false;
+                    for (AccessRule gate : gates) {
+                        if (evaluateAccessRule(parsedRequestBody, gate)) {
+                            logger.debug("evaluateAccessRule() gate {} passed", gate.getName());
+                            gatesPassed = true;
+                            break;
+                        }
                     }
-                }
 
-                if (!gatesPassed) {
-                    logger.debug("all OR gates failed");
+                    if (!gatesPassed) {
+                        logger.debug("All OR gates failed");
+                    }
                 }
             }
-        }
 
-        if (accessRule.getEvaluateOnlyByGates() != null && accessRule.getEvaluateOnlyByGates()) {
-            logger.debug("evaluateAccessRule() eval only by gates");
-            return gatesPassed;
-        }
+            boolean result = false;
+            if (accessRule.getEvaluateOnlyByGates() != null && accessRule.getEvaluateOnlyByGates()) {
+                logger.debug("evaluateAccessRule() eval only by gates");
+                result = gatesPassed;
+                currentNode.setResult(result);
+                if (!result) {
+                    currentNode.setFailureReason("Gates evaluation failed");
+                }
+                return result;
+            }
 
-        if (gatesPassed) {
-            logger.debug("evaluateAccessRule() gates passed");
-            if (!extractAndCheckRule(accessRule, parsedRequestBody)) {
-                logger.debug("Query Rejected by rule(1) {} :: {} :: {}", accessRule.getRule(), accessRule.getType(), accessRule.getValue());
-                return false;
-            } else {
-                if (accessRule.getSubAccessRule() != null) {
-                    // We need to check all the sub rules as merged rules; they can overlap
-                    Set<AccessRule> mergedSubRules = preProcessARBySortedKeys(accessRule.getSubAccessRule());
-                    for (AccessRule subAccessRule : mergedSubRules) {
-                        if (!extractAndCheckRule(subAccessRule, parsedRequestBody)) {
-                            logger.debug("Query Rejected by rule(2) {} :: {} :: {}", subAccessRule.getRule(), subAccessRule.getType(), subAccessRule.getValue());
-                            return false;
+            if (gatesPassed) {
+                logger.debug("evaluateAccessRule() gates passed");
+                if (!extractAndCheckRule(accessRule, parsedRequestBody)) {
+                    logger.debug("Query Rejected by rule(1) {}, with request body {}", accessRule,  parsedRequestBody);
+                    currentNode.setResult(false);
+                    currentNode.setFailureReason("Rule check failed: " + accessRule.getRule());
+                    return false;
+                } else {
+                    if (accessRule.getSubAccessRule() != null) {
+                        // We need to check all the sub rules as merged rules; they can overlap
+                        Set<AccessRule> mergedSubRules = preProcessARBySortedKeys(accessRule.getSubAccessRule());
+                        for (AccessRule subAccessRule : mergedSubRules) {
+                            if (!evaluateAccessRule(parsedRequestBody, subAccessRule)) {
+                                logger.debug("Query Rejected by rule(2) {}", subAccessRule);
+                                currentNode.setResult(false);
+                                currentNode.setFailureReason("Sub-rule check failed");
+                                return false;
+                            }
                         }
                     }
                 }
+            } else {
+                logger.debug("evaluateAccessRule() gates failed");
+                currentNode.setResult(false);
+                currentNode.setFailureReason("Gates evaluation failed");
+                return false;
             }
-        } else {
-            logger.debug("evaluateAccessRule() gates failed");
-            return false;
-        }
 
-        return true;
+            currentNode.setResult(true);
+            return true;
+        } finally {
+            // Always pop the node from the stack when we're done with it
+            evaluationTreeStack.get().pop();
+        }
     }
 
     public boolean extractAndCheckRule(AccessRule accessRule, Object parsedRequestBody) {
-        logger.debug("extractAndCheckRule() starting");
         String rule = accessRule.getRule();
 
         if (rule == null || rule.isEmpty())
@@ -367,7 +444,7 @@ public class AccessRuleService {
         int accessRuleType = accessRule.getType();
 
         try {
-            logger.debug("extractAndCheckRule() -> JsonPath.parse().read() with parsedRequestBody - {} - {}", parsedRequestBody, rule);
+            logger.trace("extractAndCheckRule() -> JsonPath.parse().read() with parsedRequestBody - {} - {}", parsedRequestBody, rule);
             requestBodyValue = JsonPath.parse(parsedRequestBody).read(rule);
 
             if (accessRule.getCheckMapNode() != null && accessRule.getCheckMapNode()) {
@@ -389,7 +466,14 @@ public class AccessRuleService {
                 return true;
             }
 
-            logger.debug("extractAndCheckRule() -> JsonPath.parse().read() throws exception with parsedRequestBody - {} : {} - {}", parsedRequestBody, ex.getClass().getSimpleName(), ex.getMessage());
+            logger.info("extractAndCheckRule() -> JsonPath.parse().read() throws exception with parsedRequestBody - {} : {} - {}", parsedRequestBody, ex.getClass().getSimpleName(), ex.getMessage());
+
+            // Record failure reason in the evaluation tree
+            if (!evaluationTreeStack.get().isEmpty()) {
+                AccessRuleEvaluationNode currentNode = evaluationTreeStack.get().peek();
+                currentNode.setFailureReason("Path not found: " + rule + " - " + ex.getMessage());
+            }
+
             return false;
         }
 
@@ -399,17 +483,34 @@ public class AccessRuleService {
                 || (requestBodyValue instanceof String && ((String) requestBodyValue).isEmpty())
                 || (requestBodyValue instanceof Collection && ((Collection) requestBodyValue).isEmpty())
                 || (requestBodyValue instanceof Map && ((Map) requestBodyValue).isEmpty())) {
-                return accessRuleType == AccessRule.TypeNaming.IS_EMPTY;
+                boolean result = accessRuleType == AccessRule.TypeNaming.IS_EMPTY;
+                if (!result && !evaluationTreeStack.get().isEmpty()) {
+                    AccessRuleEvaluationNode currentNode = evaluationTreeStack.get().peek();
+                    currentNode.setFailureReason("Expected empty path but found value: " + requestBodyValue);
+                }
+                return result;
             } else {
-                return accessRuleType == AccessRule.TypeNaming.IS_NOT_EMPTY;
+                boolean result = accessRuleType == AccessRule.TypeNaming.IS_NOT_EMPTY;
+                if (!result && !evaluationTreeStack.get().isEmpty()) {
+                    AccessRuleEvaluationNode currentNode = evaluationTreeStack.get().peek();
+                    currentNode.setFailureReason("Expected non-empty path but found empty value");
+                }
+                return result;
             }
         }
 
-        return evaluateNode(requestBodyValue, accessRule);
+        boolean result = evaluateNode(requestBodyValue, accessRule);
+        if (!result && !evaluationTreeStack.get().isEmpty()) {
+            AccessRuleEvaluationNode currentNode = evaluationTreeStack.get().peek();
+            if (currentNode.getFailureReason() == null) {
+                currentNode.setFailureReason("Rule evaluation failed for path: " + rule);
+            }
+        }
+        return result;
     }
 
     private boolean evaluateNode(Object requestBodyValue, AccessRule accessRule) {
-        logger.debug("evaluateNode() starting: {} :: {} :: {}", accessRule.getRule(), accessRule.getType(), accessRule.getMergedValues().isEmpty() ? accessRule.getValue() : ("Merged " + Arrays.deepToString(accessRule.getMergedValues().toArray())));
+        logger.trace("evaluateNode() starting: {} :: {} :: {}", accessRule.getRule(), accessRule.getType(), accessRule.getMergedValues().isEmpty() ? accessRule.getValue() : ("Merged " + Arrays.deepToString(accessRule.getMergedValues().toArray())));
         logger.trace("evaluateNode() requestBody {}  {}", requestBodyValue.getClass().getName(), requestBodyValue instanceof Collection ?
                 Arrays.deepToString(((Collection) requestBodyValue).toArray()) :
                 requestBodyValue.toString());
@@ -442,17 +543,12 @@ public class AccessRuleService {
                 return false;
             default:
                 if (((Map) requestBodyValue).isEmpty()) {
-                    switch (accessRule.getType()) {
-                        case (AccessRule.TypeNaming.ALL_EQUALS_IGNORE_CASE):
-                        case (AccessRule.TypeNaming.ALL_EQUALS):
-                        case (AccessRule.TypeNaming.ALL_CONTAINS):
-                        case (AccessRule.TypeNaming.ALL_CONTAINS_IGNORE_CASE):
-                            return false;
-                        case (AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY):
-                        case (AccessRule.TypeNaming.ALL_CONTAINS_OR_EMPTY_IGNORE_CASE):
-                        default:
-                            return true;
-                    }
+                    return switch (accessRule.getType()) {
+                        case (AccessRule.TypeNaming.ALL_EQUALS_IGNORE_CASE), (AccessRule.TypeNaming.ALL_EQUALS),
+                             (AccessRule.TypeNaming.ALL_CONTAINS), (AccessRule.TypeNaming.ALL_CONTAINS_IGNORE_CASE) ->
+                                false;
+                        default -> true;
+                    };
                 }
                 for (Map.Entry entry : ((Map<String, Object>) requestBodyValue).entrySet()) {
                     if (!decisionMaker(accessRule, (String) entry.getKey()))
@@ -469,6 +565,7 @@ public class AccessRuleService {
     }
 
     private Boolean evaluateCollection(Collection requestBodyValue, AccessRule accessRule) {
+        logger.debug("evaluateCollection()");
         logger.trace("evaluateCollection() access rule:{}", accessRule.getName());
         logger.trace("evaluateCollection() request body value:{}", requestBodyValue);
 
@@ -521,6 +618,7 @@ public class AccessRuleService {
     public boolean decisionMaker(AccessRule accessRule, String requestBodyValue) {
         if (accessRule.getMergedValues().isEmpty()) {
             String value = accessRule.getValue();
+            logger.debug("decisionMaker No Merged values: {}, request body: {}, access rule: {}", value, requestBodyValue, accessRule);
             if (value == null) {
                 return requestBodyValue == null;
             }
@@ -532,6 +630,7 @@ public class AccessRuleService {
         // if there is only one element in the merged value set
         // the operation equals to _decisionMaker(accessRule, requestBodyValue, value)
         boolean res = false;
+        logger.debug("Checking {} in collection {}", requestBodyValue, Arrays.deepToString(accessRule.getMergedValues().toArray()));
         for (String s : accessRule.getMergedValues()) {
             // check the special case value is null
             // if value is null, the check will stop here and
@@ -549,6 +648,7 @@ public class AccessRuleService {
             // means if you pass one of them, you pass the rule
             if (_decisionMaker(accessRule, requestBodyValue, s)) {
                 res = true;
+                logger.info("Returning true for {} in collection {}", s, Arrays.deepToString(accessRule.getMergedValues().toArray()));
                 break;
             }
         }
@@ -556,13 +656,7 @@ public class AccessRuleService {
     }
 
     private boolean _decisionMaker(AccessRule accessRule, String requestBodyValue, String value) {
-        logger.trace("_decisionMaker() starting");
-        logger.trace("_decisionMaker() access rule:{}", accessRule.getName());
-        logger.trace("_decisionMaker() request body value:{}", requestBodyValue);
-        logger.trace("_decisionMaker() value:{}", value);
-        logger.trace("_decisionMaker() access rule type:{}", accessRule.getType());
-
-        return switch (accessRule.getType()) {
+        boolean decision = switch (accessRule.getType()) {
             case AccessRule.TypeNaming.NOT_CONTAINS -> !requestBodyValue.contains(value);
             case AccessRule.TypeNaming.NOT_CONTAINS_IGNORE_CASE ->
                     !requestBodyValue.toLowerCase().contains(value.toLowerCase());
@@ -583,6 +677,12 @@ public class AccessRuleService {
                 yield true;
             }
         };
+
+        if (decision) {
+            logger.info("_decisionMaker() returning true for request body: {} access rule: {} value: {}", requestBodyValue, accessRule, value);
+        }
+
+        return decision;
     }
 
     /**
@@ -822,11 +922,9 @@ public class AccessRuleService {
     }
 
     protected AccessRule populateHarmonizedAccessRule(AccessRule rule, String parentConceptPath, String studyIdentifier, String projectAlias) {
-        if (rule.getGates() == null) {
-            rule.setGates(new HashSet<>(Collections.singletonList(
-                    upsertConsentGate("HARMONIZED_CONSENT", "$.query.query.categoryFilters." + fence_harmonized_consent_group_concept_path + "[*]", true, "harmonized data")
-            )));
-        }
+        rule.setGates(new HashSet<>(Collections.singletonList(
+                upsertConsentGate("HARMONIZED_CONSENT", "$.query.query.categoryFilters." + fence_harmonized_consent_group_concept_path + "[*]", true, "harmonized data")
+        )));
 
         addUniqueSubRules(rule, getAllowedQueryTypeRules());
         addUniqueSubRules(rule, getHarmonizedSubRules());
