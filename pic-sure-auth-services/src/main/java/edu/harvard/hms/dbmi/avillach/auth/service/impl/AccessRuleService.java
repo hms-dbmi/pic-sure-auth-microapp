@@ -151,11 +151,8 @@ public class AccessRuleService {
             return "No evaluation tree available";
         }
 
-        StringBuilder sb = new StringBuilder();
-        sb.append("ACCESS RULE EVALUATION TREE:\n");
-        sb.append(root.generateTreeString());
 
-        return sb.toString();
+        return "ACCESS RULE EVALUATION TREE:\n" + root.generateTreeString();
     }
 
     /**
