@@ -822,11 +822,9 @@ public class AccessRuleService {
     }
 
     protected AccessRule populateHarmonizedAccessRule(AccessRule rule, String parentConceptPath, String studyIdentifier, String projectAlias) {
-        if (rule.getGates() == null) {
-            rule.setGates(new HashSet<>(Collections.singletonList(
-                    upsertConsentGate("HARMONIZED_CONSENT", "$.query.query.categoryFilters." + fence_harmonized_consent_group_concept_path + "[*]", true, "harmonized data")
-            )));
-        }
+        rule.setGates(new HashSet<>(Collections.singletonList(
+                upsertConsentGate("HARMONIZED_CONSENT", "$.query.query.categoryFilters." + fence_harmonized_consent_group_concept_path + "[*]", true, "harmonized data")
+        )));
 
         addUniqueSubRules(rule, getAllowedQueryTypeRules());
         addUniqueSubRules(rule, getHarmonizedSubRules());
