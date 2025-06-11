@@ -316,13 +316,11 @@ public class AccessRuleService {
     }
 
     public boolean evaluateAccessRule(Object parsedRequestBody, AccessRule accessRule) {
-        // Get rule name (use merged name if available)
-        String ruleName = accessRule.getMergedName().isEmpty() ? 
+        String ruleName = accessRule.getMergedName().isEmpty() ?
                           accessRule.getName() : 
                           accessRule.getMergedName();
 
-        // Create a node for this rule
-        boolean isGate = !evaluationTreeStack.get().isEmpty() && 
+        boolean isGate = !evaluationTreeStack.get().isEmpty() &&
                          evaluationTreeStack.get().peek().getRule().getGates() != null &&
                          evaluationTreeStack.get().peek().getRule().getGates().contains(accessRule);
         boolean isSubRule = !evaluationTreeStack.get().isEmpty() && 
@@ -332,15 +330,12 @@ public class AccessRuleService {
 
         AccessRuleEvaluationNode currentNode = new AccessRuleEvaluationNode(accessRule, isGate, isSubRule, isOrRelationship);
 
-        // If this is the root node, store it
         if (evaluationTreeStack.get().isEmpty()) {
             rootNode.set(currentNode);
         } else {
-            // Add this node as a child of the parent node
             evaluationTreeStack.get().peek().addChild(currentNode);
         }
 
-        // Push the current node onto the stack
         evaluationTreeStack.get().push(currentNode);
 
         try {
@@ -427,7 +422,6 @@ public class AccessRuleService {
             currentNode.setResult(true);
             return true;
         } finally {
-            // Always pop the node from the stack when we're done with it
             evaluationTreeStack.get().pop();
         }
     }
