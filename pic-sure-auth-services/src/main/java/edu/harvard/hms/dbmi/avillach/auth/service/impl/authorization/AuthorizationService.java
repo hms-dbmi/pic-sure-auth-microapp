@@ -188,18 +188,32 @@ public class AuthorizationService {
     }
 
     private EvaluateAccessRuleResult passesAccessRuleEvaluation(Object requestBody, Set<AccessRule> accessRules) {
-        logger.debug("Request: {}", requestBody);
         // Current logic here is: among all accessRules, they are OR relationship
         Set<AccessRule> failedRules = new HashSet<>();
         AccessRule passByRule = null;
         boolean result = false;
+
         for (AccessRule accessRule : accessRules) {
-            if (this.accessRuleService.evaluateAccessRule(requestBody, accessRule)) {
-                result = true;
-                passByRule = accessRule;
-                break;
-            } else {
-                failedRules.add(accessRule);
+            try {
+                if (this.accessRuleService.evaluateAccessRule(requestBody, accessRule)) {
+                    result = true;
+                    passByRule = accessRule;
+                    break;
+                } else {
+                    failedRules.add(accessRule);
+                    // Print the evaluation tree when a rule fails
+                    if (logger.isInfoEnabled()) {
+                        String ruleName = accessRule.getMergedName().isEmpty() ? 
+                                         accessRule.getName() : 
+                                         accessRule.getMergedName();
+                        logger.info("Rule evaluation tree for failed rule {}:\n{}", 
+                            ruleName, 
+                            this.accessRuleService.printEvaluationTree());
+                    }
+                }
+            } finally {
+                // Clear the evaluation tree to prevent memory leaks
+                this.accessRuleService.clearEvaluationTree();
             }
         }
 
