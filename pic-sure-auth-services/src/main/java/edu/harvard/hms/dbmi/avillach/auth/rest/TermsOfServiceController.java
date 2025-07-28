@@ -57,7 +57,10 @@ public class TermsOfServiceController {
     @RolesAllowed({AuthNaming.AuthRoleNaming.ADMIN, SUPER_ADMIN})
     @PostMapping(path = "/update", consumes = "text/html", produces = "application/json")
     public ResponseEntity<?> updateTermsOfService(@RequestBody String html) {
-        Optional<TermsOfService> termsOfService = tosService.updateTermsOfService(html);
+        SecurityContext context = SecurityContextHolder.getContext();
+        CustomUserDetails customUserDetails = (CustomUserDetails) context.getAuthentication().getPrincipal();
+        String userSubject = customUserDetails.getUser().getSubject();
+        Optional<TermsOfService> termsOfService = tosService.updateTermsOfService(html, userSubject);
         if (termsOfService.isEmpty()) {
             return PICSUREResponse.success();
         }

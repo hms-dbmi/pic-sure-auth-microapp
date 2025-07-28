@@ -60,10 +60,11 @@ public class TOSService {
         return checkAgainstTOSDate(userSubj);
     }
 
-    public Optional<TermsOfService> updateTermsOfService(String html) {
+    public Optional<TermsOfService> updateTermsOfService(String html, String userSubj) {
         TermsOfService updatedTOS = new TermsOfService();
         updatedTOS.setContent(html);
         termsOfServiceRepo.save(updatedTOS);
+        this.acceptTermsOfService(userSubj);
         return termsOfServiceRepo.findTopByOrderByDateUpdatedDesc();
     }
 
