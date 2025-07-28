@@ -107,7 +107,7 @@ public class TOSService {
         }
 
         Optional<TermsOfService> latestTOS = this.termsOfServiceRepo.findTopByOrderByDateUpdatedDesc();
-        return latestTOS.filter(termsOfService -> acceptedTOS.after(termsOfService.getDateUpdated())).isPresent();
+        return latestTOS.filter(termsOfService -> acceptedTOS.compareTo(termsOfService.getDateUpdated()) >= 0).isPresent();
     }
 
 }
