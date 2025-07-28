@@ -2,6 +2,7 @@ package edu.harvard.hms.dbmi.avillach.auth.rest;
 
 import edu.harvard.hms.dbmi.avillach.auth.entity.TermsOfService;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
+import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
 import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.TOSService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.UserService;
@@ -67,7 +68,8 @@ public class TermsOfServiceController {
     @GetMapping(produces = "text/plain")
     public ResponseEntity<Boolean> hasUserAcceptedTOS() {
         SecurityContext context = SecurityContextHolder.getContext();
-        String userSubject = context.getAuthentication().getName();
+        CustomUserDetails customUserDetails = (CustomUserDetails) context.getAuthentication().getPrincipal();
+        String userSubject = customUserDetails.getUser().getSubject();
         logger.info("hasUserAcceptedTOS for user {}", userSubject);
         return PICSUREResponse.success(tosService.hasUserAcceptedLatest(userSubject));
     }
@@ -76,7 +78,8 @@ public class TermsOfServiceController {
     @PostMapping(path = "/accept", produces = "application/json")
     public ResponseEntity<?> acceptTermsOfService() {
         SecurityContext context = SecurityContextHolder.getContext();
-        String userSubject = context.getAuthentication().getName();
+        CustomUserDetails customUserDetails = (CustomUserDetails) context.getAuthentication().getPrincipal();
+        String userSubject = customUserDetails.getUser().getSubject();
         User user = tosService.acceptTermsOfService(userSubject);
         userService.updateUser(List.of(user));
         return PICSUREResponse.success();
