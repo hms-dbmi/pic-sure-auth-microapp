@@ -60,10 +60,13 @@ public class TermsOfServiceController {
         SecurityContext context = SecurityContextHolder.getContext();
         CustomUserDetails customUserDetails = (CustomUserDetails) context.getAuthentication().getPrincipal();
         String userSubject = customUserDetails.getUser().getSubject();
-        Optional<TermsOfService> termsOfService = tosService.updateTermsOfService(html, userSubject);
+        logger.info("User {} updating TOS", userSubject);
+        Optional<TermsOfService> termsOfService = tosService.updateTermsOfService(html);
         if (termsOfService.isEmpty()) {
             return PICSUREResponse.success();
         }
+        User user = tosService.acceptTermsOfService(userSubject);
+        userService.updateUser(List.of(user));
         return PICSUREResponse.success(termsOfService.get());
     }
 

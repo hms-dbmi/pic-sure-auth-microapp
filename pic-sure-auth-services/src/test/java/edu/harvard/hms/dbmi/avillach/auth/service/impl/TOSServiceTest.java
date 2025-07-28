@@ -87,22 +87,15 @@ public class TOSServiceTest {
 
     @Test
     public void testUpdateTermsOfService() {
-        Date lastDate = new Date(1678886400000L);
-        String userSubj = "some-user";
-        User user = new User();
-        user.setSubject(userSubj);
-        user.setAcceptedTOS(lastDate);
         String html = "<p>New TOS content</p>";
 
         TermsOfService updatedTOS = new TermsOfService();
         updatedTOS.setContent(html);
-        when(userRepo.findBySubject(any(String.class))).thenReturn(user);
         when(termsOfServiceRepo.save(any(TermsOfService.class))).thenReturn(updatedTOS);
         when(termsOfServiceRepo.findTopByOrderByDateUpdatedDesc()).thenReturn(Optional.of(updatedTOS));
 
-        Optional<TermsOfService> result = tosService.updateTermsOfService(html, userSubj);
+        Optional<TermsOfService> result = tosService.updateTermsOfService(html);
         assertTrue(result.isPresent());
-        assertTrue(user.getAcceptedTOS().compareTo(lastDate) > 0);
         assertEquals(html, result.get().getContent());
     }
 
