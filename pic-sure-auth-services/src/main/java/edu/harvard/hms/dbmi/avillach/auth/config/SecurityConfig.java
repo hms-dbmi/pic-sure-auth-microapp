@@ -30,7 +30,10 @@ public class SecurityConfig {
     private final JWTUtil jwtUtil;
 
     @Autowired
-    public SecurityConfig(JWTFilter jwtFilter, AuthenticationProvider authenticationProvider, UserService userService, CacheEvictionService cacheEvictionService, JWTUtil jwtUtil) {
+    public SecurityConfig(
+        JWTFilter jwtFilter, AuthenticationProvider authenticationProvider, UserService userService,
+        CacheEvictionService cacheEvictionService, JWTUtil jwtUtil
+    ) {
         this.jwtFilter = jwtFilter;
         this.authenticationProvider = authenticationProvider;
         this.userService = userService;
@@ -45,40 +48,28 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement((session) -> session.sessionCreationPolicy(STATELESS))
-                .authenticationProvider(authenticationProvider)
-                .authorizeHttpRequests((authorizeRequests) ->
-                    authorizeRequests.requestMatchers(
-                                    "/actuator/health",
-                                    "/actuator/info",
-                                    "/authentication",
-                                    "/authentication/**",
-                                    "/swagger.yaml",
-                                    "/swagger.json",
-                                    "/user/me/queryTemplate",
-                                    "/user/me/queryTemplate/**",
-                                    "/open/validate",
-                                    "/logout",
-                                    "/cache/**"
-                            ).permitAll()
-                            .anyRequest().authenticated()
-                )
-                .httpBasic(AbstractHttpConfigurer::disable)
-                .formLogin(AbstractHttpConfigurer::disable)
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
-                .logout((logout) -> logout.logoutUrl("/logout").addLogoutHandler(customLogoutHandler()).logoutSuccessHandler((request, response, authentication) -> {
-                    // We don't want to redirect to a login page, we just want to return a 200
-                    // We leave it to the client to handle the redirect
-                    response.setStatus(200);
-                }));
+        http.csrf(AbstractHttpConfigurer::disable).sessionManagement((session) -> session.sessionCreationPolicy(STATELESS))
+            .authenticationProvider(authenticationProvider)
+            .authorizeHttpRequests(
+                (authorizeRequests) -> authorizeRequests.requestMatchers(
+                    "/actuator/health", "/actuator/info", "/authentication", "/authentication/**", "/swagger.yaml", "/swagger.json",
+                    "/user/me/queryTemplate", "/user/me/queryTemplate/**", "/tos/latest", "/open/validate", "/logout", "/cache/**"
+                ).permitAll().anyRequest().authenticated()
+            ).httpBasic(AbstractHttpConfigurer::disable).formLogin(AbstractHttpConfigurer::disable)
+            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class).logout(
+                (logout) -> logout.logoutUrl("/logout").addLogoutHandler(customLogoutHandler())
+                    .logoutSuccessHandler((request, response, authentication) -> {
+                        // We don't want to redirect to a login page, we just want to return a 200
+                        // We leave it to the client to handle the redirect
+                        response.setStatus(200);
+                    })
+            );
 
         return http.build();
     }
 
     /**
-     * Remove the default "ROLE_" prefix so that hasRole("ADMIN")
-     * and @RolesAllowed("ADMIN") match a GrantedAuthority("ADMIN").
+     * Remove the default "ROLE_" prefix so that hasRole("ADMIN") and @RolesAllowed("ADMIN") match a GrantedAuthority("ADMIN").
      */
     @Bean
     public GrantedAuthorityDefaults grantedAuthorityDefaults() {
