@@ -477,14 +477,14 @@ public class UserServiceTest {
     }
 
     @Test
-    public void testAddUsers_withUserHavingNullRoleSet() {
+    public void testAddUsers_withUserHavingEmptyRoleSet() {
         User user = createTestUser();
         user.setRoles(null);
 
         configureUserSecurityContext(user);
         when(userRepository.saveAll(List.of(user))).thenReturn(List.of(user));
 
-        assertThrows(NullPointerException.class, () -> {
+        assertThrows(IllegalArgumentException.class, () -> {
             List<User> result = userService.addUsers(List.of(user));
             assertNull(result.getFirst().getRoles());
         });
