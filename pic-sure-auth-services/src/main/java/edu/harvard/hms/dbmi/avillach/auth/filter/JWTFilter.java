@@ -36,15 +36,10 @@ import java.util.stream.Collectors;
 
 
 /**
- * The main gate for PSAMA that filters all incoming requests against PSAMA.
- * <h3>Design Logic</h3>
- * <ul>
- *     <li>All incoming requests pass through this filter.</li>
- *     <li>To pass this filter, the incoming request needs a valid bearer token in its HTTP Authorization Header
- *     to represent a valid identity behind the token. </li>
- *     <li>In some cases, the incoming request doesn't need to hold a token. For example, when the request is to the <code>authentication</code>
- *     endpoint, <code>swagger.json</code>, or <code>swagger.html</code>.</li>
- * </ul>
+ * The main gate for PSAMA that filters all incoming requests against PSAMA. <h3>Design Logic</h3> <ul> <li>All incoming requests pass
+ * through this filter.</li> <li>To pass this filter, the incoming request needs a valid bearer token in its HTTP Authorization Header to
+ * represent a valid identity behind the token. </li> <li>In some cases, the incoming request doesn't need to hold a token. For example,
+ * when the request is to the <code>authentication</code> endpoint, <code>swagger.json</code>, or <code>swagger.html</code>.</li> </ul>
  */
 
 @Component
@@ -61,8 +56,10 @@ public class JWTFilter extends OncePerRequestFilter {
     private final CustomUserDetailService customUserDetailService;
 
     @Autowired
-    public JWTFilter(TOSService tosService,
-                     @Value("${application.user.id.claim}") String userClaimId, JWTUtil jwtUtil, CustomUserDetailService customUserDetailService) {
+    public JWTFilter(
+        TOSService tosService, @Value("${application.user.id.claim}") String userClaimId, JWTUtil jwtUtil,
+        CustomUserDetailService customUserDetailService
+    ) {
         this.tosService = tosService;
         this.userClaimId = userClaimId;
         this.jwtUtil = jwtUtil;
@@ -70,19 +67,19 @@ public class JWTFilter extends OncePerRequestFilter {
     }
 
     /**
-     * Filter that performs authentication and authorization checks based on the provided request headers.
-     * The filter checks for the presence of the "Authorization" header and validates the token.
-     * It sets the appropriate security context based on the type of token (long-term token or PSAMA application token) and
-     * performs the necessary checks to ensure that the user or application is authorized to access the requested resource.
-     * This filter is called by the configured security filter chain in the SecurityConfig class.
+     * Filter that performs authentication and authorization checks based on the provided request headers. The filter checks for the
+     * presence of the "Authorization" header and validates the token. It sets the appropriate security context based on the type of token
+     * (long-term token or PSAMA application token) and performs the necessary checks to ensure that the user or application is authorized
+     * to access the requested resource. This filter is called by the configured security filter chain in the SecurityConfig class.
      *
-     * @param request     the HttpServletRequest object
-     * @param response    the HttpServletResponse object
+     * @param request the HttpServletRequest object
+     * @param response the HttpServletResponse object
      * @param filterChain the FilterChain object
      * @throws IOException if an I/O error occurs during the execution of the filter
      */
     @Override
-    protected void doFilterInternal(HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain) throws IOException, ServletException {
+    protected void doFilterInternal(HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
+        throws IOException, ServletException {
         // Get headers from the request
         String authorizationHeader = request.getHeader("Authorization");
 
@@ -119,18 +116,27 @@ public class JWTFilter extends OncePerRequestFilter {
                 logger.info("Application ID: {}", applicationId);
 
                 // Create custom application details. Will be used to set the correct security context.
-                CustomApplicationDetails customApplicationDetails = (CustomApplicationDetails) this.customUserDetailService.loadUserByUsername("application:" + applicationId);
+                CustomApplicationDetails customApplicationDetails =
+                    (CustomApplicationDetails) this.customUserDetailService.loadUserByUsername("application:" + applicationId);
                 if (customApplicationDetails.getApplication() == null) {
                     logger.error("Cannot find an application by userId: {}", applicationId);
-                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Your token doesn't contain valid identical information, please contact admin.");
+                    response.sendError(
+                        HttpServletResponse.SC_UNAUTHORIZED, "Your token doesn't contain valid identical information, please contact admin."
+                    );
                     return;
                 }
 
                 Application application = customApplicationDetails.getApplication();
 
                 if (!application.getToken().equals(token)) {
-                    logger.error("filter() incoming application token - {} - is not the same as record, might because the token has been refreshed. Subject: {}", token, userId);
-                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Your token has been inactivated, please contact admin to grab you the latest one.");
+                    logger.error(
+                        "filter() incoming application token - {} - is not the same as record, might because the token has been refreshed. Subject: {}",
+                        token, userId
+                    );
+                    response.sendError(
+                        HttpServletResponse.SC_UNAUTHORIZED,
+                        "Your token has been inactivated, please contact admin to grab you the latest one."
+                    );
                 }
 
                 // This is the application token that is being used to authenticate the user by other applications
@@ -148,20 +154,22 @@ public class JWTFilter extends OncePerRequestFilter {
 
     private void setSecurityContextForApplication(HttpServletRequest request, CustomApplicationDetails authenticatedApplication) {
         logger.debug("Setting security context for application: {}", authenticatedApplication.getApplication().getName());
-        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(authenticatedApplication, null, authenticatedApplication.getAuthorities());
+        UsernamePasswordAuthenticationToken authentication =
+            new UsernamePasswordAuthenticationToken(authenticatedApplication, null, authenticatedApplication.getAuthorities());
         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-        logger.debug("Created authenticationToken object {} for application: {}", authentication, authenticatedApplication.getApplication().getName());
+        logger.debug(
+            "Created authenticationToken object {} for application: {}", authentication, authenticatedApplication.getApplication().getName()
+        );
         SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 
     /**
-     * Sets the security context for the given user.
-     * This method is responsible for validating the user claims. It checks if the user is active,
-     * ensuring the user has accepted the terms of service (if enabled), validating user roles and privileges,
-     * and setting the user object as an attribute in the security context.
+     * Sets the security context for the given user. This method is responsible for validating the user claims. It checks if the user is
+     * active, ensuring the user has accepted the terms of service (if enabled), validating user roles and privileges, and setting the user
+     * object as an attribute in the security context.
      *
-     * @param request           the HttpServletRequest object
-     * @param response          the HttpServletResponse object
+     * @param request the HttpServletRequest object
+     * @param response the HttpServletResponse object
      * @param realClaimsSubject the subject of the user's claims in the JWT token
      */
     private void setSecurityContextForUser(HttpServletRequest request, HttpServletResponse response, String realClaimsSubject) {
@@ -183,9 +191,13 @@ public class JWTFilter extends OncePerRequestFilter {
 
         logger.debug("User with ID: {} is active.", authenticatedUser.getUser().getUuid());
         logger.debug("Checking if user has accepted the latest terms of service.");
-        if (!tosService.hasUserAcceptedLatest(authenticatedUser.getUser().getSubject())) {
+
+        if (
+            !request.getRequestURI().endsWith("/tos/accept") && !tosService.hasUserAcceptedLatest(authenticatedUser.getUser().getSubject())
+        ) {
             logger.info("User with ID: {} has not accepted the latest terms of service.", authenticatedUser.getUser().getUuid());
-            //If user has not accepted terms of service and is attempted to get information other than the terms of service, don't authenticate
+            // If user has not accepted terms of service and is attempted to get information other than the terms of service, don't
+            // authenticate
             try {
                 response.sendError(HttpServletResponse.SC_FORBIDDEN, "User must accept terms of service");
                 // Return early to prevent setting up security context
@@ -196,7 +208,9 @@ public class JWTFilter extends OncePerRequestFilter {
         }
 
         Set<Role> userRoles = authenticatedUser.getUser().getRoles();
-        if (userRoles == null || userRoles.isEmpty() || userRoles.stream().allMatch(role -> CollectionUtils.isEmpty(role.getPrivileges()))) {
+        if (
+            userRoles == null || userRoles.isEmpty() || userRoles.stream().allMatch(role -> CollectionUtils.isEmpty(role.getPrivileges()))
+        ) {
             logger.error("User doesn't have any roles or privileges.");
             try {
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User doesn't have any roles or privileges.");
@@ -207,8 +221,12 @@ public class JWTFilter extends OncePerRequestFilter {
             }
         }
 
-        logger.debug("User with email {} has privileges {}.", authenticatedUser.getUser().getEmail(), authenticatedUser.getUser().getTotalPrivilege().stream().map(Privilege::getName).collect(Collectors.joining(",")));
-        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(authenticatedUser, null, authenticatedUser.getAuthorities());
+        logger.debug(
+            "User with email {} has privileges {}.", authenticatedUser.getUser().getEmail(),
+            authenticatedUser.getUser().getTotalPrivilege().stream().map(Privilege::getName).collect(Collectors.joining(","))
+        );
+        UsernamePasswordAuthenticationToken authentication =
+            new UsernamePasswordAuthenticationToken(authenticatedUser, null, authenticatedUser.getAuthorities());
         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
         SecurityContextHolder.getContext().setAuthentication(authentication);
     }
