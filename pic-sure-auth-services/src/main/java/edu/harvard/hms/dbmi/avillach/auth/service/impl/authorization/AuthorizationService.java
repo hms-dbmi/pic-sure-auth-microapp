@@ -249,18 +249,24 @@ public class AuthorizationService {
             logger.info("{} has not be created for this environment. Please create the role and its permissions before attempting to use open access.", MANAGED_OPEN_ACCESS_ROLE_NAME);
             return false;
         }
+
         Set<AccessRule> allOpenAccessRules = openAccessRole.getPrivileges().stream()
                 .map(Privilege::getAccessRules).collect(Collectors.toSet()).stream().flatMap(Collection::stream).collect(Collectors.toSet());
 
-        EvaluateAccessRuleResult evaluationResult = passesAccessRuleEvaluation(requestBody, allOpenAccessRules);
-        boolean result = evaluationResult.result();
-        String passRuleName = evaluationResult.passRuleName();
-        Set<AccessRule> failedRules = evaluationResult.failedRules();
-
-        logger.info("ACCESS_LOG ___ AN OPEN ACCESS USER ___ has been {} access to execute query ___ {} ___ in application ___ OPEN ACCESS ___ {}", (result ? "granted" : "denied"), requestBody, (result ? "passed by " + passRuleName : "failed by rules: ["
-                                                                                                                                                                                                                                         + failedRules.stream()
-                                                                                                                                                                                                                                                 .map(ar -> (ar.getMergedName().isEmpty() ? ar.getName() : ar.getMergedName()))
-                                                                                                                                                                                                                                                 .collect(Collectors.joining(", ")) + "]"));
+        boolean result = false;
+        if (allOpenAccessRules.isEmpty()) {
+            result = true;
+            logger.info("ACCESS_LOG ___ AN OPEN ACCESS USER ___ has been granted access to application ___ NO ACCESS RULES EVALUATED");
+        } else {
+            EvaluateAccessRuleResult evaluationResult = passesAccessRuleEvaluation(requestBody, allOpenAccessRules);
+            result = evaluationResult.result();
+            String passRuleName = evaluationResult.passRuleName();
+            Set<AccessRule> failedRules = evaluationResult.failedRules();
+            logger.info("ACCESS_LOG ___ AN OPEN ACCESS USER ___ has been {} access to execute query ___ {} ___ in application ___ OPEN ACCESS ___ {}", (result ? "granted" : "denied"), requestBody, (result ? "passed by " + passRuleName : "failed by rules: ["
+                                                                                                                                                                                                                                             + failedRules.stream()
+                                                                                                                                                                                                                                                     .map(ar -> (ar.getMergedName().isEmpty() ? ar.getName() : ar.getMergedName()))
+                                                                                                                                                                                                                                                     .collect(Collectors.joining(", ")) + "]"));
+        }
 
         return result;
     }
