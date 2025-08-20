@@ -47,6 +47,8 @@ public class AuthorizationService {
     protected SessionService sessionService;
     private final RoleService roleService;
 
+    private final ConsentBasedAccessRuleEvaluator consentBasedAccessRuleEvaluator;
+
     /**
      * Applications that have strict access control. If the application is strict a user must have both privileges and access rules.
      * If the application is not strict, the user only needs privileges. Access rules are optional.
@@ -57,10 +59,12 @@ public class AuthorizationService {
     public AuthorizationService(AccessRuleService accessRuleService,
                                 SessionService sessionService,
                                 RoleService roleService,
+                                ConsentBasedAccessRuleEvaluator consentBasedAccessRuleEvaluator,
                                 @Value("${strict.authorization.applications.connections}") String strictConnections) {
         this.accessRuleService = accessRuleService;
         this.sessionService = sessionService;
         this.roleService = roleService;
+        this.consentBasedAccessRuleEvaluator = consentBasedAccessRuleEvaluator;
         if (strictConnections != null && !strictConnections.isEmpty()) {
             this.strictConnections.addAll(Arrays.asList(strictConnections.split(",")));
         }
@@ -174,7 +178,7 @@ public class AuthorizationService {
 
         logger.info("ACCESS_LOG ___ {},{},{} ___ has the following access rules: {}", user.getUuid().toString(), user.getEmail(), user.getName(), accessRules.stream().map(AccessRule::toString).collect(Collectors.joining(", ")));
 
-        EvaluateAccessRuleResult evaluationResult = passesAccessRuleEvaluation(requestBody, accessRules);
+        EvaluateAccessRuleResult evaluationResult = passesAccessRuleEvaluation(requestBody, accessRules, user);
         boolean result = evaluationResult.result();
         String passRuleName = evaluationResult.passRuleName();
         Set<AccessRule> failedRules = evaluationResult.failedRules();
@@ -187,14 +191,23 @@ public class AuthorizationService {
         return result;
     }
 
-    private EvaluateAccessRuleResult passesAccessRuleEvaluation(Object requestBody, Set<AccessRule> accessRules) {
+    private EvaluateAccessRuleResult passesAccessRuleEvaluation(Object requestBody, Set<AccessRule> accessRules, User user) {
         logger.debug("Request: {}", requestBody);
         // Current logic here is: among all accessRules, they are OR relationship
         Set<AccessRule> failedRules = new HashSet<>();
         AccessRule passByRule = null;
         boolean result = false;
         for (AccessRule accessRule : accessRules) {
-            if (this.accessRuleService.evaluateAccessRule(requestBody, accessRule)) {
+            if (accessRule.getType().equals(AccessRule.TypeNaming.USER_CONSENT_ACCESS)) {
+                if (consentBasedAccessRuleEvaluator.evaluateAccessRule(requestBody, accessRule, user.getConsents())) {
+                    result = true;
+                    passByRule = accessRule;
+                    break;
+                } else {
+                    failedRules.add(accessRule);
+                }
+            }
+            if (accessRuleService.evaluateAccessRule(requestBody, accessRule)) {
                 result = true;
                 passByRule = accessRule;
                 break;
@@ -234,7 +247,7 @@ public class AuthorizationService {
         Set<AccessRule> allOpenAccessRules = fenceOpenAccessRole.getPrivileges().stream()
                 .map(Privilege::getAccessRules).collect(Collectors.toSet()).stream().flatMap(Collection::stream).collect(Collectors.toSet());
 
-        EvaluateAccessRuleResult evaluationResult = passesAccessRuleEvaluation(requestBody, allOpenAccessRules);
+        EvaluateAccessRuleResult evaluationResult = passesAccessRuleEvaluation(requestBody, allOpenAccessRules, null);
         boolean result = evaluationResult.result();
         String passRuleName = evaluationResult.passRuleName();
         Set<AccessRule> failedRules = evaluationResult.failedRules();

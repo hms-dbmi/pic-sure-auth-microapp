@@ -27,7 +27,7 @@
         <url/>
     </scm>
     <properties>
-        <java.version>21</java.version>
+        <java.version>24</java.version>
         <spotless.version>2.41.1</spotless.version>
     </properties>
     <dependencies>
@@ -205,6 +205,11 @@
             <artifactId>junit</artifactId>
             <version>4.13.1</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>edu.harvard.hms.dbmi.avillach.hpds</groupId>
+            <artifactId>client-api</artifactId>
+            <version>3.0.0-SNAPSHOT</version>
         </dependency>
     </dependencies>
 

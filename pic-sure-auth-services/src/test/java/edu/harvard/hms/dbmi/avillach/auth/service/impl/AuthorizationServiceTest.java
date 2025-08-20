@@ -5,6 +5,7 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.*;
 import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
 import edu.harvard.hms.dbmi.avillach.auth.repository.AccessRuleRepository;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization.AuthorizationService;
+import edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization.ConsentBasedAccessRuleEvaluator;
 import edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,13 +42,16 @@ public class AuthorizationServiceTest {
     @MockBean
     private RoleService roleService;
 
+    @MockBean
+    private ConsentBasedAccessRuleEvaluator consentBasedAccessRuleEvaluator;
+
     @BeforeEach
     public void setUp() {
         MockitoAnnotations.openMocks(this);
         SecurityContextHolder.setContext(securityContext);
 
         accessRuleService = new AccessRuleService(accessRuleRepository, "false", "false", "false", "false","false", "false");
-        authorizationService = new AuthorizationService(accessRuleService, sessionService, roleService,"fence,okta,open");
+        authorizationService = new AuthorizationService(accessRuleService, sessionService, roleService, consentBasedAccessRuleEvaluator,"fence,okta,open");
     }
 
     @Test

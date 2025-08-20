@@ -8,6 +8,7 @@ import java.io.Serializable;
 import java.security.Principal;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -83,6 +84,9 @@ public class User extends BaseEntity implements Serializable, Principal {
 	 */
 	@Column(name = "passport")
 	private String passport;
+
+	@Transient
+	private Set<String> consents = Set.of("phs001345.c1","phs000956.c2","phs001368.c3","phs001402.c1","phs001368.c2");
 
 	public User() {
 
@@ -271,6 +275,11 @@ public class User extends BaseEntity implements Serializable, Principal {
 	@Override
 	public String getName() {
 		return this.subject;
+	}
+
+	@JsonIgnore
+	public Set<String> getConsents() {
+		return this.consents;
 	}
 
 	public boolean isActive() {

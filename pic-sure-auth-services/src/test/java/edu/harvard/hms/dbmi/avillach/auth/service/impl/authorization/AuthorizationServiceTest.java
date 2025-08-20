@@ -44,6 +44,9 @@ public class AuthorizationServiceTest {
     @MockBean
     private RoleService roleService;
 
+    @MockBean
+    private ConsentBasedAccessRuleEvaluator consentBasedAccessRuleEvaluator;
+
     private final ObjectMapper mapper = new ObjectMapper();
 
     private static AccessRule GATE_resouceUUID;
@@ -323,7 +326,7 @@ public class AuthorizationServiceTest {
 
         when(sessionService.isSessionExpired(any(String.class))).thenReturn(false);
         accessRuleService = new AccessRuleService(accessRuleRepository, "false", "false", "false", "false","false", "false");
-        authorizationService = new AuthorizationService(accessRuleService, sessionService, roleService, "fence,okta");
+        authorizationService = new AuthorizationService(accessRuleService, sessionService, roleService, consentBasedAccessRuleEvaluator, "fence,okta");
     }
 
     @Test
