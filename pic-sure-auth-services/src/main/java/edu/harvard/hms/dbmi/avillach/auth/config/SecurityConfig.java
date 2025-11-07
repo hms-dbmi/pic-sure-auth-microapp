@@ -53,7 +53,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(
                 (authorizeRequests) -> authorizeRequests.requestMatchers(
                     "/actuator/health", "/actuator/info", "/authentication", "/authentication/**", "/swagger.yaml", "/swagger.json",
-                    "/user/me/queryTemplate", "/user/me/queryTemplate/**", "/tos/latest", "/open/validate", "/logout", "/cache/**"
+                    "/user/me/queryTemplate", "/user/me/queryTemplate/**", "/tos/latest", "/open/validate", "/logout", "/cache/**",
+                    "/configuration"
                 ).permitAll().anyRequest().authenticated()
             ).httpBasic(AbstractHttpConfigurer::disable).formLogin(AbstractHttpConfigurer::disable)
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class).logout(
