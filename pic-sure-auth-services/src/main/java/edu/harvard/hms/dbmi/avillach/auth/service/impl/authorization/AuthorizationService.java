@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.harvard.hms.dbmi.avillach.auth.entity.*;
 import edu.harvard.hms.dbmi.avillach.auth.model.EvaluateAccessRuleResult;
+import edu.harvard.hms.dbmi.avillach.auth.repository.UserConsentsRepository;
 import edu.harvard.hms.dbmi.avillach.auth.rest.TokenController;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.AccessRuleService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.RoleService;
@@ -55,12 +56,16 @@ public class AuthorizationService {
      */
     private final Set<String> strictConnections = new HashSet<>();
 
+
+    private final UserConsentsRepository userConsentsRepository;
+
     @Autowired
     public AuthorizationService(AccessRuleService accessRuleService,
                                 SessionService sessionService,
                                 RoleService roleService,
                                 ConsentBasedAccessRuleEvaluator consentBasedAccessRuleEvaluator,
-                                @Value("${strict.authorization.applications.connections}") String strictConnections) {
+                                @Value("${strict.authorization.applications.connections}") String strictConnections,
+                                UserConsentsRepository userConsentsRepository) {
         this.accessRuleService = accessRuleService;
         this.sessionService = sessionService;
         this.roleService = roleService;
@@ -68,6 +73,7 @@ public class AuthorizationService {
         if (strictConnections != null && !strictConnections.isEmpty()) {
             this.strictConnections.addAll(Arrays.asList(strictConnections.split(",")));
         }
+        this.userConsentsRepository = userConsentsRepository;
     }
 
     /**
@@ -200,7 +206,8 @@ public class AuthorizationService {
         for (AccessRule accessRule : accessRules) {
             try {
                 if (accessRule.getType().equals(AccessRule.TypeNaming.USER_CONSENT_ACCESS)) {
-                    if (consentBasedAccessRuleEvaluator.evaluateAccessRule(requestBody, accessRule, user.getConsents())) {
+                    UserConsents userConsents = userConsentsRepository.getReferenceById(user.getUuid());
+                    if (consentBasedAccessRuleEvaluator.evaluateAccessRule(requestBody, accessRule, userConsents.getConsents())) {
                         result = true;
                         passByRule = accessRule;
                         break;

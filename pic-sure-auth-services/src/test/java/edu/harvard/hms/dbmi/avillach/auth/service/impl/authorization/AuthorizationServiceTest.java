@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.harvard.hms.dbmi.avillach.auth.entity.*;
 import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
 import edu.harvard.hms.dbmi.avillach.auth.repository.AccessRuleRepository;
+import edu.harvard.hms.dbmi.avillach.auth.repository.UserConsentsRepository;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.AccessRuleService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.RoleService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.SessionService;
@@ -46,6 +47,9 @@ public class AuthorizationServiceTest {
 
     @MockBean
     private ConsentBasedAccessRuleEvaluator consentBasedAccessRuleEvaluator;
+
+    @MockBean
+    private UserConsentsRepository userConsentsRepository;
 
     private final ObjectMapper mapper = new ObjectMapper();
 
@@ -326,7 +330,7 @@ public class AuthorizationServiceTest {
 
         when(sessionService.isSessionExpired(any(String.class))).thenReturn(false);
         accessRuleService = new AccessRuleService(accessRuleRepository, "false", "false", "false", "false","false", "false");
-        authorizationService = new AuthorizationService(accessRuleService, sessionService, roleService, consentBasedAccessRuleEvaluator, "fence,okta");
+        authorizationService = new AuthorizationService(accessRuleService, sessionService, roleService, consentBasedAccessRuleEvaluator, "fence,okta", userConsentsRepository);
     }
 
     @Test

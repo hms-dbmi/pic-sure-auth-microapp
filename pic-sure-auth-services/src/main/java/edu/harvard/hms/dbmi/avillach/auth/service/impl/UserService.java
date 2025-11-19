@@ -10,6 +10,7 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
+import edu.harvard.hms.dbmi.avillach.auth.model.ras.RasDbgapPermission;
 import edu.harvard.hms.dbmi.avillach.auth.repository.ApplicationRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.ConnectionRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.UserRepository;
@@ -753,5 +754,10 @@ public class UserService {
             user.setPassport(null);
             this.save(user);
         }
+    }
+
+    public User updateUserConsents(User user, Set<RasDbgapPermission> dbgapRoleNames) {
+        //dbgapRoleNames.stream().map(dbgapRoleName -> dbgapRoleName.)
+        return user;
     }
 }
