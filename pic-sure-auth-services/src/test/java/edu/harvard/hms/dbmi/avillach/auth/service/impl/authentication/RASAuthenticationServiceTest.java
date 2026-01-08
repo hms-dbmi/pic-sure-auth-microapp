@@ -111,6 +111,7 @@ public class RASAuthenticationServiceTest {
         user.setSubject("okta-ras|adfadfaf");
         when(userService.createRasUser(any(), any())).thenReturn(Optional.of(user));
         when(userService.updateUserRoles(any(), any())).thenReturn(user);
+        when(userService.updateUserConsents(any(), any())).thenReturn(user);
         HashMap<String, String> authenticate = rasAuthenticationService.authenticate(authRequest, testDomain);
         assertNotNull(authenticate);
     }
@@ -130,6 +131,7 @@ public class RASAuthenticationServiceTest {
         when(rasPassPortService.ga4gpPassportToRasDbgapPermissions(any())).thenReturn(dbgapPermissions);
         when(roleService.getRoleNamesForDbgapPermissions(any())).thenReturn(dbgapRoleNames);
         when(userService.updateUserRoles(any(), any())).thenReturn(user);
+        when(userService.updateUserConsents(any(), any())).thenReturn(user);
 
         user = this.rasAuthenticationService.updateRasUserRoles(code, user, passport.get());
         assertNotNull(user);
