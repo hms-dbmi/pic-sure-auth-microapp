@@ -197,7 +197,7 @@ public class AuthorizationService {
         return result;
     }
 
-    private EvaluateAccessRuleResult passesAccessRuleEvaluation(Object requestBody, Set<AccessRule> accessRules, User user) {
+    private EvaluateAccessRuleResult passesAccessRuleEvaluation(Object requestBody, Set<AccessRule> accessRules) {
         // Current logic here is: among all accessRules, they are OR relationship
         Set<AccessRule> failedRules = new HashSet<>();
         AccessRule passByRule = null;
@@ -285,7 +285,7 @@ public class AuthorizationService {
             result = true;
             logger.info("ACCESS_LOG ___ AN OPEN ACCESS USER ___ has been granted access to application ___ NO ACCESS RULES EVALUATED");
         } else {
-            EvaluateAccessRuleResult evaluationResult = passesAccessRuleEvaluation(requestBody, allOpenAccessRules, null);
+            EvaluateAccessRuleResult evaluationResult = passesAccessRuleEvaluation(requestBody, allOpenAccessRules);
             result = evaluationResult.result();
             String passRuleName = evaluationResult.passRuleName();
             Set<AccessRule> failedRules = evaluationResult.failedRules();

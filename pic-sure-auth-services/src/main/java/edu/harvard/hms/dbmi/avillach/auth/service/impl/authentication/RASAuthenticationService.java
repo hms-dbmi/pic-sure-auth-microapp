@@ -206,7 +206,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
 
         return objectNode;
     }
-    
+
     private void setUserPassport(Map<String, String> authRequest, JsonNode introspectResponse, User user) {
         String passport = introspectResponse.get("passport_jwt_v11").toString();
         user.setPassport(passport);
