@@ -40,8 +40,7 @@ import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static edu.harvard.hms.dbmi.avillach.auth.service.impl.RoleService.MANAGED_OPEN_ACCESS_ROLE_NAME;
-import static edu.harvard.hms.dbmi.avillach.auth.service.impl.RoleService.MANAGED_ROLE_NAMED_DATASET;
+import static edu.harvard.hms.dbmi.avillach.auth.service.impl.RoleService.*;
 
 @Service
 public class UserService {
@@ -682,7 +681,7 @@ public class UserService {
                 .collect(Collectors.toSet());
 
         Set<Role> rolesToRemove = current_user.getRoles().stream()
-                .filter(role -> !roleNames.contains(role.getName()) && !role.getName().equals(MANAGED_OPEN_ACCESS_ROLE_NAME)
+                .filter(role -> !roleNames.contains(role.getName()) && !role.getName().equals(MANAGED_OPEN_ACCESS_ROLE_NAME) && !role.getName().equals(MANAGED_AUTH_ACCESS_ROLE_NAME)
                         && !role.getName().startsWith("MANUAL_") && !role.getName().equals("PIC-SURE Top Admin")
                         && !role.getName().equals("Admin"))
                 .collect(Collectors.toSet());
@@ -705,6 +704,13 @@ public class UserService {
             logger.debug("upsertRole() updated {} roles from user", newRoles.size());
             newRoles = roleService.persistAll(newRoles);
             current_user.getRoles().addAll(newRoles);
+        }
+
+        Role authAccessRole = roleService.findByName(MANAGED_AUTH_ACCESS_ROLE_NAME);
+        if (authAccessRole != null) {
+            current_user.getRoles().add(authAccessRole);
+        } else {
+            logger.warn("Unable to find fence AUTH ACCESS role");
         }
 
         Role openAccessRole = roleService.findByName(MANAGED_OPEN_ACCESS_ROLE_NAME);
@@ -757,6 +763,7 @@ public class UserService {
     }
 
     public User updateUserConsents(User user, Set<RasDbgapPermission> dbgapRoleNames) {
+        // todo: write user consents to database
         //dbgapRoleNames.stream().map(dbgapRoleName -> dbgapRoleName.)
         return user;
     }

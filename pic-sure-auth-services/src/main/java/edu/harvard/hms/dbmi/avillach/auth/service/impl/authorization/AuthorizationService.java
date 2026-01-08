@@ -19,7 +19,7 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static edu.harvard.hms.dbmi.avillach.auth.service.impl.RoleService.MANAGED_OPEN_ACCESS_ROLE_NAME;
+import static edu.harvard.hms.dbmi.avillach.auth.service.impl.RoleService.*;
 
 /**
  * This class handles authorization activities in the project. It decides
@@ -261,6 +261,13 @@ public class AuthorizationService {
         if (requestBody == null) {
             logger.info("ACCESS_LOG ___ AN OPEN ACCESS USER ___ has been granted access to application ___ NO REQUEST BODY FORWARDED BY APPLICATION");
             return true;
+        }
+
+        // Load the auth access rules
+        Role authAccessRole = this.roleService.getRoleByName(MANAGED_AUTH_ACCESS_ROLE_NAME);
+        if (authAccessRole == null) {
+            logger.info("{} has not be created for this environment. Please create the role and its permissions before attempting to use auth access.", MANAGED_AUTH_ACCESS_ROLE_NAME);
+            return false;
         }
 
         // Load the open access rules
