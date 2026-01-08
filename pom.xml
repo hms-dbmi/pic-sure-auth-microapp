@@ -43,11 +43,4 @@
             </plugins>
         </pluginManagement>
     </build>
-    <distributionManagement>
-        <repository>
-            <id>github</id>
-            <name>GitHub HMS-DBMI Apache Maven Packages</name>
-            <url>https://maven.pkg.github.com/hms-dbmi/pic-sure</url>
-        </repository>
-    </distributionManagement>
 </project>
