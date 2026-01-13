@@ -6,6 +6,8 @@ COPY ./ /app
 # Change the working directory
 WORKDIR /app
 
+COPY .m2 /root/.m2
+
 # Build the jar
 RUN mvn clean install -DskipTests
 
