@@ -8,6 +8,8 @@ WORKDIR /app
 
 COPY .m2 /root/.m2
 
+COPY . .
+
 # Build the jar
 RUN mvn clean install -DskipTests
 
