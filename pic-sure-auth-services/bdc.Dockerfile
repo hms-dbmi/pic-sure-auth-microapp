@@ -1,4 +1,4 @@
-FROM hms-dbmi/pic-sure-hpds:LATEST AS hpds-base
+FROM hms-dbmi/pic-sure-hpds-build:LATEST AS hpds-base
 FROM maven:3.9.9-amazoncorretto-24 AS build
 
 # Copy the .m2 artifacts from HPDS base image
