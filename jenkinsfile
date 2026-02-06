@@ -43,7 +43,7 @@ pipeline {
             -v maven_m2_cache:/root/.m2 \
             -w /app \
             maven:3.9.9-amazoncorretto-24 \
-            sh -lc "yum update -y && yum install -y git && yum clean all && mvn clean install -DskipTests"
+            sh -lc "yum update -y && yum install -y git && yum clean all && mvn clean install -T 1C -DskipTests"
 
           ls -lah pic-sure-auth-services/target || true
         '''
