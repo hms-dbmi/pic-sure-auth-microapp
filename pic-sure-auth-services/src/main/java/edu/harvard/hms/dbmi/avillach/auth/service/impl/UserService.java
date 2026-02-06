@@ -4,15 +4,12 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import edu.harvard.hms.dbmi.avillach.auth.entity.Application;
-import edu.harvard.hms.dbmi.avillach.auth.entity.Connection;
-import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
-import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
-import edu.harvard.hms.dbmi.avillach.auth.entity.User;
+import edu.harvard.hms.dbmi.avillach.auth.entity.*;
 import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
 import edu.harvard.hms.dbmi.avillach.auth.model.ras.RasDbgapPermission;
 import edu.harvard.hms.dbmi.avillach.auth.repository.ApplicationRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.ConnectionRepository;
+import edu.harvard.hms.dbmi.avillach.auth.repository.UserConsentsRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.UserRepository;
 import edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming;
 import edu.harvard.hms.dbmi.avillach.auth.utils.JWTUtil;
@@ -56,6 +53,7 @@ public class UserService {
     private final long tokenExpirationTime;
     private static final long defaultTokenExpirationTime = 1000L * 60 * 60; // 1 hour
     private final boolean openAccessIsEnabled;
+    private final UserConsentsRepository userConsentsRepository;
 
     public long longTermTokenExpirationTime;
 
@@ -69,6 +67,7 @@ public class UserService {
                        ConnectionRepository connectionRepository,
                        ApplicationRepository applicationRepository,
                        RoleService roleService,
+                       UserConsentsRepository userConsentsRepository,
                        @Value("${application.token.expiration.time}") long tokenExpirationTime,
                        @Value("${application.default.uuid}") String applicationUUID,
                        @Value("${application.long.term.token.expiration.time}") long longTermTokenExpirationTime,
@@ -88,6 +87,7 @@ public class UserService {
         long defaultLongTermTokenExpirationTime = 1000L * 60 * 60 * 24 * 30;
         this.longTermTokenExpirationTime = longTermTokenExpirationTime > 0 ? longTermTokenExpirationTime : defaultLongTermTokenExpirationTime;
         this.openAccessIsEnabled = openIdpProviderIsEnabled;
+        this.userConsentsRepository = userConsentsRepository;
     }
 
     public HashMap<String, String> getUserProfileResponse(Map<String, Object> claims) {
@@ -763,8 +763,13 @@ public class UserService {
     }
 
     public User updateUserConsents(User user, Set<RasDbgapPermission> dbgapRoleNames) {
-        // todo: write user consents to database
-        //dbgapRoleNames.stream().map(dbgapRoleName -> dbgapRoleName.)
+        Set<String> userConsentStrings = dbgapRoleNames.stream()
+                .map(permission -> permission.getPhsId() + "." + permission.getConsentGroup())
+                .collect(Collectors.toSet());
+
+        UserConsents userConsents = new UserConsents().setConsents(userConsentStrings).setUserId(user.getUuid().toString());
+        userConsentsRepository.save(userConsents);
+
         return user;
     }
 }

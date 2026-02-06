@@ -8,6 +8,7 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
 import edu.harvard.hms.dbmi.avillach.auth.repository.ApplicationRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.ConnectionRepository;
+import edu.harvard.hms.dbmi.avillach.auth.repository.UserConsentsRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.UserRepository;
 import edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming;
 import edu.harvard.hms.dbmi.avillach.auth.utils.JWTUtil;
@@ -17,6 +18,7 @@ import jakarta.mail.MessagingException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockitoAnnotations;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.HttpHeaders;
@@ -58,6 +60,8 @@ public class UserServiceTest {
     private final long longTermTokenExpirationTime = 2592000000L;
 
     private UserService userService;
+    @MockBean
+    private UserConsentsRepository userConsentsRepository;
 
     @BeforeEach
     public void setUp() {
@@ -76,6 +80,7 @@ public class UserServiceTest {
                 connectionRepository,
                 applicationRepository,
                 roleService,
+                userConsentsRepository,
                 defaultTokenExpirationTime,
                 applicationUUID,
                 longTermTokenExpirationTime,
