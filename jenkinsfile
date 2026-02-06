@@ -39,7 +39,7 @@ pipeline {
 
           # Build in a Maven container, output goes into the mounted workspace (target/ created here)
           docker run --rm \
-            -v "$DOCKER_CONFIG_DIR/jenkins_home/workspace/PIC-SURE Auth Micro-App Build - Jenkinsfile:/app" \
+            -v "$DOCKER_CONFIG_DIR/jenkins_home/workspace/PIC-SURE Auth Micro-App Build - Jenkinsfile/:/app" \
             -v maven_m2_cache:/root/.m2 \
             -w /app \
             maven:3.9.9-amazoncorretto-24 \
