@@ -5,9 +5,6 @@ pipeline {
     string(name: 'DOCKER_REGISTRY', description: 'Docker registry URL (e.g., ECR URL)', defaultValue: 'hms-dbmi')
     string(name: 'REPOSITORY_NAME', description: 'Docker repository name', defaultValue: 'psama')
     booleanParam(name: 'DEPLOY', description: 'Deploy the image to the registry', defaultValue: true)
-
-    // Optional but practical: makes the build image explicit
-    string(name: 'MAVEN_IMAGE', description: 'Maven builder image', defaultValue: 'maven:3.9.9-eclipse-temurin-21')
   }
 
   environment {
@@ -16,16 +13,21 @@ pipeline {
     TRUSTSTORE_VOLUME     = "-v $DOCKER_CONFIG_DIR/wildfly/application.truststore:/opt/jboss/wildfly/standalone/configuration/application.truststore"
     PSAMA_OPTS            = "-Xms1g -Xmx2g -XX:MetaspaceSize=96M -XX:MaxMetaspaceSize=256m -Djava.net.preferIPv4Stack=true"
     TRUSTSTORE_JAVA_OPTS  = "-Djavax.net.ssl.trustStore=/opt/jboss/wildfly/standalone/configuration/application.truststore -Djavax.net.ssl.trustStorePassword=password"
+
+    // If you need proxy args during docker build
+    DOCKER_BUILD_ARGS = "-f ./pic-sure-auth-services/Dockerfile " +
+      "--build-arg http_proxy=$http_proxy --build-arg https_proxy=$http_proxy --build-arg no_proxy=\"$no_proxy\" " +
+      "--build-arg HTTP_PROXY=$http_proxy --build-arg HTTPS_PROXY=$http_proxy --build-arg NO_PROXY=\"$no_proxy\""
   }
 
   stages {
     stage('init') {
       steps {
         script {
-          env.GIT_BRANCH_SHORT  = sh(script: 'echo "${GIT_BRANCH}" | awk -F/ \'{print $NF}\'', returnStdout: true).trim()
-          env.GIT_COMMIT_SHORT  = sh(script: 'echo "${GIT_COMMIT}" | cut -c1-7', returnStdout: true).trim()
-          env.IMAGE_TAG         = "${env.GIT_BRANCH_SHORT}_${env.GIT_COMMIT_SHORT}"
-          env.IMAGE_NAME        = "${params.DOCKER_REGISTRY}/${params.REPOSITORY_NAME}"
+          env.GIT_BRANCH_SHORT = sh(script: 'echo "${GIT_BRANCH}" | awk -F/ \'{print $NF}\'', returnStdout: true).trim()
+          env.GIT_COMMIT_SHORT = sh(script: 'echo "${GIT_COMMIT}" | cut -c1-7', returnStdout: true).trim()
+          env.IMAGE_TAG        = "${env.GIT_BRANCH_SHORT}_${env.GIT_COMMIT_SHORT}"
+          env.IMAGE_NAME       = "${params.DOCKER_REGISTRY}/${params.REPOSITORY_NAME}"
         }
       }
     }
@@ -34,14 +36,17 @@ pipeline {
       steps {
         sh '''
           set -euo pipefail
+
+          # Build in a Maven container, output goes into the mounted workspace (target/ created here)
           docker run --rm \
-            -v "$WORKSPACE:/work" \
-            -v "$HOME/.m2:/root/.m2" \
-            -w /work/pic-sure-auth-services \
-            '${MAVEN_IMAGE}' \
-            mvn -B -DskipTests clean package
+            -v "$DOCKER_CONFIG_DIR/jenkins_home/workspace/PIC-SURE Auth Micro-App Build - Jenkinsfile:/app" \
+            -v maven_m2_cache:/root/.m2 \
+            -w /app \
+            maven:3.9.9-amazoncorretto-24 \
+            sh -lc "yum update -y && yum install -y git && yum clean all && mvn clean install -DskipTests"
+
+          ls -lah pic-sure-auth-services/target || true
         '''
-        sh 'ls -lah pic-sure-auth-services/target || true'
       }
     }
 
@@ -49,16 +54,7 @@ pipeline {
       steps {
         sh '''
           set -euo pipefail
-          docker build \
-            -f ./pic-sure-auth-services/Dockerfile \
-            --build-arg http_proxy="${http_proxy:-}" \
-            --build-arg https_proxy="${https_proxy:-}" \
-            --build-arg no_proxy="${no_proxy:-}" \
-            --build-arg HTTP_PROXY="${http_proxy:-}" \
-            --build-arg HTTPS_PROXY="${https_proxy:-}" \
-            --build-arg NO_PROXY="${no_proxy:-}" \
-            -t "${IMAGE_NAME}:${IMAGE_TAG}" \
-            .
+          docker build ${DOCKER_BUILD_ARGS} -t "${IMAGE_NAME}:${IMAGE_TAG}" .
           docker tag "${IMAGE_NAME}:${IMAGE_TAG}" "${IMAGE_NAME}:${LATEST_TAG}"
         '''
       }
