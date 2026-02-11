@@ -7,6 +7,7 @@ import jakarta.persistence.*;
 
 import java.io.Serializable;
 import java.security.Principal;
+import java.util.Map;
 import java.util.Set;
 
 @Entity(name = "user_consents")
@@ -17,7 +18,7 @@ public class UserConsents extends BaseEntity {
 
 
     @Convert(converter = ConsentsJsonConverter.class)
-    private Set<String> consents;
+    private Map<String, Set<String>> consents;
 
     public String getUserId() {
         return userId;
@@ -28,21 +29,21 @@ public class UserConsents extends BaseEntity {
         return this;
     }
 
-    public Set<String> getConsents() {
+    public Map<String, Set<String>> getConsents() {
         return consents;
     }
 
-    public UserConsents setConsents(Set<String> consents) {
+    public UserConsents setConsents(Map<String, Set<String>> consents) {
         this.consents = consents;
         return this;
     }
 
-    protected static class ConsentsJsonConverter implements AttributeConverter<Set<String>, String> {
+    protected static class ConsentsJsonConverter implements AttributeConverter<Map<String, Set<String>>, String> {
         private static final ObjectMapper objectMapper = new ObjectMapper();
-        private static final TypeReference<Set<String>> SET_OF_STRING_TYPE_REF = new TypeReference<Set<String>>() {};
+        private static final TypeReference<Map<String, Set<String>>> SET_OF_STRING_TYPE_REF = new TypeReference<Map<String, Set<String>>>() {};
 
         @Override
-        public String convertToDatabaseColumn(Set<String> strings) {
+        public String convertToDatabaseColumn(Map<String, Set<String>> strings) {
             try {
                 return objectMapper.writeValueAsString(strings);
             } catch (JsonProcessingException e) {
@@ -51,7 +52,7 @@ public class UserConsents extends BaseEntity {
         }
 
         @Override
-        public Set<String> convertToEntityAttribute(String s) {
+        public Map<String, Set<String>> convertToEntityAttribute(String s) {
             try {
                 return objectMapper.readValue(s, SET_OF_STRING_TYPE_REF);
             } catch (JsonProcessingException e) {

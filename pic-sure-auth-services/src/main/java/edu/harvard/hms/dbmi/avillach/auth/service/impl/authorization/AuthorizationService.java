@@ -208,7 +208,7 @@ public class AuthorizationService {
                 if (accessRule.getType().equals(AccessRule.TypeNaming.USER_CONSENT_ACCESS)) {
                     UserConsents userConsents = userConsentsRepository.findByUserId(user.getUuid());
 
-                    if (consentBasedAccessRuleEvaluator.evaluateAccessRule(requestBody, accessRule, userConsents.getConsents())) {
+                    if (consentBasedAccessRuleEvaluator.evaluateAccessRule(requestBody, accessRule, userConsents)) {
                         result = true;
                         passByRule = accessRule;
                         break;

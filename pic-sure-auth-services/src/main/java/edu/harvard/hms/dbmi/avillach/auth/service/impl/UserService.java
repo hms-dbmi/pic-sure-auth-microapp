@@ -11,6 +11,7 @@ import edu.harvard.hms.dbmi.avillach.auth.repository.ApplicationRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.ConnectionRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.UserConsentsRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.UserRepository;
+import edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization.BdcConsentsBuilder;
 import edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming;
 import edu.harvard.hms.dbmi.avillach.auth.utils.JWTUtil;
 import edu.harvard.hms.dbmi.avillach.auth.utils.JsonUtils;
@@ -763,11 +764,9 @@ public class UserService {
     }
 
     public User updateUserConsents(User user, Set<RasDbgapPermission> dbgapRoleNames) {
-        Set<String> userConsentStrings = dbgapRoleNames.stream()
-                .map(permission -> permission.getPhsId() + "." + permission.getConsentGroup())
-                .collect(Collectors.toSet());
-
-        UserConsents userConsents = new UserConsents().setConsents(userConsentStrings).setUserId(user.getUuid().toString());
+        UserConsents userConsents = new UserConsents()
+                .setConsents(new BdcConsentsBuilder(null, dbgapRoleNames).createConsents())
+                .setUserId(user.getUuid().toString());
         userConsentsRepository.save(userConsents);
 
         return user;
