@@ -769,7 +769,7 @@ public class UserService {
 
     public User updateUserConsents(User user, Set<RasDbgapPermission> dbgapRoleNames) {
         UserConsents userConsents = new UserConsents()
-                .setConsents(new BdcConsentsBuilder(null, dbgapRoleNames).createConsents())
+                .setConsents(new BdcConsentsBuilder(fenceMappingUtility.getFENCEMapping(), dbgapRoleNames).createConsents())
                 .setUserId(user.getUuid().toString());
         userConsentsRepository.save(userConsents);
 
