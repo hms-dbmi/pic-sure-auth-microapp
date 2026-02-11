@@ -13,6 +13,7 @@ import edu.harvard.hms.dbmi.avillach.auth.repository.UserConsentsRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.UserRepository;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization.BdcConsentsBuilder;
 import edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming;
+import edu.harvard.hms.dbmi.avillach.auth.utils.FenceMappingUtility;
 import edu.harvard.hms.dbmi.avillach.auth.utils.JWTUtil;
 import edu.harvard.hms.dbmi.avillach.auth.utils.JsonUtils;
 import io.jsonwebtoken.Claims;
@@ -55,6 +56,7 @@ public class UserService {
     private static final long defaultTokenExpirationTime = 1000L * 60 * 60; // 1 hour
     private final boolean openAccessIsEnabled;
     private final UserConsentsRepository userConsentsRepository;
+    private final FenceMappingUtility fenceMappingUtility;
 
     public long longTermTokenExpirationTime;
 
@@ -69,6 +71,7 @@ public class UserService {
                        ApplicationRepository applicationRepository,
                        RoleService roleService,
                        UserConsentsRepository userConsentsRepository,
+                       FenceMappingUtility fenceMappingUtility,
                        @Value("${application.token.expiration.time}") long tokenExpirationTime,
                        @Value("${application.default.uuid}") String applicationUUID,
                        @Value("${application.long.term.token.expiration.time}") long longTermTokenExpirationTime,
@@ -79,6 +82,8 @@ public class UserService {
         this.userRepository = userRepository;
         this.connectionRepository = connectionRepository;
         this.roleService = roleService;
+        this.userConsentsRepository = userConsentsRepository;
+        this.fenceMappingUtility = fenceMappingUtility;
         this.tokenExpirationTime = tokenExpirationTime > 0 ? tokenExpirationTime : defaultTokenExpirationTime;
         logger.info("Token Expiration Time : {}", tokenExpirationTime);
         this.applicationRepository = applicationRepository;
@@ -88,7 +93,6 @@ public class UserService {
         long defaultLongTermTokenExpirationTime = 1000L * 60 * 60 * 24 * 30;
         this.longTermTokenExpirationTime = longTermTokenExpirationTime > 0 ? longTermTokenExpirationTime : defaultLongTermTokenExpirationTime;
         this.openAccessIsEnabled = openIdpProviderIsEnabled;
-        this.userConsentsRepository = userConsentsRepository;
     }
 
     public HashMap<String, String> getUserProfileResponse(Map<String, Object> claims) {

@@ -11,6 +11,7 @@ import edu.harvard.hms.dbmi.avillach.auth.repository.ConnectionRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.UserConsentsRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.UserRepository;
 import edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming;
+import edu.harvard.hms.dbmi.avillach.auth.utils.FenceMappingUtility;
 import edu.harvard.hms.dbmi.avillach.auth.utils.JWTUtil;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
@@ -62,6 +63,8 @@ public class UserServiceTest {
     private UserService userService;
     @MockBean
     private UserConsentsRepository userConsentsRepository;
+    @MockBean
+    private FenceMappingUtility fenceMappingUtility;
 
     @BeforeEach
     public void setUp() {
@@ -81,6 +84,7 @@ public class UserServiceTest {
                 applicationRepository,
                 roleService,
                 userConsentsRepository,
+                fenceMappingUtility,
                 defaultTokenExpirationTime,
                 applicationUUID,
                 longTermTokenExpirationTime,
