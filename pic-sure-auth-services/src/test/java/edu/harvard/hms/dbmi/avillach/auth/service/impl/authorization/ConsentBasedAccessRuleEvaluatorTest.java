@@ -41,7 +41,7 @@ class ConsentBasedAccessRuleEvaluatorTest {
                                         PhenotypicFilterType.FILTER, "\\phs456\\data\\age\\", null, 30.0, 40.0, null
                                 ),
                                 new PhenotypicFilter(
-                                        PhenotypicFilterType.FILTER, "\\phs123\\data\\sex\\", List.of("male", "female"), null, null, null
+                                        PhenotypicFilterType.FILTER, "\\phs123\\data\\sex\\", Set.of("male", "female"), null, null, null
                                 )
                         ),
                         Operator.AND
@@ -70,7 +70,7 @@ class ConsentBasedAccessRuleEvaluatorTest {
                                         PhenotypicFilterType.FILTER, "\\phs456\\data\\age\\", null, 30.0, 40.0, null
                                 ),
                                 new PhenotypicFilter(
-                                        PhenotypicFilterType.FILTER, "\\phs789\\data\\sex\\", List.of("male", "female"), null, null, null
+                                        PhenotypicFilterType.FILTER, "\\phs789\\data\\sex\\", Set.of("male", "female"), null, null, null
                                 )
                         ),
                         Operator.AND
@@ -100,7 +100,7 @@ class ConsentBasedAccessRuleEvaluatorTest {
                                         PhenotypicFilterType.FILTER, "\\phs456\\data\\age\\", null, 30.0, 40.0, null
                                 ),
                                 new PhenotypicFilter(
-                                        PhenotypicFilterType.FILTER, "\\phs123\\data\\sex\\", List.of("male", "female"), null, null, null
+                                        PhenotypicFilterType.FILTER, "\\phs123\\data\\sex\\", Set.of("male", "female"), null, null, null
                                 )
                         ),
                         Operator.AND
@@ -116,8 +116,8 @@ class ConsentBasedAccessRuleEvaluatorTest {
     @Test
     public void evaluateAccessRule_genomicFiltersTopmedConsents_accept() throws JsonProcessingException {
         var expectedAuthFilters = List.of(
-                new AuthorizationFilter("\\_consents\\", List.of("phs123.c1", "phs456.c2")),
-                new AuthorizationFilter("\\_topmed_consents\\", List.of("phs123.c1", "phs456.c2"))
+                new AuthorizationFilter("\\_consents\\", Set.of("phs123.c1", "phs456.c2")),
+                new AuthorizationFilter("\\_topmed_consents\\", Set.of("phs123.c1", "phs456.c2"))
         );
 
         Map<String, Set<String>> consents = Map.of(
@@ -138,7 +138,7 @@ class ConsentBasedAccessRuleEvaluatorTest {
                                         PhenotypicFilterType.FILTER, "\\phs456\\data\\age\\", null, 30.0, 40.0, null
                                 ),
                                 new PhenotypicFilter(
-                                        PhenotypicFilterType.FILTER, "\\phs123\\data\\sex\\", List.of("male", "female"), null, null, null
+                                        PhenotypicFilterType.FILTER, "\\phs123\\data\\sex\\", Set.of("male", "female"), null, null, null
                                 )
                         ),
                         Operator.AND
@@ -170,7 +170,7 @@ class ConsentBasedAccessRuleEvaluatorTest {
                                         PhenotypicFilterType.FILTER, "\\phs456\\data\\age\\", null, 30.0, 40.0, null
                                 ),
                                 new PhenotypicFilter(
-                                        PhenotypicFilterType.FILTER, "\\phs123\\data\\sex\\", List.of("male", "female"), null, null, null
+                                        PhenotypicFilterType.FILTER, "\\phs123\\data\\sex\\", Set.of("male", "female"), null, null, null
                                 )
                         ),
                         Operator.AND
