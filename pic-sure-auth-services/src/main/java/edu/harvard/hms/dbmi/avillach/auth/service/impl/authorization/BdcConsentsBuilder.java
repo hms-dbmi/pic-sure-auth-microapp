@@ -30,7 +30,7 @@ public class BdcConsentsBuilder {
 
         Map<String, Set<String>> result = new HashMap<>();
 
-        userConsentStrings.stream().forEach(consent -> {
+        userConsentStrings.forEach(consent -> {
             result.computeIfAbsent(CONSENTS_KEY, _ -> new HashSet<>()).add(consent);
 
             StudyMetaData studyMetaData = fenceMappingByConsent.get(consent);

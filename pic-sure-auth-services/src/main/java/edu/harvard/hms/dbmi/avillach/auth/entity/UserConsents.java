@@ -13,7 +13,7 @@ import java.util.Set;
 @Entity(name = "user_consents")
 public class UserConsents extends BaseEntity {
 
-    @Column(unique = true)
+    @Column(unique = true, name = "user_id")
     private String userId;
 
 
