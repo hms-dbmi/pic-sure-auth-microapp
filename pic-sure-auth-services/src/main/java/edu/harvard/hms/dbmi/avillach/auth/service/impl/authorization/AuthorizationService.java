@@ -212,7 +212,12 @@ public class AuthorizationService {
                 if (accessRule.getType().equals(AccessRule.TypeNaming.USER_CONSENT_ACCESS)) {
                     UserConsents userConsents = userConsentsRepository.findByUserId(user.getUuid());
 
-                    Query query = new ObjectMapper().readValue((String) requestBody, Query.class);
+                    String formattedQuery = (String) ((Map) requestBody).get("formattedQuery");
+                    ((Map) requestBody).keySet().stream().forEach(key -> {
+                        logger.info("Key = " + key);
+                    });
+                    logger.info("Formatted query = " + formattedQuery);
+                    Query query = new ObjectMapper().readValue(formattedQuery, Query.class);
 
                     if (consentBasedAccessRuleEvaluator.evaluateAccessRule(query, accessRule, userConsents)) {
                         result = true;
