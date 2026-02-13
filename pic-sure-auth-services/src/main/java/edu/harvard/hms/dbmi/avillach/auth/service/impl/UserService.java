@@ -647,7 +647,10 @@ public class UserService {
             new_user.setConnection(connection);
             User actual_user = this.findOrCreate(new_user);
 
-            actual_user.setConsents(userConsentsRepository.findByUserId(actual_user.getUuid()).getConsents());
+            UserConsents userConsents = userConsentsRepository.findByUserId(actual_user.getUuid());
+            if (userConsents != null) {
+                actual_user.setConsents(userConsents.getConsents());
+            }
 
             if (actual_user.getRoles() == null) {
                 actual_user.setRoles(new HashSet<>());
