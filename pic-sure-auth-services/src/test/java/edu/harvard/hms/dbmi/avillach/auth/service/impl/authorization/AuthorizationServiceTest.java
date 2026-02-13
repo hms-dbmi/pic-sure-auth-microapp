@@ -357,7 +357,7 @@ public class AuthorizationServiceTest {
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("test", "value");
 
-        boolean result = authorizationService.isAuthorized(application, requestBody, user, false);
+        boolean result = authorizationService.isAuthorized(application, requestBody, user, false).result();
 
         assertTrue(result);
     }
@@ -372,7 +372,7 @@ public class AuthorizationServiceTest {
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("test", "differentValue");
 
-        boolean result = authorizationService.isAuthorized(application, requestBody, user, false);
+        boolean result = authorizationService.isAuthorized(application, requestBody, user, false).result();
 
         assertFalse(result);
     }
@@ -387,7 +387,7 @@ public class AuthorizationServiceTest {
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("test", "differentValue");
 
-        boolean result = authorizationService.isAuthorized(application, requestBody, user, false);
+        boolean result = authorizationService.isAuthorized(application, requestBody, user, false).result();
 
         assertFalse(result);
     }
@@ -489,7 +489,7 @@ public class AuthorizationServiceTest {
         configureUserSecurityContext(user);
         application.setPrivileges(user.getPrivilegesByApplication(application));
 
-        boolean result = authorizationService.isAuthorized(application, null, user, false);
+        boolean result = authorizationService.isAuthorized(application, null, user, false).result();
 
         assertTrue(result);
     }
@@ -501,7 +501,7 @@ public class AuthorizationServiceTest {
         user.setConnection(createFenceTestConnection());
 
         user.getRoles().iterator().next().setPrivileges(Collections.emptySet());
-        boolean result = authorizationService.isAuthorized(application, new HashMap<>(), user, false);
+        boolean result = authorizationService.isAuthorized(application, new HashMap<>(), user, false).result();
 
         assertFalse(result);
     }

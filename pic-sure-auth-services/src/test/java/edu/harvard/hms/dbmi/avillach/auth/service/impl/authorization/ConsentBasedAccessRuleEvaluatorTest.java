@@ -22,7 +22,7 @@ class ConsentBasedAccessRuleEvaluatorTest {
 
     @BeforeEach
     public void setup() {
-        consentBasedAccessRuleEvaluator = new ConsentBasedAccessRuleEvaluator(new ObjectMapper());
+        consentBasedAccessRuleEvaluator = new ConsentBasedAccessRuleEvaluator();
     }
 
     @Test
@@ -48,9 +48,7 @@ class ConsentBasedAccessRuleEvaluatorTest {
                 ), null, ResultType.COUNT, null, null
         );
 
-        String json = new ObjectMapper().writeValueAsString(query);
-
-        boolean result = consentBasedAccessRuleEvaluator.evaluateAccessRule(json, null, userConsents);
+        boolean result = consentBasedAccessRuleEvaluator.evaluateAccessRule(query, null, userConsents);
         assertTrue(result);
     }
 
@@ -77,9 +75,7 @@ class ConsentBasedAccessRuleEvaluatorTest {
                 ), null, ResultType.COUNT, null, null
         );
 
-        String json = new ObjectMapper().writeValueAsString(query);
-
-        boolean result = consentBasedAccessRuleEvaluator.evaluateAccessRule(json, null, userConsents);
+        boolean result = consentBasedAccessRuleEvaluator.evaluateAccessRule(query, null, userConsents);
         assertFalse(result);
     }
 
@@ -107,9 +103,7 @@ class ConsentBasedAccessRuleEvaluatorTest {
                 ), null, ResultType.COUNT, null, null
         );
 
-        String json = new ObjectMapper().writeValueAsString(query);
-
-        boolean result = consentBasedAccessRuleEvaluator.evaluateAccessRule(json, null, userConsents);
+        boolean result = consentBasedAccessRuleEvaluator.evaluateAccessRule(query, null, userConsents);
         assertFalse(result);
     }
 
@@ -147,9 +141,7 @@ class ConsentBasedAccessRuleEvaluatorTest {
                 ResultType.COUNT, null, null
         );
 
-        String json = new ObjectMapper().writeValueAsString(query);
-
-        boolean result = consentBasedAccessRuleEvaluator.evaluateAccessRule(json, null, userConsents);
+        boolean result = consentBasedAccessRuleEvaluator.evaluateAccessRule(query, null, userConsents);
         assertTrue(result);
     }
 
@@ -179,9 +171,7 @@ class ConsentBasedAccessRuleEvaluatorTest {
                 ResultType.COUNT, null, null
         );
 
-        String json = new ObjectMapper().writeValueAsString(query);
-
-        boolean result = consentBasedAccessRuleEvaluator.evaluateAccessRule(json, null, userConsents);
+        boolean result = consentBasedAccessRuleEvaluator.evaluateAccessRule(query, null, userConsents);
         assertFalse(result);
     }
 }

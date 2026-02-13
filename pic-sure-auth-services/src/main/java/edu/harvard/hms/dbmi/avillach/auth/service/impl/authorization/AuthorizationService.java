@@ -1,6 +1,7 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.harvard.hms.dbmi.avillach.auth.entity.*;
 import edu.harvard.hms.dbmi.avillach.auth.model.EvaluateAccessRuleResult;
@@ -9,6 +10,8 @@ import edu.harvard.hms.dbmi.avillach.auth.rest.TokenController;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.AccessRuleService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.RoleService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.SessionService;
+import edu.harvard.hms.dbmi.avillach.hpds.data.query.v3.AuthorizationFilter;
+import edu.harvard.hms.dbmi.avillach.hpds.data.query.v3.Query;
 import io.micrometer.common.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -103,30 +106,30 @@ public class AuthorizationService {
      * @see Privilege
      * @see AccessRule
      */
-    public boolean isAuthorized(Application application, Object requestBody, User user, boolean isLongTermToken) {
+    public EvaluateAccessRuleResult isAuthorized(Application application, Object requestBody, User user, boolean isLongTermToken) {
         String applicationName = application.getName();
         String resourceId = "null";
         String targetService = "null";
 
         if (user == null) {
             logger.error("isAuthorized() User cannot be null");
-            return false;
+            return new EvaluateAccessRuleResult(false, Set.of(), null, Optional.empty());
         }
 
         if (StringUtils.isBlank(user.getSubject())) {
             logger.error("isAuthorized() Subject cannot be blank {}", user.getSubject());
-            return false;
+            return new EvaluateAccessRuleResult(false, Set.of(), null, Optional.empty());
         }
 
         if (!isLongTermToken && sessionService.isSessionExpired(user.getSubject())) {
             logger.error("isAuthorized() Session expired {}", user.getSubject());
-            return false;
+            return new EvaluateAccessRuleResult(false, Set.of(), null, Optional.empty());
         }
 
         //in some cases, we don't go through the evaluation
         if (requestBody == null) {
             logger.debug("ACCESS_LOG ___ {},{},{} ___ has been granted access to application ___ {} ___ NO REQUEST BODY FORWARDED BY APPLICATION", user.getUuid().toString(), user.getEmail(), user.getName(), applicationName);
-            return true;
+            return new EvaluateAccessRuleResult(true, Set.of(), null, Optional.empty());
         }
 
         try {
@@ -150,7 +153,7 @@ public class AuthorizationService {
         } catch (ClassCastException | JsonProcessingException e1) {
             logger.debug("ACCESS_LOG ___ {},{},{} ___ has been denied access to execute query ___ {} ___ in application ___ {} ___ UNABLE TO PARSE REQUEST", user.getUuid().toString(), user.getEmail(), user.getName(), requestBody, applicationName);
             logger.debug("isAuthorized() Stack Trace: ", e1);
-            return false;
+            return new EvaluateAccessRuleResult(false, Set.of(), null, Optional.empty());
         }
 
         Set<AccessRule> accessRules;
@@ -164,7 +167,7 @@ public class AuthorizationService {
             accessRules = this.accessRuleService.getAccessRulesForUserAndApp(user, application);
             if (accessRules.isEmpty()) {
                 logger.info("ACCESS_LOG ___ {},{},{} ___ has been denied access to execute query ___ {} ___ in application ___ {} ___ NO ACCESS RULES EVALUATED", user.getUuid().toString(), user.getEmail(), user.getName(), formattedQuery, applicationName);
-                return false;
+                return new EvaluateAccessRuleResult(false, Set.of(), null, Optional.empty());
             }
         } else {
             Set<Privilege> privileges = user.getPrivilegesByApplication(application);
@@ -172,13 +175,13 @@ public class AuthorizationService {
             logger.info("ACCESS_LOG ___ {},{},{} ___ has the following privileges: {}", user.getUuid().toString(), user.getEmail(), user.getName(), privileges.stream().map(Privilege::getName).collect(Collectors.joining(", ")));
             if (privileges == null || privileges.isEmpty()) {
                 logger.info("ACCESS_LOG ___ {},{},{} ___ has been denied access to execute query ___ {} ___ in application ___ {} __ USER HAS NO PRIVILEGES ASSOCIATED TO THE APPLICATION, BUT APPLICATION HAS PRIVILEGES", user.getUuid().toString(), user.getEmail(), user.getName(), formattedQuery, applicationName);
-                return false;
+                return new EvaluateAccessRuleResult(false, Set.of(), null, Optional.empty());
             }
 
             accessRules = this.accessRuleService.cachedPreProcessAccessRules(user, privileges);
             if (accessRules.isEmpty()) {
                 logger.info("ACCESS_LOG ___ {},{},{} ___ has been granted access to execute query ___ {} ___ in application ___ {} ___ NO ACCESS RULES EVALUATED", user.getUuid().toString(), user.getEmail(), user.getName(), formattedQuery, applicationName);
-                return true;
+                return new EvaluateAccessRuleResult(true, Set.of(), null, Optional.empty());
             }
         }
 
@@ -194,7 +197,7 @@ public class AuthorizationService {
                 .map(ar -> (ar.getMergedName().isEmpty() ? ar.getName() : ar.getMergedName()))
                 .collect(Collectors.joining(", ")) + "]"));
 
-        return result;
+        return evaluationResult;
     }
 
     private EvaluateAccessRuleResult passesAccessRuleEvaluation(Object requestBody, Set<AccessRule> accessRules, User user) {
@@ -202,15 +205,23 @@ public class AuthorizationService {
         Set<AccessRule> failedRules = new HashSet<>();
         AccessRule passByRule = null;
         boolean result = false;
+        Query returnQuery = null;
 
         for (AccessRule accessRule : accessRules) {
             try {
                 if (accessRule.getType().equals(AccessRule.TypeNaming.USER_CONSENT_ACCESS)) {
                     UserConsents userConsents = userConsentsRepository.findByUserId(user.getUuid());
 
-                    if (consentBasedAccessRuleEvaluator.evaluateAccessRule(requestBody, accessRule, userConsents)) {
+                    Query query = new ObjectMapper().readValue((String) requestBody, Query.class);
+
+                    if (consentBasedAccessRuleEvaluator.evaluateAccessRule(query, accessRule, userConsents)) {
                         result = true;
                         passByRule = accessRule;
+
+                        List<AuthorizationFilter> authorizationFilter = userConsents.getConsents().entrySet().stream()
+                                .map(entry -> new AuthorizationFilter(entry.getKey(), entry.getValue())).toList();
+
+                        returnQuery = query.setAuthorizationFilters(authorizationFilter);
                         break;
                     } else {
                         failedRules.add(accessRule);
@@ -232,6 +243,8 @@ public class AuthorizationService {
                             this.accessRuleService.printEvaluationTree());
                     }
                 }
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
             } finally {
                 // Clear the evaluation tree to prevent memory leaks
                 this.accessRuleService.clearEvaluationTree();
@@ -246,7 +259,7 @@ public class AuthorizationService {
                 passRuleName = passByRule.getMergedName();
         }
 
-        return new EvaluateAccessRuleResult(result, failedRules, passRuleName);
+        return new EvaluateAccessRuleResult(result, failedRules, passRuleName, Optional.ofNullable(returnQuery));
     }
 
 
