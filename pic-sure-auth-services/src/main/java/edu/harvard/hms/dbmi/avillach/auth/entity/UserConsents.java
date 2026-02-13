@@ -9,22 +9,23 @@ import java.io.Serializable;
 import java.security.Principal;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 @Entity(name = "user_consents")
 public class UserConsents extends BaseEntity {
 
     @Column(unique = true, name = "user_id")
-    private String userId;
+    private UUID userId;
 
 
     @Convert(converter = ConsentsJsonConverter.class)
     private Map<String, Set<String>> consents;
 
-    public String getUserId() {
+    public UUID getUserId() {
         return userId;
     }
 
-    public UserConsents setUserId(String userId) {
+    public UserConsents setUserId(UUID userId) {
         this.userId = userId;
         return this;
     }
