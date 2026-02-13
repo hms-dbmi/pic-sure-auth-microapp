@@ -647,6 +647,8 @@ public class UserService {
             new_user.setConnection(connection);
             User actual_user = this.findOrCreate(new_user);
 
+            actual_user.setConsents(userConsentsRepository.findByUserId(actual_user.getUuid()).getConsents());
+
             if (actual_user.getRoles() == null) {
                 actual_user.setRoles(new HashSet<>());
             }
@@ -768,11 +770,14 @@ public class UserService {
     }
 
     public User updateUserConsents(User user, Set<RasDbgapPermission> dbgapRoleNames) {
-        UserConsents userConsents = new UserConsents()
-                .setConsents(new BdcConsentsBuilder(fenceMappingUtility.getFENCEMapping(), dbgapRoleNames).createConsents())
-                .setUserId(user.getUuid());
+        UserConsents userConsents = userConsentsRepository.findByUserId(user.getUuid());
+        if (userConsents == null) {
+            userConsents = new UserConsents()
+                    .setConsents(new BdcConsentsBuilder(fenceMappingUtility.getFENCEMapping(), dbgapRoleNames).createConsents())
+                    .setUserId(user.getUuid());
+        }
         userConsentsRepository.save(userConsents);
 
-        return user;
+        return user.setConsents(userConsents.getConsents());
     }
 }
