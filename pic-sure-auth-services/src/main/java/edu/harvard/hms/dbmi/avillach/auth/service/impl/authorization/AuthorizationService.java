@@ -223,7 +223,7 @@ public class AuthorizationService {
                         result = true;
                         passByRule = accessRule;
 
-                        returnQuery = setAuthorizationFiltersForQuery(userConsents, query);
+                        returnQuery = consentBasedAccessRuleEvaluator.setAuthorizationFiltersForQuery(userConsents, query);
                         break;
                     } else {
                         failedRules.add(accessRule);
@@ -270,18 +270,6 @@ public class AuthorizationService {
         }
 
         return new EvaluateAccessRuleResult(result, failedRules, passRuleName, Optional.ofNullable(returnQuery));
-    }
-
-    private Query setAuthorizationFiltersForQuery(UserConsents userConsents, Query query) {
-        List<AuthorizationFilter> authorizationFilter = userConsents.getConsents().entrySet().stream()
-                .filter(entry -> {
-                    // todo: add logic to remove topmed and harmonized consents when not applicable
-                    return true;
-                })
-                .map(entry -> new AuthorizationFilter(entry.getKey(), entry.getValue())).toList();
-
-
-        return query.setAuthorizationFilters(authorizationFilter);
     }
 
 
