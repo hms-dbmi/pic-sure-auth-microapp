@@ -229,20 +229,28 @@ public class AuthorizationService {
                         failedRules.add(accessRule);
                     }
                 }
-                else if (this.accessRuleService.evaluateAccessRule(requestBody, accessRule)) {
-                    result = true;
-                    passByRule = accessRule;
-                    break;
-                } else {
-                    failedRules.add(accessRule);
-                    // Print the evaluation tree when a rule fails
-                    if (logger.isInfoEnabled()) {
-                        String ruleName = accessRule.getMergedName().isEmpty() ?
-                                         accessRule.getName() :
-                                         accessRule.getMergedName();
-                        logger.info("Rule evaluation tree for failed rule {}:\n{}",
-                            ruleName,
-                            this.accessRuleService.printEvaluationTree());
+                else {
+                    String targetService = (String) ((Map) requestBody).get("Target Service");
+                    logger.info("target service = " + targetService);
+                    if (targetService.startsWith("/v3")) {
+                        // ignore
+                        // TODO: remove this workaround!
+                    }
+                    else if (this.accessRuleService.evaluateAccessRule(requestBody, accessRule)) {
+                        result = true;
+                        passByRule = accessRule;
+                        break;
+                    } else {
+                        failedRules.add(accessRule);
+                        // Print the evaluation tree when a rule fails
+                        if (logger.isInfoEnabled()) {
+                            String ruleName = accessRule.getMergedName().isEmpty() ?
+                                    accessRule.getName() :
+                                    accessRule.getMergedName();
+                            logger.info("Rule evaluation tree for failed rule {}:\n{}",
+                                    ruleName,
+                                    this.accessRuleService.printEvaluationTree());
+                        }
                     }
                 }
             } catch (JsonProcessingException e) {
