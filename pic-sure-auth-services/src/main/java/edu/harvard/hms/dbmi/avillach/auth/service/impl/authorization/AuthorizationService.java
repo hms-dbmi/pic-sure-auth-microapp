@@ -252,8 +252,6 @@ public class AuthorizationService {
                         }
                     }
                 }
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
             } finally {
                 // Clear the evaluation tree to prevent memory leaks
                 this.accessRuleService.clearEvaluationTree();
