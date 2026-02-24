@@ -216,7 +216,7 @@ public class AuthorizationService {
                     queryMap.keySet().stream().forEach(key -> {
                         logger.info("Key = " + key);
                     });
-                    Query query = new ObjectMapper().readValue((String) queryMap.get("formattedQuery"), Query.class);
+                    Query query = new ObjectMapper().convertValue(queryMap.get("query"), Query.class);
 
                     if (consentBasedAccessRuleEvaluator.evaluateAccessRule(query, accessRule, userConsents)) {
                         result = true;
