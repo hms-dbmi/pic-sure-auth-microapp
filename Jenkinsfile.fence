@@ -23,7 +23,7 @@ pipeline {
         stage('Maven Build') {
             steps {
                 sh '''docker run --rm \
-                  -v "/var/jenkins_home/workspace/${JOB_NAME}/:/app" \
+                  -v "/var/jenkins_home/workspace/${JOB_NAME}/:/app:z" \
                   -v maven_m2_cache:/root/.m2 \
                   -w /app \
                   --platform=linux/amd64 \
