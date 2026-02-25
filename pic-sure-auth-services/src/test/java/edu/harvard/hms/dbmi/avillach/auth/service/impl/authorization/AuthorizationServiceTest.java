@@ -46,7 +46,7 @@ public class AuthorizationServiceTest {
     private RoleService roleService;
 
     @MockBean
-    private ConsentBasedAccessRuleEvaluator consentBasedAccessRuleEvaluator;
+    private BdcConsentBasedAccessRuleEvaluator bdcConsentBasedAccessRuleEvaluator;
 
     @MockBean
     private UserConsentsRepository userConsentsRepository;
@@ -330,7 +330,7 @@ public class AuthorizationServiceTest {
 
         when(sessionService.isSessionExpired(any(String.class))).thenReturn(false);
         accessRuleService = new AccessRuleService(accessRuleRepository, "false", "false", "false", "false","false", "false");
-        authorizationService = new AuthorizationService(accessRuleService, sessionService, roleService, consentBasedAccessRuleEvaluator, "fence,okta", userConsentsRepository);
+        authorizationService = new AuthorizationService(accessRuleService, sessionService, roleService, bdcConsentBasedAccessRuleEvaluator, "fence,okta", userConsentsRepository);
     }
 
     @Test

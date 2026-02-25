@@ -1,7 +1,6 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.harvard.hms.dbmi.avillach.auth.entity.UserConsents;
 import edu.harvard.hms.dbmi.avillach.hpds.data.query.ResultType;
 import edu.harvard.hms.dbmi.avillach.hpds.data.query.v3.*;
@@ -11,18 +10,17 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class ConsentBasedAccessRuleEvaluatorTest {
+class BdcConsentBasedAccessRuleEvaluatorTest {
 
 
-    private ConsentBasedAccessRuleEvaluator consentBasedAccessRuleEvaluator;
+    private BdcConsentBasedAccessRuleEvaluator bdcConsentBasedAccessRuleEvaluator;
 
     @BeforeEach
     public void setup() {
-        consentBasedAccessRuleEvaluator = new ConsentBasedAccessRuleEvaluator();
+        bdcConsentBasedAccessRuleEvaluator = new BdcConsentBasedAccessRuleEvaluator();
     }
 
     @Test
@@ -48,7 +46,7 @@ class ConsentBasedAccessRuleEvaluatorTest {
                 ), null, ResultType.COUNT, null, null
         );
 
-        boolean result = consentBasedAccessRuleEvaluator.evaluateAccessRule(query, null, userConsents);
+        boolean result = bdcConsentBasedAccessRuleEvaluator.evaluateAccessRule(query, null, userConsents);
         assertTrue(result);
     }
 
@@ -75,7 +73,7 @@ class ConsentBasedAccessRuleEvaluatorTest {
                 ), null, ResultType.COUNT, null, null
         );
 
-        boolean result = consentBasedAccessRuleEvaluator.evaluateAccessRule(query, null, userConsents);
+        boolean result = bdcConsentBasedAccessRuleEvaluator.evaluateAccessRule(query, null, userConsents);
         assertFalse(result);
     }
 
@@ -103,7 +101,7 @@ class ConsentBasedAccessRuleEvaluatorTest {
                 ), null, ResultType.COUNT, null, null
         );
 
-        boolean result = consentBasedAccessRuleEvaluator.evaluateAccessRule(query, null, userConsents);
+        boolean result = bdcConsentBasedAccessRuleEvaluator.evaluateAccessRule(query, null, userConsents);
         assertFalse(result);
     }
 
@@ -141,7 +139,7 @@ class ConsentBasedAccessRuleEvaluatorTest {
                 ResultType.COUNT, null, null
         );
 
-        boolean result = consentBasedAccessRuleEvaluator.evaluateAccessRule(query, null, userConsents);
+        boolean result = bdcConsentBasedAccessRuleEvaluator.evaluateAccessRule(query, null, userConsents);
         assertTrue(result);
     }
 
@@ -171,7 +169,7 @@ class ConsentBasedAccessRuleEvaluatorTest {
                 ResultType.COUNT, null, null
         );
 
-        boolean result = consentBasedAccessRuleEvaluator.evaluateAccessRule(query, null, userConsents);
+        boolean result = bdcConsentBasedAccessRuleEvaluator.evaluateAccessRule(query, null, userConsents);
         assertFalse(result);
     }
 }
