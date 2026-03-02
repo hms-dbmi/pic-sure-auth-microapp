@@ -14,11 +14,12 @@ import java.util.stream.Collectors;
 
 public class BdcConsentsBuilder {
 
+    public static final String PUBLIC_STUDY_TYPE = "public";
     private final Logger log = LoggerFactory.getLogger(BdcConsentsBuilder.class);
 
-    public static final String CONSENTS_KEY = "\\_consent\\";
-    public static final String HARMONIZED_CONSENTS_KEY = "\\_harmonized_consents\\";
-    public static final String TOPMED_CONSENTS_KEY = "\\_topmed_consents\\";
+    public static final String CONSENTS_KEY = "\\\\_consent\\\\";
+    public static final String HARMONIZED_CONSENTS_KEY = "\\\\_harmonized_consents\\\\";
+    public static final String TOPMED_CONSENTS_KEY = "\\\\_topmed_consents\\\\";
     private final Map<String, StudyMetaData> fenceMappingByConsent;
 
     private final Set<RasDbgapPermission> dbgapRoleNames;
@@ -30,10 +31,10 @@ public class BdcConsentsBuilder {
 
     public Map<String, Set<String>> createConsents() {
         Set<String> userConsentStrings = dbgapRoleNames.stream()
-                .map(permission -> permission.getPhsId() + "." + permission.getConsentGroup())
-                .collect(Collectors.toSet());
+            .map(permission -> permission.getPhsId() + "." + permission.getConsentGroup()).collect(Collectors.toSet());
 
         Map<String, Set<String>> result = new HashMap<>();
+        result.put(CONSENTS_KEY, new HashSet<>());
 
         userConsentStrings.forEach(consent -> {
             StudyMetaData studyMetaData = fenceMappingByConsent.get(consent);
@@ -41,6 +42,7 @@ public class BdcConsentsBuilder {
                 log.info(consent + " not found in fence mapping");
                 return;
             }
+            // all user consents go in the consents list
             result.computeIfAbsent(CONSENTS_KEY, _ -> new HashSet<>()).add(consent);
 
             if (studyMetaData.getIsHarmonized()) {
@@ -55,6 +57,16 @@ public class BdcConsentsBuilder {
                 result.put(TOPMED_CONSENTS_KEY, topmedConsents);
             }
         });
+
+        fenceMappingByConsent.forEach((key, value) -> {
+            if (PUBLIC_STUDY_TYPE.equalsIgnoreCase(value.getStudyType())) {
+                result.computeIfAbsent(CONSENTS_KEY, _ -> new HashSet<>()).add(key);
+            }
+        });
+
+        if (result.get(CONSENTS_KEY).isEmpty()) {
+            throw new IllegalStateException("No studies available for user");
+        }
 
         return result;
     }
