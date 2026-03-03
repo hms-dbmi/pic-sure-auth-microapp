@@ -1,5 +1,7 @@
 package edu.harvard.hms.dbmi.avillach.auth.rest;
 
+import edu.harvard.dbmi.avillach.logging.LoggingClient;
+import edu.harvard.dbmi.avillach.logging.LoggingEvent;
 import edu.harvard.hms.dbmi.avillach.auth.model.InvalidRefreshToken;
 import edu.harvard.hms.dbmi.avillach.auth.model.RefreshToken;
 import edu.harvard.hms.dbmi.avillach.auth.model.ValidRefreshToken;
@@ -31,10 +33,12 @@ import java.util.Map;
 public class TokenController {
 
     private final TokenService tokenService;
+    private final LoggingClient loggingClient;
 
     @Autowired
-    public TokenController(TokenService tokenService) {
+    public TokenController(TokenService tokenService, LoggingClient loggingClient) {
         this.tokenService = tokenService;
+        this.loggingClient = loggingClient;
     }
 
     @Operation(description = "Token introspection endpoint for user to retrieve a valid token")
@@ -44,6 +48,14 @@ public class TokenController {
                     " include a user the token for validation")
             @RequestBody Map<String, Object> inputMap) {
         Map<String, Object> stringObjectMap = this.tokenService.inspectToken(inputMap);
+
+        loggingClient.send(LoggingEvent.builder("ACCESS")
+            .action("TOKEN_INTROSPECT")
+            .metadata(Map.of(
+                "active", String.valueOf(stringObjectMap.getOrDefault("active", false))
+            ))
+            .build());
+
         return PICSUREResponse.success(stringObjectMap);
     }
 
