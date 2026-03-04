@@ -42,8 +42,8 @@ public class UserController {
     @RolesAllowed({ADMIN, SUPER_ADMIN})
     @GetMapping(path = "/{userId}", produces = "application/json")
     public ResponseEntity<User> getUserById(
-            @Parameter(required = true, description = "The UUID of the user to fetch information about")
-            @PathVariable("userId") String userId) {
+        @Parameter(required = true, description = "The UUID of the user to fetch information about") @PathVariable("userId") String userId
+    ) {
         User userById = this.userService.getUserById(userId);
         return PICSUREResponse.success(userById);
     }
@@ -60,8 +60,8 @@ public class UserController {
     @RolesAllowed({ADMIN})
     @PostMapping(produces = "application/json")
     public ResponseEntity<?> addUser(
-            @Parameter(required = true, description = "A list of user in JSON format")
-            @RequestBody List<User> users) {
+        @Parameter(required = true, description = "A list of user in JSON format") @RequestBody List<User> users
+    ) {
         List<User> addedUsers = this.userService.addUsers(users);
         if (addedUsers == null) {
             return PICSUREResponse.applicationError("Inner application error, please contact admin.");
@@ -78,8 +78,7 @@ public class UserController {
     @Operation(description = "Update a list of users, will only update the fields listed, requires ADMIN role")
     @RolesAllowed({ADMIN})
     @PutMapping(produces = "application/json")
-    public ResponseEntity<?> updateUser(
-            @RequestBody List<User> users) {
+    public ResponseEntity<?> updateUser(@RequestBody List<User> users) {
         List<User> updatedUsers = this.userService.updateUser(users);
         if (updatedUsers == null) {
             return PICSUREResponse.applicationError("Inner application error, please contact admin.");
@@ -94,17 +93,18 @@ public class UserController {
     }
 
     /**
-     * For the long term token, current logic is,
-     * every time a user hit this endpoint <code>/me</code> with the query parameter ?hasToken presented,
-     * it will refresh the long term token.
+     * For the long term token, current logic is, every time a user hit this endpoint <code>/me</code> with the query parameter ?hasToken
+     * presented, it will refresh the long term token.
      *
      */
     @Operation(description = "Retrieve information of current user")
     @GetMapping(produces = "application/json", path = "/me")
     public ResponseEntity<?> getCurrentUser(
-            @RequestHeader("Authorization") String authorizationHeader,
-            @Parameter(description = "Attribute that represents if a long term token will attach to the response")
-            @RequestParam(name = "hasToken", required = false) Boolean hasToken) {
+        @RequestHeader("Authorization") String authorizationHeader,
+        @Parameter(description = "Attribute that represents if a long term token will attach to the response") @RequestParam(
+            name = "hasToken", required = false
+        ) Boolean hasToken
+    ) {
         logger.info("getCurrentUser() authorizationHeader: {}, hasToken {}", authorizationHeader, hasToken);
         User.UserForDisplay currentUser = this.userService.getCurrentUser(authorizationHeader, hasToken);
 
@@ -118,8 +118,8 @@ public class UserController {
     @Operation(description = "Retrieve the queryTemplate of certain application by given application Id for the currentUser ")
     @GetMapping(path = "/me/queryTemplate/{applicationId}", produces = "application/json")
     public ResponseEntity<?> getQueryTemplate(
-            @Parameter(description = "Application Id for the returning queryTemplate")
-            @PathVariable("applicationId") String applicationId) {
+        @Parameter(description = "Application Id for the returning queryTemplate") @PathVariable("applicationId") String applicationId
+    ) {
         Optional<String> mergedTemplate = this.userService.getQueryTemplate(applicationId);
 
         if (mergedTemplate.isEmpty()) {
@@ -143,24 +143,33 @@ public class UserController {
     }
 
     /**
-     * For the long term token, current logic is,
-     * every time a user hit this endpoint /me
-     * with the query parameter ?hasToken presented,
-     * it will refresh the long term token.
+     * For the long term token, current logic is, every time a user hit this endpoint /me with the query parameter ?hasToken presented, it
+     * will refresh the long term token.
      *
      * @param httpHeaders the http headers
      * @return the refreshed long term token
      */
     @Operation(description = "refresh the long term tokne of current user")
     @GetMapping(path = "/me/refresh_long_term_token", produces = "application/json")
-    public ResponseEntity<?> refreshUserToken(
-            @RequestHeader HttpHeaders httpHeaders) {
+    public ResponseEntity<?> refreshUserToken(@RequestHeader HttpHeaders httpHeaders) {
         Map<String, String> stringStringMap = this.userService.refreshUserToken(httpHeaders);
         if (stringStringMap != null) {
             return PICSUREResponse.success(stringStringMap);
         }
 
         return PICSUREResponse.applicationError("Inner application error, please contact admin.");
+    }
+
+    @Operation(description = "Retrieve consents of current user")
+    @GetMapping(path = "/me/consents", produces = "application/json")
+    public ResponseEntity<?> getUserConsents(@PathVariable("userId") UUID userId) {
+        UserConsents userConsents = this.userService.getUserConsents(userId);
+
+        if (userConsents == null) {
+            return PICSUREResponse.applicationError("Inner application error, please contact admin.");
+        }
+
+        return PICSUREResponse.success(userConsents);
     }
 
 }

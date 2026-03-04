@@ -65,18 +65,14 @@ public class UserService {
     private final JWTUtil jwtUtil;
 
     @Autowired
-    public UserService(BasicMailService basicMailService, TOSService tosService,
-                       UserRepository userRepository,
-                       ConnectionRepository connectionRepository,
-                       ApplicationRepository applicationRepository,
-                       RoleService roleService,
-                       UserConsentsRepository userConsentsRepository,
-                       FenceMappingUtility fenceMappingUtility,
-                       @Value("${application.token.expiration.time}") long tokenExpirationTime,
-                       @Value("${application.default.uuid}") String applicationUUID,
-                       @Value("${application.long.term.token.expiration.time}") long longTermTokenExpirationTime,
-                       JWTUtil jwtUtil,
-                       @Value("${open.idp.provider.is.enabled}") boolean openIdpProviderIsEnabled) {
+    public UserService(
+        BasicMailService basicMailService, TOSService tosService, UserRepository userRepository, ConnectionRepository connectionRepository,
+        ApplicationRepository applicationRepository, RoleService roleService, UserConsentsRepository userConsentsRepository,
+        FenceMappingUtility fenceMappingUtility, @Value("${application.token.expiration.time}") long tokenExpirationTime,
+        @Value("${application.default.uuid}") String applicationUUID,
+        @Value("${application.long.term.token.expiration.time}") long longTermTokenExpirationTime, JWTUtil jwtUtil,
+        @Value("${open.idp.provider.is.enabled}") boolean openIdpProviderIsEnabled
+    ) {
         this.basicMailService = basicMailService;
         this.tosService = tosService;
         this.userRepository = userRepository;
@@ -91,7 +87,8 @@ public class UserService {
         this.jwtUtil = jwtUtil;
 
         long defaultLongTermTokenExpirationTime = 1000L * 60 * 60 * 24 * 30;
-        this.longTermTokenExpirationTime = longTermTokenExpirationTime > 0 ? longTermTokenExpirationTime : defaultLongTermTokenExpirationTime;
+        this.longTermTokenExpirationTime =
+            longTermTokenExpirationTime > 0 ? longTermTokenExpirationTime : defaultLongTermTokenExpirationTime;
         this.openAccessIsEnabled = openIdpProviderIsEnabled;
     }
 
@@ -103,13 +100,8 @@ public class UserService {
 
         logger.info("getUserProfileResponse() using claims:{}", claims.toString());
 
-        String token = this.jwtUtil.createJwtToken(
-                "whatever",
-                "edu.harvard.hms.dbmi.psama",
-                claims,
-                claims.get("sub").toString(),
-                this.tokenExpirationTime
-        );
+        String token = this.jwtUtil
+            .createJwtToken("whatever", "edu.harvard.hms.dbmi.psama", claims, claims.get("sub").toString(), this.tokenExpirationTime);
         logger.info("getUserProfileResponse() PSAMA JWT token has been generated. Token:{}", token);
         responseMap.put("token", token);
 
@@ -158,25 +150,19 @@ public class UserService {
     }
 
     /**
-     * This check is to prevent non-super-admin user to create/remove a super admin role
-     * against a user(include themselves). Only super admin user could perform such actions.
+     * This check is to prevent non-super-admin user to create/remove a super admin role against a user(include themselves). Only super
+     * admin user could perform such actions.
      *
-     * <p>
-     * if operations not related to super admin role updates, this will return true.
-     * </p>
-     * <p>
-     * The logic here is checking the state of the super admin role in the input and output users,
-     * if the state is changed, check if the user is a super admin to determine if the user could perform the action.
+     * <p> if operations not related to super admin role updates, this will return true. </p> <p> The logic here is checking the state of
+     * the super admin role in the input and output users, if the state is changed, check if the user is a super admin to determine if the
+     * user could perform the action.
      *
-     * @param currentUser  the user trying to perform the action
-     * @param inputUser    the user that is going to be updated
+     * @param currentUser the user trying to perform the action
+     * @param inputUser the user that is going to be updated
      * @param originalUser there could be no original user when adding a new user
      * @return true if the user could perform the action, false otherwise
      */
-    private boolean allowUpdateSuperAdminRole(
-            @NotNull User currentUser,
-            @NotNull User inputUser,
-            User originalUser) {
+    private boolean allowUpdateSuperAdminRole(@NotNull User currentUser, @NotNull User inputUser, User originalUser) {
 
         // if current user is a super admin, this check will return true
         for (Role role : currentUser.getRoles()) {
@@ -232,14 +218,21 @@ public class UserService {
         for (User user : users) {
             logger.debug("Adding User {}", user);
             if (!allowUpdateSuperAdminRole(currentUser, user, null)) {
-                logger.error("updateUser() user - {} - with roles [{}] - is not allowed to grant " + AuthNaming.AuthRoleNaming.SUPER_ADMIN + " role when adding a user.", currentUser.getUuid(), currentUser.getRoleString());
-                throw new IllegalArgumentException("Not allowed to add a user with a " + AuthNaming.AuthRoleNaming.SUPER_ADMIN + " privilege associated.");
+                logger.error(
+                    "updateUser() user - {} - with roles [{}] - is not allowed to grant " + AuthNaming.AuthRoleNaming.SUPER_ADMIN
+                        + " role when adding a user.",
+                    currentUser.getUuid(), currentUser.getRoleString()
+                );
+                throw new IllegalArgumentException(
+                    "Not allowed to add a user with a " + AuthNaming.AuthRoleNaming.SUPER_ADMIN + " privilege associated."
+                );
             }
 
             if (user.getEmail() == null) {
                 try {
                     logger.info("Parsing metadata for email address");
-                    HashMap<String, String> metadata = new HashMap<String, String>(new ObjectMapper().readValue(user.getGeneralMetadata(), Map.class));
+                    HashMap<String, String> metadata =
+                        new HashMap<String, String>(new ObjectMapper().readValue(user.getGeneralMetadata(), Map.class));
                     List<String> emailKeys = metadata.keySet().stream().filter((key) -> key.toLowerCase().contains("email")).toList();
                     if (!emailKeys.isEmpty()) {
                         user.setEmail(metadata.get(emailKeys.getFirst()));
@@ -255,9 +248,8 @@ public class UserService {
     }
 
     /**
-     * Check all referenced fields if they are already in a database. If
-     * they are in the database, then retrieve it by id and attach it to
-     * a user object.
+     * Check all referenced fields if they are already in a database. If they are in the database, then retrieve it by id and attach it to a
+     * user object.
      *
      * @param users A list of users
      */
@@ -310,8 +302,14 @@ public class UserService {
             users = this.userRepository.saveAll(users);
             return users;
         } else {
-            logger.error("updateUser() user - {} - with roles [{}] - is not allowed to grant or remove " + AuthNaming.AuthRoleNaming.SUPER_ADMIN + " privilege.", currentUser.getUuid(), currentUser.getRoleString());
-            throw new IllegalArgumentException("Not allowed to update a user with changes associated to " + AuthNaming.AuthRoleNaming.SUPER_ADMIN + " privilege.");
+            logger.error(
+                "updateUser() user - {} - with roles [{}] - is not allowed to grant or remove " + AuthNaming.AuthRoleNaming.SUPER_ADMIN
+                    + " privilege.",
+                currentUser.getUuid(), currentUser.getRoleString()
+            );
+            throw new IllegalArgumentException(
+                "Not allowed to update a user with changes associated to " + AuthNaming.AuthRoleNaming.SUPER_ADMIN + " privilege."
+            );
         }
     }
 
@@ -337,7 +335,8 @@ public class UserService {
     @Transactional
     public User.UserForDisplay getCurrentUser(String authorizationHeader, Boolean hasToken) {
         SecurityContext securityContext = SecurityContextHolder.getContext();
-        Optional<CustomUserDetails> customUserDetails = Optional.ofNullable((CustomUserDetails) securityContext.getAuthentication().getPrincipal());
+        Optional<CustomUserDetails> customUserDetails =
+            Optional.ofNullable((CustomUserDetails) securityContext.getAuthentication().getPrincipal());
         if (customUserDetails.isEmpty() || customUserDetails.get().getUser() == null) {
             logger.error("Security context didn't have a user stored.");
             return null;
@@ -350,11 +349,8 @@ public class UserService {
         }
 
         logger.info("getCurrentUser() user found: {}", user.getEmail());
-        User.UserForDisplay userForDisplay = new User.UserForDisplay()
-                .setEmail(user.getEmail())
-                .setPrivileges(user.getPrivilegeNameSet())
-                .setUuid(user.getUuid().toString())
-                .setAcceptedTOS(this.tosService.hasUserAcceptedLatest(user.getSubject()));
+        User.UserForDisplay userForDisplay = new User.UserForDisplay().setEmail(user.getEmail()).setPrivileges(user.getPrivilegeNameSet())
+            .setUuid(user.getUuid().toString()).setAcceptedTOS(this.tosService.hasUserAcceptedLatest(user.getSubject()));
 
         // currently, the queryScopes are simple combination of queryScope string together as a set.
         // We are expecting the queryScope string as plain string. If it is a JSON, we could change the
@@ -364,9 +360,8 @@ public class UserService {
             Set<String> scopes = new TreeSet<>();
             privileges.stream().filter(privilege -> privilege.getQueryScope() != null).forEach(privilege -> {
                 try {
-                    Arrays.stream(objectMapper.readValue(privilege.getQueryScope(), String[].class))
-                            .filter(Objects::nonNull)
-                            .forEach(scopes::add);
+                    Arrays.stream(objectMapper.readValue(privilege.getQueryScope(), String[].class)).filter(Objects::nonNull)
+                        .forEach(scopes::add);
                 } catch (IOException e) {
                     logger.error("Parsing issue for privilege {} queryScope", privilege.getUuid(), e);
                 }
@@ -392,7 +387,8 @@ public class UserService {
         }
 
         SecurityContext securityContext = SecurityContextHolder.getContext();
-        Optional<CustomUserDetails> customUserDetails = Optional.ofNullable((CustomUserDetails) securityContext.getAuthentication().getPrincipal());
+        Optional<CustomUserDetails> customUserDetails =
+            Optional.ofNullable((CustomUserDetails) securityContext.getAuthentication().getPrincipal());
         if ((customUserDetails.isEmpty() || customUserDetails.get().getUser() == null) && openAccessIsEnabled) {
             Optional<Application> application = this.applicationRepository.findById(UUID.fromString(applicationId));
             if (application.isEmpty()) {
@@ -520,9 +516,9 @@ public class UserService {
     }
 
     /**
-     * Logic here is, retrieve the subject of the user from httpHeader. Then generate a long term one
-     * with LONG_TERM_TOKEN_PREFIX| in front of the subject to be able to distinguish with regular ones, since
-     * long term token only generated for accessing certain things to, in some degrees, decrease the insecurity.
+     * Logic here is, retrieve the subject of the user from httpHeader. Then generate a long term one with LONG_TERM_TOKEN_PREFIX| in front
+     * of the subject to be able to distinguish with regular ones, since long term token only generated for accessing certain things to, in
+     * some degrees, decrease the insecurity.
      *
      * @param authorizationHeader the authorization header
      * @return the long term token
@@ -551,11 +547,9 @@ public class UserService {
         }
 
         return this.jwtUtil.createJwtToken(
-                claims.getId(),
-                claims.getIssuer(),
-                claims,
-                AuthNaming.LONG_TERM_TOKEN_PREFIX + "|" + tokenSubject,
-                this.longTermTokenExpirationTime);
+            claims.getId(), claims.getIssuer(), claims, AuthNaming.LONG_TERM_TOKEN_PREFIX + "|" + tokenSubject,
+            this.longTermTokenExpirationTime
+        );
     }
 
     public User changeRole(User currentUser, Set<Role> roles) {
@@ -573,7 +567,10 @@ public class UserService {
     }
 
     public User findOrCreate(User newUser) {
-        logger.info("findOrCreate(), trying to find user: {subject: {}}, and found a user with uuid: {}, subject: {}", newUser.getSubject(), newUser.getUuid(), newUser.getSubject());
+        logger.info(
+            "findOrCreate(), trying to find user: {subject: {}}, and found a user with uuid: {}, subject: {}", newUser.getSubject(),
+            newUser.getUuid(), newUser.getSubject()
+        );
         // check if the user exist by subject
         Optional<User> user = Optional.ofNullable(findBySubject(newUser.getSubject()));
         if (user.isPresent()) {
@@ -592,8 +589,10 @@ public class UserService {
         }
 
         user = Optional.ofNullable(save(newUser));
-        logger.info("createUser created user, uuid: {}, subject: {}, role: {}, privilege: {}",
-                user.get().getUuid(), newUser.getSubject(), user.get().getRoleString(), user.get().getPrivilegeString());
+        logger.info(
+            "createUser created user, uuid: {}, subject: {}, role: {}, privilege: {}", user.get().getUuid(), newUser.getSubject(),
+            user.get().getRoleString(), user.get().getPrivilegeString()
+        );
         // create a new user
         return user.orElse(null);
     }
@@ -624,14 +623,16 @@ public class UserService {
         user.setEmail(user.getUuid() + "@open_access.com");
         user = save(user);
 
-        logger.info("createOpenAccessUser() created user, uuid: {}, subject: {}, role: {}, privilege: {}",
-                user.getUuid(), user.getSubject(), user.getRoleString(), user.getPrivilegeString());
+        logger.info(
+            "createOpenAccessUser() created user, uuid: {}, subject: {}, role: {}, privilege: {}", user.getUuid(), user.getSubject(),
+            user.getRoleString(), user.getPrivilegeString()
+        );
         return user;
     }
 
     /**
-     * Using the introspection token response, load the user from the database. If the user does not exist, we
-     * will reject their login attempt. For the RAS integration here is a sample payload.
+     * Using the introspection token response, load the user from the database. If the user does not exist, we will reject their login
+     * attempt. For the RAS integration here is a sample payload.
      *
      * @param node The response from the introspect endpoint
      * @return The user
@@ -679,22 +680,21 @@ public class UserService {
     }
 
     /**
-     * Update the provided users roles based on the list of roleNames provided. This method will update the roles
-     * in place. Adding and removing roles from the current list of roles.
+     * Update the provided users roles based on the list of roleNames provided. This method will update the roles in place. Adding and
+     * removing roles from the current list of roles.
      *
      * @param current_user User to be updated
-     * @param roleNames    Roles that should be assigned to the user.
+     * @param roleNames Roles that should be assigned to the user.
      */
     public User updateUserRoles(User current_user, Set<String> roleNames) {
-        Set<String> currentRoleNames = current_user.getRoles().stream()
-                .map(Role::getName)
-                .collect(Collectors.toSet());
+        Set<String> currentRoleNames = current_user.getRoles().stream().map(Role::getName).collect(Collectors.toSet());
 
         Set<Role> rolesToRemove = current_user.getRoles().stream()
-                .filter(role -> !roleNames.contains(role.getName()) && !role.getName().equals(MANAGED_OPEN_ACCESS_ROLE_NAME) && !role.getName().equals(MANAGED_AUTH_ACCESS_ROLE_NAME)
-                        && !role.getName().startsWith("MANUAL_") && !role.getName().equals("PIC-SURE Top Admin")
-                        && !role.getName().equals("Admin"))
-                .collect(Collectors.toSet());
+            .filter(
+                role -> !roleNames.contains(role.getName()) && !role.getName().equals(MANAGED_OPEN_ACCESS_ROLE_NAME)
+                    && !role.getName().equals(MANAGED_AUTH_ACCESS_ROLE_NAME) && !role.getName().startsWith("MANUAL_")
+                    && !role.getName().equals("PIC-SURE Top Admin") && !role.getName().equals("Admin")
+            ).collect(Collectors.toSet());
 
         if (!rolesToRemove.isEmpty()) {
             current_user.getRoles().removeAll(rolesToRemove);
@@ -704,11 +704,8 @@ public class UserService {
 
         // Bulk lookup for existing roles. By using a hashmap we avoid having to iterate over the set of roles each time.
         Map<String, Role> existingRoles = roleService.findByNames(roleNames);
-        List<Role> newRoles = roleNames.stream()
-                .filter(roleName -> !currentRoleNames.contains(roleName))
-                .map(existingRoles::get)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+        List<Role> newRoles = roleNames.stream().filter(roleName -> !currentRoleNames.contains(roleName)).map(existingRoles::get)
+            .filter(Objects::nonNull).collect(Collectors.toList());
 
         if (!newRoles.isEmpty()) {
             logger.debug("upsertRole() updated {} roles from user", newRoles.size());
@@ -740,7 +737,9 @@ public class UserService {
         // Every user has access to public datasets by default.
         current_user.getRoles().addAll(roleService.getPublicAccessRoles());
 
-        logger.debug("User roles: {}", current_user.getRoles().stream().filter(Objects::nonNull).map(Role::getName).collect(Collectors.joining(", ")));
+        logger.debug(
+            "User roles: {}", current_user.getRoles().stream().filter(Objects::nonNull).map(Role::getName).collect(Collectors.joining(", "))
+        );
         try {
             current_user = this.changeRole(current_user, current_user.getRoles());
             logger.debug("upsertRole() updated user, who now has {} roles.", current_user.getRoles().size());
@@ -776,11 +775,15 @@ public class UserService {
         UserConsents userConsents = userConsentsRepository.findByUserId(user.getUuid());
         if (userConsents == null) {
             userConsents = new UserConsents()
-                    .setConsents(new BdcConsentsBuilder(fenceMappingUtility.getFENCEMapping(), dbgapRoleNames).createConsents())
-                    .setUserId(user.getUuid());
+                .setConsents(new BdcConsentsBuilder(fenceMappingUtility.getFENCEMapping(), dbgapRoleNames).createConsents())
+                .setUserId(user.getUuid());
         }
         userConsentsRepository.save(userConsents);
 
         return user.setConsents(userConsents.getConsents());
+    }
+
+    public UserConsents getUserConsents(UUID userId) {
+        return userConsentsRepository.findByUserId(userId);
     }
 }
