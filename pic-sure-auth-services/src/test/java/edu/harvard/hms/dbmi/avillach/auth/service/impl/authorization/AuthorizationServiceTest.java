@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.harvard.hms.dbmi.avillach.auth.entity.*;
 import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
 import edu.harvard.hms.dbmi.avillach.auth.repository.AccessRuleRepository;
+import edu.harvard.hms.dbmi.avillach.auth.repository.UserConsentsRepository;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.AccessRuleService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.RoleService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.SessionService;
@@ -43,6 +44,12 @@ public class AuthorizationServiceTest {
 
     @MockBean
     private RoleService roleService;
+
+    @MockBean
+    private BdcConsentBasedAccessRuleEvaluator bdcConsentBasedAccessRuleEvaluator;
+
+    @MockBean
+    private UserConsentsRepository userConsentsRepository;
 
     private final ObjectMapper mapper = new ObjectMapper();
 
@@ -323,7 +330,7 @@ public class AuthorizationServiceTest {
 
         when(sessionService.isSessionExpired(any(String.class))).thenReturn(false);
         accessRuleService = new AccessRuleService(accessRuleRepository, "false", "false", "false", "false","false", "false");
-        authorizationService = new AuthorizationService(accessRuleService, sessionService, roleService, "fence,okta");
+        authorizationService = new AuthorizationService(accessRuleService, sessionService, roleService, bdcConsentBasedAccessRuleEvaluator, "fence,okta", userConsentsRepository);
     }
 
     @Test
@@ -350,7 +357,7 @@ public class AuthorizationServiceTest {
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("test", "value");
 
-        boolean result = authorizationService.isAuthorized(application, requestBody, user, false);
+        boolean result = authorizationService.isAuthorized(application, requestBody, user, false).result();
 
         assertTrue(result);
     }
@@ -365,7 +372,7 @@ public class AuthorizationServiceTest {
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("test", "differentValue");
 
-        boolean result = authorizationService.isAuthorized(application, requestBody, user, false);
+        boolean result = authorizationService.isAuthorized(application, requestBody, user, false).result();
 
         assertFalse(result);
     }
@@ -380,7 +387,7 @@ public class AuthorizationServiceTest {
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("test", "differentValue");
 
-        boolean result = authorizationService.isAuthorized(application, requestBody, user, false);
+        boolean result = authorizationService.isAuthorized(application, requestBody, user, false).result();
 
         assertFalse(result);
     }
@@ -482,7 +489,7 @@ public class AuthorizationServiceTest {
         configureUserSecurityContext(user);
         application.setPrivileges(user.getPrivilegesByApplication(application));
 
-        boolean result = authorizationService.isAuthorized(application, null, user, false);
+        boolean result = authorizationService.isAuthorized(application, null, user, false).result();
 
         assertTrue(result);
     }
@@ -494,7 +501,7 @@ public class AuthorizationServiceTest {
         user.setConnection(createFenceTestConnection());
 
         user.getRoles().iterator().next().setPrivileges(Collections.emptySet());
-        boolean result = authorizationService.isAuthorized(application, new HashMap<>(), user, false);
+        boolean result = authorizationService.isAuthorized(application, new HashMap<>(), user, false).result();
 
         assertFalse(result);
     }
