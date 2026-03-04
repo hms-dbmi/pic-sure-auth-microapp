@@ -110,7 +110,7 @@ public class TokenService {
             throw new IllegalAccessException("The application token does not associate with an application but " + principalName);
         }
 
-        // Verify application exists after JWT authentication 
+        // Verify application exists after JWT authentication
         if (application == null) {
             logger.error("_inspectToken() There is no application in securityContext, which shall not be.");
             throw new NullPointerException("Inner application error, please ask admin to check the log.");
@@ -124,7 +124,7 @@ public class TokenService {
         // Check for long-term token type
         // Long-term tokens:
         // - One per user stored in database
-        // - Must match database token exactly 
+        // - Must match database token exactly
         // - Previous token invalidated on refresh
         // Regular tokens remain valid after refresh
         boolean isLongTermToken = false;
@@ -142,7 +142,7 @@ public class TokenService {
             return tokenInspection;
         }
 
-        // Verify token is active and authorized 
+        // Verify token is active and authorized
         boolean isAuthorizationPassed = false;
         String errorMsg = null;
 
@@ -159,12 +159,12 @@ public class TokenService {
             isAuthorizationPassed = true;
             logger.info("ACCESS_LOG ___ {},{},{} ___ has been granted access to execute query ___ {} ___ in application ___ {} ___ NO APP PRIVILEGES DEFINED", user.getUuid(), user.getEmail(), user.getName(), inputMap.get("request"), application.getName());
         } else if (!isLongTermTokenCompromised
-                   && user.getRoles() != null
-                   && authorizationService.isAuthorized(application, inputMap.get("request"), user, isLongTermToken)) {
-            isAuthorizationPassed = true;
-        } else {
-            if (!isLongTermTokenCompromised)
-                errorMsg = "User doesn't have enough privileges.";
+                   && user.getRoles() != null) {
+            EvaluateAccessRuleResult evaluateAccessRuleResult = authorizationService.isAuthorized(application, inputMap.get("request"), user, isLongTermToken);
+            isAuthorizationPassed = evaluateAccessRuleResult.result();
+            evaluateAccessRuleResult.query().ifPresent(query -> tokenInspection.addField("query", query));
+        } else if (!isLongTermTokenCompromised) {
+            errorMsg = "User doesn't have enough privileges.";
         }
 
         if (isLongTermToken && isAuthorizationPassed) {

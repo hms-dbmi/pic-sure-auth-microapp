@@ -164,6 +164,7 @@ public class AimAheadAuthenticationService extends OktaAuthenticationService imp
                 user.get().setSubject("okta|" + introspectResponse.get("uid").asText());
             }
 
+            // todo: MANAGED_AUTH_ACCESS_ROLE_NAME too?
             // All users that login through OKTA should have the fence_open_access role, or they will not be able to interact with the UI
             Role openAccessRole = roleService.getRoleByName(MANAGED_OPEN_ACCESS_ROLE_NAME);
             if (!user.get().getRoles().contains(openAccessRole)) {

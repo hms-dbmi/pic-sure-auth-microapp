@@ -92,7 +92,6 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
             JsonNode userToken = handleCodeTokenExchange(host, authRequest.get("code"));
             introspectResponse = introspectToken(userToken);
             idToken = userToken.get("id_token").asText();
-            logger.debug("RAS OKTA LOGIN ATTEMPT ___ INTROSPECTION RESPONSE {}", introspectResponse);
         }
 
         if (introspectResponse == null) {
@@ -149,6 +148,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
         Set<RasDbgapPermission> dbgapPermissions = this.rasPassPortService.ga4gpPassportToRasDbgapPermissions(ga4ghPassports);
         Set<String> dbgapRoleNames = this.roleService.getRoleNamesForDbgapPermissions(dbgapPermissions);
         user = userService.updateUserRoles(user, dbgapRoleNames);
+        user = userService.updateUserConsents(user, dbgapPermissions);
         logger.debug("USER {} ROLES UPDATED {} ___ CODE {}",
                 user.getSubject(),
                 user.getRoles().stream().map(role -> role.getName().replace("MANAGED_", "")).toArray(),
@@ -206,7 +206,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
 
         return objectNode;
     }
-    
+
     private void setUserPassport(Map<String, String> authRequest, JsonNode introspectResponse, User user) {
         String passport = introspectResponse.get("passport_jwt_v11").toString();
         user.setPassport(passport);
