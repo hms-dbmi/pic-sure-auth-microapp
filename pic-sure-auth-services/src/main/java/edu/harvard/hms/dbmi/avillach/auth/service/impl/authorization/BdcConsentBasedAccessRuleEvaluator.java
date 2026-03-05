@@ -19,8 +19,8 @@ public class BdcConsentBasedAccessRuleEvaluator implements ConsentBasedAccessRul
 
     private final Logger log = LoggerFactory.getLogger(BdcConsentBasedAccessRuleEvaluator.class);
 
-    private static final String GENOMIC_AUTHORIZATION_FILTER = "\\\\_topmed_consents\\\\";
-    private static final String HARMONIZED_AUTHORIZATION_FILTER = "\\\\_harmonized_consent\\\\";
+    private static final String GENOMIC_AUTHORIZATION_FILTER = "\\_topmed_consents\\";
+    private static final String HARMONIZED_AUTHORIZATION_FILTER = "\\_harmonized_consent\\";
 
     @Override
     public boolean evaluateAccessRule(Query query, AccessRule accessRule, UserConsents consents) {
@@ -49,7 +49,7 @@ public class BdcConsentBasedAccessRuleEvaluator implements ConsentBasedAccessRul
 
     private boolean isConceptPathAuthorized(String conceptPath, UserConsents consents, Set<String> userStudies) {
         // the 0th index of the array is empty because consents start with \\
-        String[] split = conceptPath.split("\\\\\\\\");
+        String[] split = conceptPath.split("\\\\");
         String filterConsent = split.length > 1 ? split[1] : split[0];
 
         if (filterConsent.equals("DCC Harmonized data set")) {
