@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Connection;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
+import edu.harvard.hms.dbmi.avillach.auth.entity.UserClaims;
 import edu.harvard.hms.dbmi.avillach.auth.exceptions.NotAuthorizedException;
 import edu.harvard.hms.dbmi.avillach.auth.model.fenceMapping.StudyMetaData;
 import edu.harvard.hms.dbmi.avillach.auth.service.AuthenticationService;
@@ -150,11 +151,14 @@ public class FENCEAuthenticationService implements AuthenticationService {
         });
 
         currentUser = userService.updateUserRoles(currentUser, roleNames);
-        HashMap<String, Object> claims = new HashMap<String, Object>();
-        claims.put("name", fence_user_profile.get("name"));
-        claims.put("email", currentUser.getEmail());
-        claims.put("sub", currentUser.getSubject());
-        HashMap<String, String> responseMap = userService.getUserProfileResponse(claims);
+        UserClaims userClaims = new UserClaims();
+        userClaims.setUuid(currentUser.getUuid().toString());
+        userClaims.setSub(currentUser.getSubject());
+        userClaims.setEmail(currentUser.getEmail());
+        userClaims.setName(fence_user_profile.has("name") ? fence_user_profile.get("name").asText() : currentUser.getName());
+        userClaims.setIdp(this.fenceConnection.getLabel());
+        userClaims.setRoles(userService.addRoleClaims(currentUser));
+        HashMap<String, String> responseMap = userService.getUserProfileResponse(userClaims);
         logger.info("LOGIN SUCCESS ___ {}:{}:{} ___ WITH ROLES ___ {} ___ Authorization will expire at  ___ {}___",
                 currentUser.getEmail(),
                 currentUser.getUuid().toString(),
