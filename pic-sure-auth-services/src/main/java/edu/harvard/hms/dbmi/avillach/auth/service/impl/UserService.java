@@ -4,11 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import edu.harvard.hms.dbmi.avillach.auth.entity.Application;
-import edu.harvard.hms.dbmi.avillach.auth.entity.Connection;
-import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
-import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
-import edu.harvard.hms.dbmi.avillach.auth.entity.User;
+import edu.harvard.hms.dbmi.avillach.auth.entity.*;
 import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
 import edu.harvard.hms.dbmi.avillach.auth.repository.ApplicationRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.ConnectionRepository;
@@ -63,6 +59,8 @@ public class UserService {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final JWTUtil jwtUtil;
 
+    private final List<String> tokenInclusionRoles;
+
     @Autowired
     public UserService(BasicMailService basicMailService, TOSService tosService,
                        UserRepository userRepository,
@@ -73,7 +71,8 @@ public class UserService {
                        @Value("${application.default.uuid}") String applicationUUID,
                        @Value("${application.long.term.token.expiration.time}") long longTermTokenExpirationTime,
                        JWTUtil jwtUtil,
-                       @Value("${open.idp.provider.is.enabled}") boolean openIdpProviderIsEnabled) {
+                       @Value("${open.idp.provider.is.enabled}") boolean openIdpProviderIsEnabled,
+                       @Value("${application.token.inclusionRoles}") String tokenInclusionRoles) {
         this.basicMailService = basicMailService;
         this.tosService = tosService;
         this.userRepository = userRepository;
@@ -88,50 +87,54 @@ public class UserService {
         long defaultLongTermTokenExpirationTime = 1000L * 60 * 60 * 24 * 30;
         this.longTermTokenExpirationTime = longTermTokenExpirationTime > 0 ? longTermTokenExpirationTime : defaultLongTermTokenExpirationTime;
         this.openAccessIsEnabled = openIdpProviderIsEnabled;
+        this.tokenInclusionRoles = Arrays.asList(tokenInclusionRoles.split(","));
     }
 
-    public HashMap<String, String> getUserProfileResponse(Map<String, Object> claims) {
-        logger.info("getUserProfileResponse() starting...");
-
+    public HashMap<String, String> getUserProfileResponse(UserClaims userClaims) {
+        logger.debug("getUserProfileResponse() started");
         HashMap<String, String> responseMap = new HashMap<String, String>();
-        logger.info("getUserProfileResponse() initialized map");
 
-        logger.info("getUserProfileResponse() using claims:{}", claims.toString());
-
+        HashMap<String, Object> claimsMap = userClaims.toHashMap();
+        logger.debug("getUserProfileResponse() using claims:{}", claimsMap.toString());
         String token = this.jwtUtil.createJwtToken(
                 "whatever",
                 "edu.harvard.hms.dbmi.psama",
-                claims,
-                claims.get("sub").toString(),
+                claimsMap,
+                userClaims.getSub(),
                 this.tokenExpirationTime
         );
-        logger.info("getUserProfileResponse() PSAMA JWT token has been generated. Token:{}", token);
+
         responseMap.put("token", token);
+        logger.debug("getUserProfileResponse() .usedId field is set");
+        responseMap.put("userId", userClaims.getSub());
 
-        logger.info("getUserProfileResponse() .usedId field is set");
-        responseMap.put("userId", claims.get("sub").toString());
+        logger.debug("getUserProfileResponse() .email field is set");
+        responseMap.put("email", userClaims.getEmail());
 
-        logger.info("getUserProfileResponse() .email field is set");
-        responseMap.put("email", claims.get("email").toString());
-
-        logger.info("getUserProfileResponse() acceptedTOS is set");
-
-        boolean acceptedTOS = tosService.hasUserAcceptedLatest(claims.get("sub").toString());
-
+        logger.debug("getUserProfileResponse() acceptedTOS is set");
+        boolean acceptedTOS = tosService.hasUserAcceptedLatest(userClaims.getSub());
         responseMap.put("acceptedTOS", "" + acceptedTOS);
 
-        logger.info("getUserProfileResponse() expirationDate is set");
+        logger.debug("getUserProfileResponse() expirationDate is set");
         Date expirationDate = new Date(Calendar.getInstance().getTimeInMillis() + this.tokenExpirationTime);
         responseMap.put("expirationDate", ZonedDateTime.ofInstant(expirationDate.toInstant(), ZoneOffset.UTC).toString());
 
-        // This is required for open access, but optional otherwise
-        if (claims.get("uuid") != null) {
-            logger.debug("getUserProfileResponse() uuid field is set");
-            responseMap.put("uuid", claims.get("uuid").toString());
+        logger.debug("getUserProfileResponse() uuid field is set");
+        responseMap.put("uuid", userClaims.getUuid());
+
+        logger.debug("getUserProfileResponse() finished");
+        return responseMap;
+    }
+
+    public List<String> addRoleClaims(User user) {
+        if (user != null && user.getRoles() != null) {
+            return user.getRoles().stream()
+                    .map(Role::getName)
+                    .filter(tokenInclusionRoles::contains)
+                    .collect(Collectors.toList());
         }
 
-        logger.info("getUserProfileResponse() finished");
-        return responseMap;
+        return List.of();
     }
 
     public User getUserById(String userId) {
@@ -372,7 +375,7 @@ public class UserService {
         if (user.getToken() != null && !user.getToken().isEmpty()) {
             userForDisplay.setToken(user.getToken());
         } else {
-            user.setToken(generateUserLongTermToken(authorizationHeader));
+            user.setToken(generateUserLongTermToken(authorizationHeader, user));
             this.userRepository.save(user);
             userForDisplay.setToken(user.getToken());
         }
@@ -507,7 +510,7 @@ public class UserService {
 
         User user = customUserDetails.getUser();
         String authorizationHeader = httpHeaders.getFirst("Authorization");
-        String longTermToken = generateUserLongTermToken(authorizationHeader);
+        String longTermToken = generateUserLongTermToken(authorizationHeader, user);
         user.setToken(longTermToken);
         this.userRepository.save(user);
 
@@ -523,7 +526,7 @@ public class UserService {
      * @return the long term token
      * @throws IllegalArgumentException if the authorization header is not presented
      */
-    private String generateUserLongTermToken(String authorizationHeader) {
+    private String generateUserLongTermToken(String authorizationHeader, User user) {
         if (!StringUtils.isNotBlank(authorizationHeader)) {
             throw new IllegalArgumentException("Authorization header is not presented.");
         }
@@ -539,16 +542,16 @@ public class UserService {
         String tokenSubject = claims.getSubject();
 
         if (tokenSubject.startsWith(AuthNaming.LONG_TERM_TOKEN_PREFIX + "|")) {
-            // considering the subject already contains a "|"
-            // to prevent infinitely adding the long term token prefix
-            // we will grab the real subject here
             tokenSubject = tokenSubject.substring(AuthNaming.LONG_TERM_TOKEN_PREFIX.length() + 1);
         }
+
+        Map<String, Object> claimsMap = new HashMap<>(claims);
+        claimsMap.put("roles", addRoleClaims(user));
 
         return this.jwtUtil.createJwtToken(
                 claims.getId(),
                 claims.getIssuer(),
-                claims,
+                claimsMap,
                 AuthNaming.LONG_TERM_TOKEN_PREFIX + "|" + tokenSubject,
                 this.longTermTokenExpirationTime);
     }
