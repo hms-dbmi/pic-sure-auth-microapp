@@ -111,7 +111,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
         if (rasPassport.isEmpty()) return null;
         user = updateRasUserRoles(authRequest.get("code"), user, rasPassport.get());
         setUserPassport(authRequest, introspectResponse, user);
-        HashMap<String, String> responseMap = createUserClaims(user, idToken);
+        HashMap<String, String> responseMap = createUserClaims(user, idToken, introspectResponse, rasPassport.get());
 
         responseMap.put("oktaIdToken", idToken);
         logger.info("LOGIN SUCCESS ___ USER {}:{} ___ WITH ROLES ___ {} ___ AUTHORIZATION WILL EXPIRE AT  ___ {} ___ CODE {}",
@@ -174,16 +174,60 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
     /**
      * Create user claims to return to the client
      *
-     * @param user The user
+     * @param user               The user
+     * @param idToken            The id token
+     * @param introspectResponse The OKTA introspect response
+     * @param rasPassport        The RAS passport
      * @return The user claims as a HashMap
      */
-    private HashMap<String, String> createUserClaims(User user, String idToken) {
+    private HashMap<String, String> createUserClaims(User user, String idToken, JsonNode introspectResponse, Passport rasPassport) {
         HashMap<String, Object> claims = new HashMap<>();
-        claims.put("name", user.getName());
-        claims.put("email", user.getEmail());
         claims.put("sub", user.getSubject());
-        // We need the id_token to be returned, so we can use it at logout
+
+        String firstName = introspectResponse.has("firstName") ? introspectResponse.get("firstName").asText() : null;
+        String lastName = introspectResponse.has("lastName") ? introspectResponse.get("lastName").asText() : null;
+        if (firstName != null && lastName != null) {
+            claims.put("name", firstName + " " + lastName);
+        } else {
+            claims.put("name", user.getName());
+        }
+
+        if (introspectResponse.has("email")) {
+            claims.put("email", introspectResponse.get("email").asText());
+        } else {
+            claims.put("email", user.getEmail());
+        }
+
+        if (introspectResponse.has("userid")) {
+            claims.put("userid", introspectResponse.get("userid").asText());
+        }
+
+        if (introspectResponse.has("preferred_username")) {
+            claims.put("preferred_username", introspectResponse.get("preferred_username").asText());
+        }
+
+        String permissionGroup = extractPermissionGroupFromPassport(rasPassport);
+        if (permissionGroup != null) {
+            claims.put("user_permission_group", permissionGroup);
+        }
+
         return userService.getUserProfileResponse(claims);
+    }
+
+    private String extractPermissionGroupFromPassport(Passport rasPassport) {
+        try {
+            List<String> ga4ghPassports = rasPassport.getGa4ghPassportV1();
+            if (ga4ghPassports == null || ga4ghPassports.isEmpty()) {
+                return null;
+            }
+            Optional<Ga4ghPassportV1> parsedPassport = JWTUtil.parseGa4ghPassportV1(ga4ghPassports.get(0));
+            if (parsedPassport.isPresent() && parsedPassport.get().getGa4ghVisaV1() != null) {
+                return parsedPassport.get().getGa4ghVisaV1().getSource();
+            }
+        } catch (Exception e) {
+            logger.error("Failed to extract permission group from passport: {}", e.getMessage());
+        }
+        return null;
     }
 
     /**

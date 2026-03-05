@@ -25,8 +25,9 @@ import org.springframework.test.context.ContextConfiguration;
 
 import java.util.*;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.mockito.ArgumentCaptor;
+
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @SpringBootTest
@@ -98,7 +99,10 @@ public class RASAuthenticationServiceTest {
         String redirectUri = "https://" + testDomain + "/login/loading";
         String queryString = "grant_type=authorization_code" + "&code=" + code + "&redirect_uri=" + redirectUri;
         String introspectionResponse =
-                "{\"active\":true,\"sub\":\"example_email@test.com\",\"client_id\":\"test_client_id\",\"passport_jwt_v11\":\""+ exampleRasPassport +"\"}";
+                "{\"active\":true,\"sub\":\"example_email@test.com\",\"client_id\":\"test_client_id\"," +
+                "\"userid\":\"test_userid\",\"preferred_username\":\"testuser\"," +
+                "\"email\":\"okta_email@test.com\",\"firstName\":\"Test\",\"lastName\":\"User\"," +
+                "\"passport_jwt_v11\":\""+ exampleRasPassport +"\"}";
 
         // token exchange
         when(restClientUtil.retrievePostResponse(anyString(), any(), eq(queryString))).thenReturn(ResponseEntity.ok(data));
@@ -111,8 +115,20 @@ public class RASAuthenticationServiceTest {
         user.setSubject("okta-ras|adfadfaf");
         when(userService.createRasUser(any(), any())).thenReturn(Optional.of(user));
         when(userService.updateUserRoles(any(), any())).thenReturn(user);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<HashMap<String, Object>> claimsCaptor = ArgumentCaptor.forClass(HashMap.class);
+        when(userService.getUserProfileResponse(claimsCaptor.capture())).thenReturn(new HashMap<>());
+
         HashMap<String, String> authenticate = rasAuthenticationService.authenticate(authRequest, testDomain);
         assertNotNull(authenticate);
+
+        HashMap<String, Object> capturedClaims = claimsCaptor.getValue();
+        assertEquals("test_userid", capturedClaims.get("userid"));
+        assertEquals("testuser", capturedClaims.get("preferred_username"));
+        assertEquals("okta_email@test.com", capturedClaims.get("email"));
+        assertEquals("Test User", capturedClaims.get("name"));
+        assertEquals("https://ncbi.nlm.nih.gov/gap", capturedClaims.get("user_permission_group"));
     }
 
     @Test
