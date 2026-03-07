@@ -173,7 +173,13 @@ public class TokenService {
             EvaluateAccessRuleResult evaluateAccessRuleResult =
                 authorizationService.isAuthorized(application, inputMap.get("request"), user, isLongTermToken);
             isAuthorizationPassed = evaluateAccessRuleResult.result();
-            evaluateAccessRuleResult.query().ifPresent(query -> tokenInspection.addField("query", query));
+            evaluateAccessRuleResult.query().ifPresent(query -> {
+                try {
+                    tokenInspection.addField("query", new ObjectMapper().writeValueAsString(query));
+                } catch (JsonProcessingException e) {
+                    throw new RuntimeException(e);
+                }
+            });
         } else if (!isLongTermTokenCompromised) {
             errorMsg = "User doesn't have enough privileges.";
         }
