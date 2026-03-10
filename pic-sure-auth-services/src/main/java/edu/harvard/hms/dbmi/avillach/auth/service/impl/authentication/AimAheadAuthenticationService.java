@@ -94,6 +94,7 @@ public class AimAheadAuthenticationService extends OktaAuthenticationService imp
 
             HashMap<String, String> responseMap = createUserClaims(user);
             logger.info("LOGIN SUCCESS ___ {}:{} ___ Authorization will expire at  ___ {}___", user.getEmail(), user.getUuid().toString(), responseMap.get("expirationDate"));
+            responseMap.put("oktaIdToken", userToken.get("id_token").asText());
 
             return responseMap;
         }
