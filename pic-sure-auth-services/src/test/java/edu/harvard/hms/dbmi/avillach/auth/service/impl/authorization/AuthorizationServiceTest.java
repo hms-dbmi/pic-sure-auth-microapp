@@ -66,179 +66,63 @@ public class AuthorizationServiceTest {
     private static AccessRule AR_Fields_IS_NOT_EMPTY;
     private static AccessRule AR_ExpectedResultType_String_contains;
 
-    private static String sample_matchGate = "{\"queries\":[{\"resourceUUID\":\"8694e3d4-5cb4-410f-8431-993445e6d3f6\",\"query\":{\"expectedResultType\":\"DATAFRAME\"}}]}";
+    private static String sample_matchGate =
+        "{\"queries\":[{\"resourceUUID\":\"8694e3d4-5cb4-410f-8431-993445e6d3f6\",\"query\":{\"expectedResultType\":\"DATAFRAME\"}}]}";
 
-    private static String sample_gates_all_any = "{\"queries\":" +
-            "[" +
-            "{\"resourceUUID\":\"8694e3d4-5cb4-410f-8431-993445e6d3f6\"" +
-            "}]}";
+    private static String sample_gates_all_any =
+        "{\"queries\":" + "[" + "{\"resourceUUID\":\"8694e3d4-5cb4-410f-8431-993445e6d3f6\"" + "}]}";
 
-    private static String sample_nestedGates = "{\"queries\":[{\n" +
-            "  \"query\": {\n" +
-            "    \"categoryFilters\": {\n" +
-            "      \"\\\\demographics\\\\SEX\\\\\": [\n" +
-            "        \"male\"\n" +
-            "      ]\n" +
-            "    },\n" +
-            "    \"numericFilters\": {},\n" +
-            "    \"expectedResultType\": \"DATAFRAME\",\n" +
-            "    \"fields\": [\n" +
-            "      \"\\\\demographics\\\\SEX\\\\\",\n" +
-            "      \"\\\\demographics\\\\AGE\\\\\"\n" +
-            "    ]\n" +
-            "  },\n" +
-            "  \"resourceUUID\": \"8694e3d4-5cb4-410f-8431-993445e6d3f6\",\n" +
-            "  \"resourceCredentials\": {}\n" +
-            "}]\n" +
-            "}";
+    private static String sample_nestedGates = "{\"queries\":[{\n" + "  \"query\": {\n" + "    \"categoryFilters\": {\n"
+        + "      \"\\\\demographics\\\\SEX\\\\\": [\n" + "        \"male\"\n" + "      ]\n" + "    },\n" + "    \"numericFilters\": {},\n"
+        + "    \"expectedResultType\": \"DATAFRAME\",\n" + "    \"fields\": [\n" + "      \"\\\\demographics\\\\SEX\\\\\",\n"
+        + "      \"\\\\demographics\\\\AGE\\\\\"\n" + "    ]\n" + "  },\n"
+        + "  \"resourceUUID\": \"8694e3d4-5cb4-410f-8431-993445e6d3f6\",\n" + "  \"resourceCredentials\": {}\n" + "}]\n" + "}";
 
-    private static String getSample_passGate_passCheck_array_contains = "{\"queries\":[{\n" +
-            "  \"query\": {\n" +
-            "    \"categoryFilters\": {\n" +
-            "      \"\\\\demographics\\\\SEX\\\\\": [\n" +
-            "        \"male\"\n" +
-            "      ]\n" +
-            "    },\n" +
-            "    \"numericFilters\": {},\n" +
-            "    \"requiredFields\": [\n" +
-            "      \"\\\\demographics\\\\AGE\\\\\"\n" +
-            "    ],\n" +
-            "    \"expectedResultType\": \"DATAFRAME\",\n" +
-            "    \"fields\": [\n" +
-            "      \"\\\\demographics\\\\SEX\\\\\",\n" +
-            "      \"\\\\demographics\\\\AGE\\\\\"\n" +
-            "    ]\n" +
-            "  },\n" +
-            "  \"resourceUUID\": \"8694e3d4-5cb4-410f-8431-993445e6d3f6\",\n" +
-            "  \"resourceCredentials\": {}\n" +
-            "}]\n" +
-            "}";
+    private static String getSample_passGate_passCheck_array_contains = "{\"queries\":[{\n" + "  \"query\": {\n"
+        + "    \"categoryFilters\": {\n" + "      \"\\\\demographics\\\\SEX\\\\\": [\n" + "        \"male\"\n" + "      ]\n" + "    },\n"
+        + "    \"numericFilters\": {},\n" + "    \"requiredFields\": [\n" + "      \"\\\\demographics\\\\AGE\\\\\"\n" + "    ],\n"
+        + "    \"expectedResultType\": \"DATAFRAME\",\n" + "    \"fields\": [\n" + "      \"\\\\demographics\\\\SEX\\\\\",\n"
+        + "      \"\\\\demographics\\\\AGE\\\\\"\n" + "    ]\n" + "  },\n"
+        + "  \"resourceUUID\": \"8694e3d4-5cb4-410f-8431-993445e6d3f6\",\n" + "  \"resourceCredentials\": {}\n" + "}]\n" + "}";
 
-    private static String sample_passGate_passCheck_string_contains = "{\"queries\":[{\n" +
-            "  \"query\": {\n" +
-            "    \"categoryFilters\": {\n" +
-            "      \"\\\\demographics\\\\SEX\\\\\": [\n" +
-            "        \"male\"\n" +
-            "      ]\n" +
-            "    },\n" +
-            "    \"numericFilters\": {},\n" +
-            "    \"requiredFields\": [\n" +
-            "      \"\\\\demographics\\\\AGE\\\\\"\n" +
-            "    ],\n" +
-            "    \"expectedResultType\": \"DATAFRAME\",\n" +
-            "    \"fields\": [\n" +
-            "      \"\\\\demographics\\\\SEX\\\\\"\n" +
-            "    ]\n" +
-            "  },\n" +
-            "  \"resourceUUID\": \"8694e3d4-5cb4-410f-8431-993445e6d3f6\",\n" +
-            "  \"resourceCredentials\": {}\n" +
-            "}]\n" +
-            "}";
+    private static String sample_passGate_passCheck_string_contains = "{\"queries\":[{\n" + "  \"query\": {\n"
+        + "    \"categoryFilters\": {\n" + "      \"\\\\demographics\\\\SEX\\\\\": [\n" + "        \"male\"\n" + "      ]\n" + "    },\n"
+        + "    \"numericFilters\": {},\n" + "    \"requiredFields\": [\n" + "      \"\\\\demographics\\\\AGE\\\\\"\n" + "    ],\n"
+        + "    \"expectedResultType\": \"DATAFRAME\",\n" + "    \"fields\": [\n" + "      \"\\\\demographics\\\\SEX\\\\\"\n" + "    ]\n"
+        + "  },\n" + "  \"resourceUUID\": \"8694e3d4-5cb4-410f-8431-993445e6d3f6\",\n" + "  \"resourceCredentials\": {}\n" + "}]\n" + "}";
 
-    private static String sample_no_pass_gate = "{\"queries\":[{\n" +
-            "  \"query\": {\n" +
-            "    \"categoryFilters\": {\n" +
-            "      \"\\\\demographics\\\\SEX\\\\\": [\n" +
-            "        \"male\"\n" +
-            "      ]\n" +
-            "    },\n" +
-            "    \"numericFilters\": {},\n" +
-            "    \"requiredFields\": [\n" +
-            "      \"\\\\demographics\\\\AGE\\\\\"\n" +
-            "    ],\n" +
-            "    \"expectedResultType\": \"DATAFRAME\",\n" +
-            "    \"fields\": [\n" +
-            "      \"\\\\demographics\\\\SEX\\\\\",\n" +
-            "      \"\\\\demographics\\\\AGE\\\\\"\n" +
-            "    ]\n" +
-            "  },\n" +
-            "  \"resourceUUID\": \"8694e3d4-5cb4-410f-8431-993445e6d3fd\",\n" +
-            "  \"resourceCredentials\": {}\n" +
-            "}]\n" +
-            "}";
+    private static String sample_no_pass_gate = "{\"queries\":[{\n" + "  \"query\": {\n" + "    \"categoryFilters\": {\n"
+        + "      \"\\\\demographics\\\\SEX\\\\\": [\n" + "        \"male\"\n" + "      ]\n" + "    },\n" + "    \"numericFilters\": {},\n"
+        + "    \"requiredFields\": [\n" + "      \"\\\\demographics\\\\AGE\\\\\"\n" + "    ],\n"
+        + "    \"expectedResultType\": \"DATAFRAME\",\n" + "    \"fields\": [\n" + "      \"\\\\demographics\\\\SEX\\\\\",\n"
+        + "      \"\\\\demographics\\\\AGE\\\\\"\n" + "    ]\n" + "  },\n"
+        + "  \"resourceUUID\": \"8694e3d4-5cb4-410f-8431-993445e6d3fd\",\n" + "  \"resourceCredentials\": {}\n" + "}]\n" + "}";
 
-    private static String sample_UUID_8694e3d4_withFields_SEX_And_AGE = "{\"queries\":[{\n" +
-            "  \"query\": {\n" +
-            "    \"categoryFilters\": {\n" +
-            "      \"\\\\demographics\\\\SEX\\\\\": [\n" +
-            "        \"male\"\n" +
-            "      ]\n" +
-            "    },\n" +
-            "    \"numericFilters\": {},\n" +
-            "    \"requiredFields\": [\n" +
-            "      \"\\\\demographics\\\\AGE\\\\\"\n" +
-            "    ],\n" +
-            "    \"expectedResultType\": \"DATAFRAME\",\n" +
-            "    \"fields\": [\n" +
-            "      \"\\\\demographics\\\\SEX\\\\\",\n" +
-            "      \"\\\\demographics\\\\AGE\\\\\"\n" +
-            "    ]\n" +
-            "  },\n" +
-            "  \"resourceUUID\": \"8694e3d4-5cb4-410f-8431-993445e6d3f6\",\n" +
-            "  \"resourceCredentials\": {}\n" +
-            "}]\n" +
-            "}";
+    private static String sample_UUID_8694e3d4_withFields_SEX_And_AGE = "{\"queries\":[{\n" + "  \"query\": {\n"
+        + "    \"categoryFilters\": {\n" + "      \"\\\\demographics\\\\SEX\\\\\": [\n" + "        \"male\"\n" + "      ]\n" + "    },\n"
+        + "    \"numericFilters\": {},\n" + "    \"requiredFields\": [\n" + "      \"\\\\demographics\\\\AGE\\\\\"\n" + "    ],\n"
+        + "    \"expectedResultType\": \"DATAFRAME\",\n" + "    \"fields\": [\n" + "      \"\\\\demographics\\\\SEX\\\\\",\n"
+        + "      \"\\\\demographics\\\\AGE\\\\\"\n" + "    ]\n" + "  },\n"
+        + "  \"resourceUUID\": \"8694e3d4-5cb4-410f-8431-993445e6d3f6\",\n" + "  \"resourceCredentials\": {}\n" + "}]\n" + "}";
 
-    private static String sample_UUID_8694e3d4_withFields_and_SEE_AGE_SEX = "{\"queries\":[{\n" +
-            "  \"query\": {\n" +
-            "    \"categoryFilters\": {\n" +
-            "      \"\\\\demographics\\\\SEX\\\\\": [\n" +
-            "        \"male\"\n" +
-            "      ]\n" +
-            "    },\n" +
-            "    \"numericFilters\": {},\n" +
-            "    \"requiredFields\": [\n" +
-            "      \"\\\\demographics\\\\AGE\\\\\"\n" +
-            "    ],\n" +
-            "    \"expectedResultType\": \"DATAFRAME\",\n" +
-            "    \"fields\": [\n" +
-            "      \"\\\\demographics\\\\SEE\\\\\",\n" +
-            "      \"\\\\demographics\\\\AGE\\\\\",\n" +
-            "      \"\\\\demographics\\\\SEX\\\\\"\n" +
-            "    ]\n" +
-            "  },\n" +
-            "  \"resourceUUID\": \"8694e3d4-5cb4-410f-8431-993445e6d3f6\",\n" +
-            "  \"resourceCredentials\": {}\n" +
-            "}]\n" +
-            "}";
+    private static String sample_UUID_8694e3d4_withFields_and_SEE_AGE_SEX = "{\"queries\":[{\n" + "  \"query\": {\n"
+        + "    \"categoryFilters\": {\n" + "      \"\\\\demographics\\\\SEX\\\\\": [\n" + "        \"male\"\n" + "      ]\n" + "    },\n"
+        + "    \"numericFilters\": {},\n" + "    \"requiredFields\": [\n" + "      \"\\\\demographics\\\\AGE\\\\\"\n" + "    ],\n"
+        + "    \"expectedResultType\": \"DATAFRAME\",\n" + "    \"fields\": [\n" + "      \"\\\\demographics\\\\SEE\\\\\",\n"
+        + "      \"\\\\demographics\\\\AGE\\\\\",\n" + "      \"\\\\demographics\\\\SEX\\\\\"\n" + "    ]\n" + "  },\n"
+        + "  \"resourceUUID\": \"8694e3d4-5cb4-410f-8431-993445e6d3f6\",\n" + "  \"resourceCredentials\": {}\n" + "}]\n" + "}";
 
-    private static String sample_UUID_8694e3d4_withEmptyFields = "{\"queries\":[{\n" +
-            "  \"query\": {\n" +
-            "    \"categoryFilters\": {\n" +
-            "      \"\\\\demographics\\\\SEX\\\\\": [\n" +
-            "        \"male\"\n" +
-            "      ]\n" +
-            "    },\n" +
-            "    \"numericFilters\": {},\n" +
-            "    \"requiredFields\": [\n" +
-            "      \"\\\\demographics\\\\AGE\\\\\"\n" +
-            "    ],\n" +
-            "    \"expectedResultType\": \"DATAFRAME\",\n" +
-            "    \"fields\": [\n" +
-            "    ]\n" +
-            "  },\n" +
-            "  \"resourceUUID\": \"8694e3d4-5cb4-410f-8431-993445e6d3f6\",\n" +
-            "  \"resourceCredentials\": {}\n" +
-            "}]\n" +
-            "}";
+    private static String sample_UUID_8694e3d4_withEmptyFields = "{\"queries\":[{\n" + "  \"query\": {\n" + "    \"categoryFilters\": {\n"
+        + "      \"\\\\demographics\\\\SEX\\\\\": [\n" + "        \"male\"\n" + "      ]\n" + "    },\n" + "    \"numericFilters\": {},\n"
+        + "    \"requiredFields\": [\n" + "      \"\\\\demographics\\\\AGE\\\\\"\n" + "    ],\n"
+        + "    \"expectedResultType\": \"DATAFRAME\",\n" + "    \"fields\": [\n" + "    ]\n" + "  },\n"
+        + "  \"resourceUUID\": \"8694e3d4-5cb4-410f-8431-993445e6d3f6\",\n" + "  \"resourceCredentials\": {}\n" + "}]\n" + "}";
 
-    private static String sample_UUID_8694e3d4_withNoFieldsNode = "{\"queries\":[{\n" +
-            "  \"query\": {\n" +
-            "    \"categoryFilters\": {\n" +
-            "      \"\\\\demographics\\\\SEX\\\\\": [\n" +
-            "        \"male\"\n" +
-            "      ]\n" +
-            "    },\n" +
-            "    \"numericFilters\": {},\n" +
-            "    \"requiredFields\": [\n" +
-            "      \"\\\\demographics\\\\AGE\\\\\"\n" +
-            "    ],\n" +
-            "    \"expectedResultType\": \"DATAFRAME\"\n" +
-            "  },\n" +
-            "  \"resourceUUID\": \"8694e3d4-5cb4-410f-8431-993445e6d3f6\",\n" +
-            "  \"resourceCredentials\": {}\n" +
-            "}]\n" +
-            "}";
+    private static String sample_UUID_8694e3d4_withNoFieldsNode =
+        "{\"queries\":[{\n" + "  \"query\": {\n" + "    \"categoryFilters\": {\n" + "      \"\\\\demographics\\\\SEX\\\\\": [\n"
+            + "        \"male\"\n" + "      ]\n" + "    },\n" + "    \"numericFilters\": {},\n" + "    \"requiredFields\": [\n"
+            + "      \"\\\\demographics\\\\AGE\\\\\"\n" + "    ],\n" + "    \"expectedResultType\": \"DATAFRAME\"\n" + "  },\n"
+            + "  \"resourceUUID\": \"8694e3d4-5cb4-410f-8431-993445e6d3f6\",\n" + "  \"resourceCredentials\": {}\n" + "}]\n" + "}";
 
     @BeforeAll
     public static void init() {
@@ -329,8 +213,10 @@ public class AuthorizationServiceTest {
         SecurityContextHolder.setContext(securityContext);
 
         when(sessionService.isSessionExpired(any(String.class))).thenReturn(false);
-        accessRuleService = new AccessRuleService(accessRuleRepository, "false", "false", "false", "false","false", "false");
-        authorizationService = new AuthorizationService(accessRuleService, sessionService, roleService, bdcConsentBasedAccessRuleEvaluator, "fence,okta", userConsentsRepository);
+        accessRuleService = new AccessRuleService(accessRuleRepository, "false", "false", "false", "false", "false", "false");
+        authorizationService = new AuthorizationService(
+            accessRuleService, sessionService, roleService, bdcConsentBasedAccessRuleEvaluator, "fence,okta", userConsentsRepository
+        );
     }
 
     @Test
@@ -356,6 +242,7 @@ public class AuthorizationServiceTest {
 
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("test", "value");
+        requestBody.put("Target Service", "/query");
 
         boolean result = authorizationService.isAuthorized(application, requestBody, user, false).result();
 
@@ -669,39 +556,55 @@ public class AuthorizationServiceTest {
     }
 
     @Test
-    public void testWithGate_passGate_passCheck_all_string_contains() throws IOException{
+    public void testWithGate_passGate_passCheck_all_string_contains() throws IOException {
 
         Set<AccessRule> gates = new HashSet<>();
         gates.add(GATE_resouceUUID);
         AR_CategoryFilter_String_contains.setGates(gates);
-        assertTrue(accessRuleService.evaluateAccessRule(mapper.readValue(sample_passGate_passCheck_string_contains, Map.class), AR_CategoryFilter_String_contains));
+        assertTrue(
+            accessRuleService.evaluateAccessRule(
+                mapper.readValue(sample_passGate_passCheck_string_contains, Map.class), AR_CategoryFilter_String_contains
+            )
+        );
     }
 
     @Test
-    public void testWithGate_passGate_notPassCheck_string_contains() throws IOException{
+    public void testWithGate_passGate_notPassCheck_string_contains() throws IOException {
 
         Set<AccessRule> gates = new HashSet<>();
         gates.add(GATE_resouceUUID);
         AR_CategoryFilter_String_contains.setGates(gates);
-        assertFalse(accessRuleService.evaluateAccessRule(mapper.readValue(getSample_passGate_passCheck_array_contains, Map.class), AR_CategoryFilter_String_contains));
+        assertFalse(
+            accessRuleService.evaluateAccessRule(
+                mapper.readValue(getSample_passGate_passCheck_array_contains, Map.class), AR_CategoryFilter_String_contains
+            )
+        );
     }
 
     @Test
-    public void testWithGate_passGate_passCheck_Array_contains() throws IOException{
+    public void testWithGate_passGate_passCheck_Array_contains() throws IOException {
 
         Set<AccessRule> gates = new HashSet<>();
         gates.add(GATE_resouceUUID);
         AR_CategoryFilter_Any_Contains.setGates(gates);
-        assertTrue(accessRuleService.evaluateAccessRule(mapper.readValue(getSample_passGate_passCheck_array_contains, Map.class), AR_CategoryFilter_Any_Contains));
+        assertTrue(
+            accessRuleService.evaluateAccessRule(
+                mapper.readValue(getSample_passGate_passCheck_array_contains, Map.class), AR_CategoryFilter_Any_Contains
+            )
+        );
     }
 
     @Test
-    public void testWithGate_passGate_notPassCheck() throws IOException{
+    public void testWithGate_passGate_notPassCheck() throws IOException {
 
         Set<AccessRule> gates = new HashSet<>();
         gates.add(GATE_resouceUUID);
         AR_CategoryFilter_String_contains.setGates(gates);
-        assertFalse(accessRuleService.evaluateAccessRule(mapper.readValue(getSample_passGate_passCheck_array_contains, Map.class), AR_CategoryFilter_String_contains));
+        assertFalse(
+            accessRuleService.evaluateAccessRule(
+                mapper.readValue(getSample_passGate_passCheck_array_contains, Map.class), AR_CategoryFilter_String_contains
+            )
+        );
     }
 
     @Test
@@ -709,7 +612,9 @@ public class AuthorizationServiceTest {
         Set<AccessRule> gates = new HashSet<>();
         gates.add(GATE_resouceUUID);
         AR_CategoryFilter_String_contains.setGates(gates);
-        assertFalse(accessRuleService.evaluateAccessRule(mapper.readValue(sample_no_pass_gate, Map.class), AR_CategoryFilter_String_contains));
+        assertFalse(
+            accessRuleService.evaluateAccessRule(mapper.readValue(sample_no_pass_gate, Map.class), AR_CategoryFilter_String_contains)
+        );
     }
 
     /**
@@ -727,29 +632,44 @@ public class AuthorizationServiceTest {
 
         assertEquals(1, mergedAccessRules.size());
 
-        assertTrue(accessRuleService.evaluateAccessRule(mapper.readValue(sample_UUID_8694e3d4_withFields_SEX_And_AGE, Map.class),
-                mergedAccessRules.stream().findFirst().get()));
+        assertTrue(
+            accessRuleService.evaluateAccessRule(
+                mapper.readValue(sample_UUID_8694e3d4_withFields_SEX_And_AGE, Map.class), mergedAccessRules.stream().findFirst().get()
+            )
+        );
 
-        assertFalse(accessRuleService.evaluateAccessRule(mapper.readValue(sample_UUID_8694e3d4_withFields_and_SEE_AGE_SEX, Map.class),
-                mergedAccessRules.stream().findFirst().get()));
+        assertFalse(
+            accessRuleService.evaluateAccessRule(
+                mapper.readValue(sample_UUID_8694e3d4_withFields_and_SEE_AGE_SEX, Map.class), mergedAccessRules.stream().findFirst().get()
+            )
+        );
 
-        assertFalse(accessRuleService.evaluateAccessRule(mapper.readValue(sample_UUID_8694e3d4_withEmptyFields, Map.class),
-                mergedAccessRules.stream().findFirst().get()));
+        assertFalse(
+            accessRuleService.evaluateAccessRule(
+                mapper.readValue(sample_UUID_8694e3d4_withEmptyFields, Map.class), mergedAccessRules.stream().findFirst().get()
+            )
+        );
 
-        assertFalse(accessRuleService.evaluateAccessRule(mapper.readValue(sample_UUID_8694e3d4_withNoFieldsNode, Map.class),
-                mergedAccessRules.stream().findFirst().get()));
+        assertFalse(
+            accessRuleService.evaluateAccessRule(
+                mapper.readValue(sample_UUID_8694e3d4_withNoFieldsNode, Map.class), mergedAccessRules.stream().findFirst().get()
+            )
+        );
     }
 
     /**
-     * AccessRule rule isEmpty and isNotEmpty are special cases,
-     * we should have a test case especially for it
+     * AccessRule rule isEmpty and isNotEmpty are special cases, we should have a test case especially for it
      *
      * @throws IOException
      */
     @Test
     public void testRuleIsEmpty_IsNotEmpty() throws IOException {
-        assertTrue(accessRuleService.evaluateAccessRule(mapper.readValue(sample_UUID_8694e3d4_withEmptyFields, Map.class), AR_Fields_IS_EMPTY));
-        assertFalse(accessRuleService.evaluateAccessRule(mapper.readValue(sample_UUID_8694e3d4_withEmptyFields, Map.class), AR_Fields_IS_NOT_EMPTY));
+        assertTrue(
+            accessRuleService.evaluateAccessRule(mapper.readValue(sample_UUID_8694e3d4_withEmptyFields, Map.class), AR_Fields_IS_EMPTY)
+        );
+        assertFalse(
+            accessRuleService.evaluateAccessRule(mapper.readValue(sample_UUID_8694e3d4_withEmptyFields, Map.class), AR_Fields_IS_NOT_EMPTY)
+        );
     }
 
     /**
@@ -805,7 +725,7 @@ public class AuthorizationServiceTest {
      * @throws IOException
      */
     @Test
-    public void testGatesAllorAny() throws IOException{
+    public void testGatesAllorAny() throws IOException {
         AccessRule accessRuleGatesAllAny = new AccessRule();
         accessRuleGatesAllAny.setUuid(UUID.randomUUID());
         accessRuleGatesAllAny.setRule("$.queries..query.categoryFilter");
@@ -878,7 +798,8 @@ public class AuthorizationServiceTest {
 
     private void configureUserSecurityContext(User user) {
         CustomUserDetails customUserDetails = new CustomUserDetails(user);
-        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(customUserDetails, null, customUserDetails.getAuthorities());
+        UsernamePasswordAuthenticationToken authentication =
+            new UsernamePasswordAuthenticationToken(customUserDetails, null, customUserDetails.getAuthorities());
         when(securityContext.getAuthentication()).thenReturn(authentication);
     }
 

@@ -54,8 +54,10 @@ public class AuthorizationServiceTest {
         MockitoAnnotations.openMocks(this);
         SecurityContextHolder.setContext(securityContext);
 
-        accessRuleService = new AccessRuleService(accessRuleRepository, "false", "false", "false", "false","false", "false");
-        authorizationService = new AuthorizationService(accessRuleService, sessionService, roleService, bdcConsentBasedAccessRuleEvaluator,"fence,okta,open", userConsentsRepository);
+        accessRuleService = new AccessRuleService(accessRuleRepository, "false", "false", "false", "false", "false", "false");
+        authorizationService = new AuthorizationService(
+            accessRuleService, sessionService, roleService, bdcConsentBasedAccessRuleEvaluator, "fence,okta,open", userConsentsRepository
+        );
     }
 
     @Test
@@ -79,6 +81,7 @@ public class AuthorizationServiceTest {
 
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("test", "value");
+        requestBody.put("Target Service", "/query");
 
         boolean result = authorizationService.isAuthorized(application, requestBody, user, false).result();
 
@@ -375,7 +378,8 @@ public class AuthorizationServiceTest {
 
     private void configureUserSecurityContext(User user) {
         CustomUserDetails customUserDetails = new CustomUserDetails(user);
-        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(customUserDetails, null, customUserDetails.getAuthorities());
+        UsernamePasswordAuthenticationToken authentication =
+            new UsernamePasswordAuthenticationToken(customUserDetails, null, customUserDetails.getAuthorities());
         when(securityContext.getAuthentication()).thenReturn(authentication);
     }
 
