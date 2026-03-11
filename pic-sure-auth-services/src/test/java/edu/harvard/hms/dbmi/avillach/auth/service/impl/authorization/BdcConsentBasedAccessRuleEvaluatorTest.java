@@ -1,6 +1,5 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import edu.harvard.hms.dbmi.avillach.auth.entity.UserConsents;
 import edu.harvard.hms.dbmi.avillach.hpds.data.query.ResultType;
 import edu.harvard.hms.dbmi.avillach.hpds.data.query.v3.*;
@@ -24,7 +23,7 @@ class BdcConsentBasedAccessRuleEvaluatorTest {
     }
 
     @Test
-    public void evaluateAccessRule_validAuthorizationFilters_accept() {
+    public void evaluateAccessRule_validPhenotypicFilters_accept() {
         UserConsents userConsents = new UserConsents().setConsents(Map.of("\\_consents\\", Set.of("phs123.c1", "phs456.c2")));
         Query query = new Query(
             List.of(), List.of(),
@@ -43,7 +42,7 @@ class BdcConsentBasedAccessRuleEvaluatorTest {
     }
 
     @Test
-    public void evaluateAccessRule_authorizationFiltersWrongConsent_reject() {
+    public void evaluateAccessRule_phenotypicFiltersOneWrongConsent_reject() {
         UserConsents userConsents = new UserConsents().setConsents(Map.of("\\_consents\\", Set.of("phs123.c1", "phs456.c2")));
         Query query = new Query(
             List.of(), List.of(),
@@ -63,7 +62,7 @@ class BdcConsentBasedAccessRuleEvaluatorTest {
 
 
     @Test
-    public void evaluateAccessRule_userNoConsentsWithAuthorizationFilter_reject() {
+    public void evaluateAccessRule_userNoConsents_reject() {
         UserConsents userConsents = new UserConsents().setConsents(Map.of());
         Query query = new Query(
             List.of(), List.of(),
@@ -82,12 +81,7 @@ class BdcConsentBasedAccessRuleEvaluatorTest {
     }
 
     @Test
-    public void evaluateAccessRule_genomicFiltersTopmedConsents_accept() {
-        var expectedAuthFilters = List.of(
-            new AuthorizationFilter("\\_consents\\", Set.of("phs123.c1", "phs456.c2")),
-            new AuthorizationFilter("\\_topmed_consents\\", Set.of("phs123.c1", "phs456.c2"))
-        );
-
+    public void evaluateAccessRule_genomicFiltersValidTopmedConsents_accept() {
         Map<String, Set<String>> consents =
             Map.of("\\_consents\\", Set.of("phs123.c1", "phs456.c2"), "\\_topmed_consents\\", Set.of("phs123.c1", "phs456.c2"));
         UserConsents userConsents = new UserConsents().setConsents(consents);

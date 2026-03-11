@@ -210,10 +210,8 @@ public class AuthorizationService {
                 if (accessRule.getType().equals(AccessRule.TypeNaming.USER_CONSENT_ACCESS)) {
                     UserConsents userConsents = userConsentsRepository.findByUserId(user.getUuid());
 
+                    // This is an HPDS query inside a PIC-SURE query
                     Map queryMap  = (Map) ((Map) requestBody).get("query");
-                    queryMap.keySet().stream().forEach(key -> {
-                        logger.info("Key = " + key);
-                    });
                     Query query = new ObjectMapper().convertValue(queryMap.get("query"), Query.class);
 
                     if (consentBasedAccessRuleEvaluator.evaluateAccessRule(query, accessRule, userConsents)) {
@@ -228,8 +226,7 @@ public class AuthorizationService {
                 }
                 else {
                     String targetService = (String) ((Map) requestBody).get("Target Service");
-                    logger.info("target service = " + targetService);
-                    if (targetService.startsWith("/v3")) {
+                    if (targetService != null && targetService.startsWith("/v3")) {
                         // ignore
                         // TODO: remove this workaround!
                     }

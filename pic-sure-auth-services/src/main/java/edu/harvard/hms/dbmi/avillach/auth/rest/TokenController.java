@@ -49,7 +49,7 @@ public class TokenController {
         ) @RequestBody Map<String, Object> inputMap
     ) {
         Map<String, Object> stringObjectMap = this.tokenService.inspectToken(inputMap);
-        logger.info("Returning token inspection with query: " + stringObjectMap.get("query"));
+        logger.debug("Returning token inspection with query: " + stringObjectMap.get("query"));
         return PICSUREResponse.success(stringObjectMap);
     }
 

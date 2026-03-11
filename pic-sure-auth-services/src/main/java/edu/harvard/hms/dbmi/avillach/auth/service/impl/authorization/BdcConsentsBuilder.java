@@ -11,10 +11,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-
+/**
+ * Builds BDC consents based on a user's RAS passport
+ */
 public class BdcConsentsBuilder {
 
     public static final String PUBLIC_STUDY_TYPE = "public";
+    public static final String GENOMIC_DATA_TYPE_VALUE = "G";
     private final Logger log = LoggerFactory.getLogger(BdcConsentsBuilder.class);
 
     public static final String CONSENTS_KEY = "\\_consent\\";
@@ -39,7 +42,7 @@ public class BdcConsentsBuilder {
         userConsentStrings.forEach(consent -> {
             StudyMetaData studyMetaData = fenceMappingByConsent.get(consent);
             if (studyMetaData == null) {
-                log.info(consent + " not found in fence mapping");
+                log.debug(consent + " not found in fence mapping");
                 return;
             }
             // all user consents go in the consents list
@@ -51,13 +54,14 @@ public class BdcConsentsBuilder {
                 result.put(HARMONIZED_CONSENTS_KEY, harmonizedConsents);
             }
 
-            if (studyMetaData.getDataType() != null && studyMetaData.getDataType().contains("G")) {
+            if (studyMetaData.getDataType() != null && studyMetaData.getDataType().contains(GENOMIC_DATA_TYPE_VALUE)) {
                 Set<String> topmedConsents = result.getOrDefault(TOPMED_CONSENTS_KEY, new HashSet<>());
                 topmedConsents.add(consent);
                 result.put(TOPMED_CONSENTS_KEY, topmedConsents);
             }
         });
 
+        // Add all public studies to the consents list
         fenceMappingByConsent.forEach((key, value) -> {
             if (PUBLIC_STUDY_TYPE.equalsIgnoreCase(value.getStudyType())) {
                 result.computeIfAbsent(CONSENTS_KEY, _ -> new HashSet<>()).add(key);
