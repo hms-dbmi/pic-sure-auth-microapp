@@ -53,7 +53,8 @@ public class BdcConsentBasedAccessRuleEvaluator implements ConsentBasedAccessRul
         String filterConsent = split.length > 1 ? split[1] : split[0];
 
         if (filterConsent.equals("DCC Harmonized data set")) {
-            if (!consents.getConsents().containsKey(HARMONIZED_AUTHORIZATION_FILTER)) {
+            Set<String> harmonizedConsents = consents.getConsents().getOrDefault(HARMONIZED_AUTHORIZATION_FILTER, Set.of());
+            if (harmonizedConsents.isEmpty()) {
                 log.info("User must have at least one consent in " + HARMONIZED_AUTHORIZATION_FILTER + " to use filter " + conceptPath);
                 return false;
             }
