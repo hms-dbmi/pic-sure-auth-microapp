@@ -149,6 +149,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
         Set<RasDbgapPermission> dbgapPermissions = this.rasPassPortService.ga4gpPassportToRasDbgapPermissions(ga4ghPassports);
         Set<String> dbgapRoleNames = this.roleService.getRoleNamesForDbgapPermissions(dbgapPermissions);
         user = userService.updateUserRoles(user, dbgapRoleNames);
+        user = userService.updateUserConsents(user, dbgapPermissions);
         logger.debug("USER {} ROLES UPDATED {} ___ CODE {}",
                 user.getSubject(),
                 user.getRoles().stream().map(role -> role.getName().replace("MANAGED_", "")).toArray(),
@@ -206,7 +207,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
 
         return objectNode;
     }
-    
+
     private void setUserPassport(Map<String, String> authRequest, JsonNode introspectResponse, User user) {
         String passport = introspectResponse.get("passport_jwt_v11").toString();
         user.setPassport(passport);

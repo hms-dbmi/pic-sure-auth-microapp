@@ -6,9 +6,7 @@ import jakarta.persistence.*;
 
 import java.io.Serializable;
 import java.security.Principal;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -83,6 +81,9 @@ public class User extends BaseEntity implements Serializable, Principal {
 	 */
 	@Column(name = "passport")
 	private String passport;
+
+	@Transient
+	private Map<String, Set<String>> consents = null;
 
 	public User() {
 
@@ -271,6 +272,15 @@ public class User extends BaseEntity implements Serializable, Principal {
 	@Override
 	public String getName() {
 		return this.subject;
+	}
+
+	public Map<String, Set<String>> getConsents() {
+		return this.consents;
+	}
+
+	public User setConsents(Map<String, Set<String>> consents) {
+		this.consents = consents;
+		return this;
 	}
 
 	public boolean isActive() {
