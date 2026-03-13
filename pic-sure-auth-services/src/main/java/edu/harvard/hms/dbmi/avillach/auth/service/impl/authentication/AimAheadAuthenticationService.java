@@ -83,9 +83,7 @@ public class AimAheadAuthenticationService extends OktaAuthenticationService imp
         String code = authRequest.get("code");
         if (StringUtils.isNotBlank(code)) {
             JsonNode userToken = super.handleCodeTokenExchange(host, code);
-            logger.info("userToken: {}", userToken);
-            JsonNode introspectResponse = super.introspectToken(userToken);
-            logger.info("introspectResponse: {}", introspectResponse);
+JsonNode introspectResponse = super.introspectToken(userToken);
             User user = initializeUser(introspectResponse);
 
             if (user == null) {
