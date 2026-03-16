@@ -20,8 +20,8 @@ public class BdcConsentsBuilder {
     public static final String GENOMIC_DATA_TYPE_VALUE = "G";
     private final Logger log = LoggerFactory.getLogger(BdcConsentsBuilder.class);
 
-    public static final String CONSENTS_KEY = "\\_consent\\";
-    public static final String HARMONIZED_CONSENTS_KEY = "\\_harmonized_consents\\";
+    public static final String CONSENTS_KEY = "\\_consents\\";
+    public static final String HARMONIZED_CONSENTS_KEY = "\\_harmonized_consent\\";
     public static final String TOPMED_CONSENTS_KEY = "\\_topmed_consents\\";
     private final Map<String, StudyMetaData> fenceMappingByConsent;
 

@@ -197,4 +197,23 @@ class BdcConsentBasedAccessRuleEvaluatorTest {
         boolean result = bdcConsentBasedAccessRuleEvaluator.evaluateAccessRule(query, null, userConsents);
         assertFalse(result);
     }
+
+    @Test
+    public void setAuthorizationFiltersForQuery_normalConsents_addOnlyConsents() {
+        UserConsents userConsents = new UserConsents().setConsents(Map.of("\\_consents\\", Set.of("phs123.c1", "phs456.c2"), "\\_harmonized_consent\\", Set.of("phs789.c1", "phs789.c2")));
+        Query query = new Query(
+                List.of(), List.of(),
+                new PhenotypicSubquery(
+                        null,
+                        List.of(
+                                new PhenotypicFilter(PhenotypicFilterType.FILTER, "\\phs123\\data\\age\\", null, 30.0, 40.0, null),
+                                new PhenotypicFilter(PhenotypicFilterType.FILTER, "\\phs456\\data\\age\\", null, 30.0, 40.0, null)
+                        ), Operator.AND
+                ), null, ResultType.COUNT, null, null
+        );
+
+        Query queryWithConsents = bdcConsentBasedAccessRuleEvaluator.setAuthorizationFiltersForQuery(userConsents, query);
+        assertEquals(1, queryWithConsents.authorizationFilters().size());
+        assertEquals(new AuthorizationFilter("\\_consents\\", Set.of("phs123.c1", "phs456.c2")), queryWithConsents.authorizationFilters().get(0));
+    }
 }
