@@ -4,6 +4,7 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.Application;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
+import edu.harvard.hms.dbmi.avillach.auth.entity.UserClaims;
 
 import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
 import edu.harvard.hms.dbmi.avillach.auth.repository.ApplicationRepository;
@@ -80,7 +81,8 @@ public class UserServiceTest {
                 applicationUUID,
                 longTermTokenExpirationTime,
                 mockJwtUtil,
-                false);
+                false,
+                "ADMIN,SUPER_ADMIN");
     }
 
     @Test
@@ -88,11 +90,8 @@ public class UserServiceTest {
         User user = createTestUser();
         when(userRepository.findByEmail(user.getEmail())).thenReturn(user);
 
-        HashMap<String, Object> claims = new HashMap<>();
-        claims.put("email", user.getEmail());
-        claims.put("sub", user.getSubject());
-
-        HashMap<String, String> result = userService.getUserProfileResponse(claims);
+        UserClaims userClaims = buildTestUserClaims(user);
+        HashMap<String, String> result = userService.getUserProfileResponse(userClaims);
         assertNotNull(result);
     }
 
@@ -289,12 +288,12 @@ public class UserServiceTest {
 
     @Test
     public void testGetUserProfileResponse_missingClaims() {
-        HashMap<String, Object> incompleteClaims = new HashMap<>();
-        incompleteClaims.put("email", "test@example.com");
-        // Missing "sub" which is mandatory for the method logic
-        assertThrows(NullPointerException.class, ()->{
-            userService.getUserProfileResponse(incompleteClaims);
-        });
+        UserClaims userClaims = new UserClaims();
+        userClaims.setEmail("test@example.com");
+        // Missing "sub" - should still return a response but with null userId
+        HashMap<String, String> result = userService.getUserProfileResponse(userClaims);
+        assertNotNull(result);
+        assertNull(result.get("userId"));
     }
 
     @Test
@@ -427,11 +426,8 @@ public class UserServiceTest {
         User user = createTestUser();
         when(tosService.hasUserAcceptedLatest(anyString())).thenReturn(false);
 
-        HashMap<String, Object> claims = new HashMap<>();
-        claims.put("email", user.getEmail());
-        claims.put("sub", user.getSubject());
-
-        HashMap<String, String> result = userService.getUserProfileResponse(claims);
+        UserClaims userClaims = buildTestUserClaims(user);
+        HashMap<String, String> result = userService.getUserProfileResponse(userClaims);
         assertEquals("false", result.get("acceptedTOS"));
     }
 
@@ -440,11 +436,8 @@ public class UserServiceTest {
         User user = createTestUser();
         when(tosService.hasUserAcceptedLatest(anyString())).thenReturn(true);
 
-        HashMap<String, Object> claims = new HashMap<>();
-        claims.put("email", user.getEmail());
-        claims.put("sub", user.getSubject());
-
-        HashMap<String, String> result = userService.getUserProfileResponse(claims);
+        UserClaims userClaims = buildTestUserClaims(user);
+        HashMap<String, String> result = userService.getUserProfileResponse(userClaims);
         assertEquals("true", result.get("acceptedTOS"));
     }
 
@@ -571,6 +564,15 @@ public class UserServiceTest {
         User result = userService.save(user);
         assertNotNull(result);
         assertEquals(user, result);
+    }
+
+    private UserClaims buildTestUserClaims(User user) {
+        UserClaims userClaims = new UserClaims();
+        userClaims.setUuid(user.getUuid().toString());
+        userClaims.setSub(user.getSubject());
+        userClaims.setEmail(user.getEmail());
+        userClaims.setName(user.getName());
+        return userClaims;
     }
 
     private User createTestUser() {
