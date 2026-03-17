@@ -91,6 +91,11 @@ public class UserService {
     }
 
     public HashMap<String, String> getUserProfileResponse(UserClaims userClaims) {
+        if (StringUtils.isBlank(userClaims.getSub())) {
+            logger.warn("User subject is blank, cannot generate profile response");
+            return null;
+        }
+
         logger.debug("getUserProfileResponse() started");
         HashMap<String, String> responseMap = new HashMap<String, String>();
 
