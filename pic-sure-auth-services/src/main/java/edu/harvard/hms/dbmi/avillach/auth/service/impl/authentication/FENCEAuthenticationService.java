@@ -159,14 +159,17 @@ public class FENCEAuthenticationService implements AuthenticationService {
         userClaims.setIdp(this.fenceConnection.getLabel());
         userClaims.setRoles(userService.addRoleClaims(currentUser));
         HashMap<String, String> responseMap = userService.getUserProfileResponse(userClaims);
-        logger.info("LOGIN SUCCESS ___ {}:{}:{} ___ WITH ROLES ___ {} ___ Authorization will expire at  ___ {}___",
-                currentUser.getEmail(),
-                currentUser.getUuid().toString(),
-                currentUser.getSubject(),
-                currentUser.getRoles().stream().map(role -> role.getName().replace("MANAGED_", "")).collect(Collectors.joining(",")),
-                responseMap.get("expirationDate"));
-        logger.debug("getFENCEProfile() UserProfile response object has been generated");
-        logger.debug("getFENCEToken() finished");
+
+        if (responseMap != null) {
+            logger.info("LOGIN SUCCESS ___ {}:{}:{} ___ WITH ROLES ___ {} ___ Authorization will expire at  ___ {}___",
+                    currentUser.getEmail(),
+                    currentUser.getUuid().toString(),
+                    currentUser.getSubject(),
+                    currentUser.getRoles().stream().map(role -> role.getName().replace("MANAGED_", "")).collect(Collectors.joining(",")),
+                    responseMap.get("expirationDate"));
+            logger.debug("getFENCEProfile() UserProfile response object has been generated");
+            logger.debug("getFENCEToken() finished");
+        }
 
         return responseMap;
     }

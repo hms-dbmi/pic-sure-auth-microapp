@@ -115,11 +115,13 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
         UserClaims userClaims = buildUserClaims(user, introspectResponse, rasPassport.get());
         HashMap<String, String> responseMap = userService.getUserProfileResponse(userClaims);
 
-        responseMap.put("oktaIdToken", idToken);
-        logger.info("LOGIN SUCCESS ___ USER {}:{} ___ WITH ROLES ___ {} ___ AUTHORIZATION WILL EXPIRE AT  ___ {} ___ CODE {}",
-                user.getSubject(), user.getUuid().toString(),
-                user.getRoles().stream().map(role -> role.getName().replace("MANAGED_", "")).collect(Collectors.joining(",")),
-                responseMap.get("expirationDate"), authRequest.get("code"));
+        if (responseMap != null) {
+            responseMap.put("oktaIdToken", idToken);
+            logger.info("LOGIN SUCCESS ___ USER {}:{} ___ WITH ROLES ___ {} ___ AUTHORIZATION WILL EXPIRE AT  ___ {} ___ CODE {}",
+                    user.getSubject(), user.getUuid().toString(),
+                    user.getRoles().stream().map(role -> role.getName().replace("MANAGED_", "")).collect(Collectors.joining(",")),
+                    responseMap.get("expirationDate"), authRequest.get("code"));
+        }
 
         return responseMap;
     }

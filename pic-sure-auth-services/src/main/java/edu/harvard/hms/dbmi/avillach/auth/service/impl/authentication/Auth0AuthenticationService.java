@@ -135,7 +135,10 @@ public class Auth0AuthenticationService implements AuthenticationService {
         userClaims.setRoles(userService.addRoleClaims(user));
         HashMap<String, String> responseMap = userService.getUserProfileResponse(userClaims);
 
-        logger.info("LOGIN SUCCESS ___ {}:{} ___ Authorization will expire at  ___ {}___", user.getEmail(), user.getUuid().toString(), responseMap.get("expirationDate"));
+        if (responseMap != null) {
+            logger.info("LOGIN SUCCESS ___ {}:{} ___ Authorization will expire at  ___ {}___", user.getEmail(), user.getUuid().toString(), responseMap.get("expirationDate"));
+        }
+
         return responseMap;
     }
 
