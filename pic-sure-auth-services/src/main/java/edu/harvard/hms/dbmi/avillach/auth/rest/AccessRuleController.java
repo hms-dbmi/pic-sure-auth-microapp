@@ -3,9 +3,11 @@ package edu.harvard.hms.dbmi.avillach.auth.rest;
 import edu.harvard.hms.dbmi.avillach.auth.entity.AccessRule;
 import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.AccessRuleService;
+import edu.harvard.hms.dbmi.avillach.auth.utils.AuditContext;
 import io.swagger.v3.oas.annotations.*;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -65,7 +67,8 @@ public class AccessRuleController {
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> addAccessRule(
             @Parameter(required = true, description = "A list of AccessRule in JSON format")
-            @RequestBody List<AccessRule> accessRules) {
+            @RequestBody List<AccessRule> accessRules, HttpServletRequest request) {
+        AuditContext.put(request, "access_rule_count", String.valueOf(accessRules.size()));
         accessRules = this.accessRuleService.addAccessRule(accessRules);
 
         if (accessRules.isEmpty()) {
@@ -80,7 +83,8 @@ public class AccessRuleController {
     @PutMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<AccessRule>> updateAccessRule(
             @Parameter(required = true, description = "A list of AccessRule with fields to be updated in JSON format")
-            @RequestBody List<AccessRule> accessRules) {
+            @RequestBody List<AccessRule> accessRules, HttpServletRequest request) {
+        AuditContext.put(request, "access_rule_count", String.valueOf(accessRules.size()));
         accessRules = this.accessRuleService.updateAccessRules(accessRules);
         return PICSUREResponse.success(accessRules);
     }
@@ -90,7 +94,8 @@ public class AccessRuleController {
     @DeleteMapping(path = "/{accessRuleId}")
     public ResponseEntity<List<AccessRule>> removeById(
             @Parameter(required = true, description = "A valid accessRule Id")
-            @PathVariable("accessRuleId") final String accessRuleId) {
+            @PathVariable("accessRuleId") final String accessRuleId, HttpServletRequest request) {
+        AuditContext.put(request, "access_rule_id", accessRuleId);
         return PICSUREResponse.success(this.accessRuleService.removeAccessRuleById(accessRuleId));
     }
 

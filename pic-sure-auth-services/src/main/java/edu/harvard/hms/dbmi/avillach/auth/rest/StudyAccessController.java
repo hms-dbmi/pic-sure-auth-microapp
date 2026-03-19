@@ -2,9 +2,11 @@ package edu.harvard.hms.dbmi.avillach.auth.rest;
 
 import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.StudyAccessService;
+import edu.harvard.hms.dbmi.avillach.auth.utils.AuditContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -38,7 +40,8 @@ public class StudyAccessController {
     @RolesAllowed({SUPER_ADMIN, ADMIN})
     @PostMapping(consumes = "application/json")
     public ResponseEntity<String> addStudyAccess(@Parameter(description = "The Study Identifier of the new study from the metadata.json")
-                                            @RequestBody String studyIdentifier) {
+                                            @RequestBody String studyIdentifier, HttpServletRequest request) {
+        AuditContext.put(request, "study_identifier", studyIdentifier);
         String status = studyAccessService.addStudyAccess(studyIdentifier);
         if (status.contains("Error:")) {
             return PICSUREResponse.error(status);

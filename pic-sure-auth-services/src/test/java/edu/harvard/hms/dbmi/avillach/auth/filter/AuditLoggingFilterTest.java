@@ -108,6 +108,149 @@ class AuditLoggingFilterTest {
     }
 
     @Test
+    void shouldCategorizeRoleDelete() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("DELETE", "/role/some-uuid");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, filterChain);
+
+        ArgumentCaptor<LoggingEvent> captor = ArgumentCaptor.forClass(LoggingEvent.class);
+        verify(loggingClient).send(captor.capture());
+        assertEquals("ADMIN", captor.getValue().getEventType());
+        assertEquals("ROLE_DELETE", captor.getValue().getAction());
+    }
+
+    @Test
+    void shouldCategorizeConnectionModify() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/connection");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, filterChain);
+
+        ArgumentCaptor<LoggingEvent> captor = ArgumentCaptor.forClass(LoggingEvent.class);
+        verify(loggingClient).send(captor.capture());
+        assertEquals("ADMIN", captor.getValue().getEventType());
+        assertEquals("CONNECTION_MODIFY", captor.getValue().getAction());
+    }
+
+    @Test
+    void shouldCategorizeConnectionDelete() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("DELETE", "/connection/some-uuid");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, filterChain);
+
+        ArgumentCaptor<LoggingEvent> captor = ArgumentCaptor.forClass(LoggingEvent.class);
+        verify(loggingClient).send(captor.capture());
+        assertEquals("ADMIN", captor.getValue().getEventType());
+        assertEquals("CONNECTION_DELETE", captor.getValue().getAction());
+    }
+
+    @Test
+    void shouldCategorizeApplicationModify() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("PUT", "/application");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, filterChain);
+
+        ArgumentCaptor<LoggingEvent> captor = ArgumentCaptor.forClass(LoggingEvent.class);
+        verify(loggingClient).send(captor.capture());
+        assertEquals("ADMIN", captor.getValue().getEventType());
+        assertEquals("APPLICATION_MODIFY", captor.getValue().getAction());
+    }
+
+    @Test
+    void shouldCategorizeApplicationTokenRefresh() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/application/refreshToken/some-uuid");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, filterChain);
+
+        ArgumentCaptor<LoggingEvent> captor = ArgumentCaptor.forClass(LoggingEvent.class);
+        verify(loggingClient).send(captor.capture());
+        assertEquals("ADMIN", captor.getValue().getEventType());
+        assertEquals("APPLICATION_TOKEN_REFRESH", captor.getValue().getAction());
+    }
+
+    @Test
+    void shouldCategorizeTosAccept() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/tos/accept");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, filterChain);
+
+        ArgumentCaptor<LoggingEvent> captor = ArgumentCaptor.forClass(LoggingEvent.class);
+        verify(loggingClient).send(captor.capture());
+        assertEquals("ACCESS", captor.getValue().getEventType());
+        assertEquals("TOS_ACCEPT", captor.getValue().getAction());
+    }
+
+    @Test
+    void shouldCategorizeTosUpdate() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/tos/update");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, filterChain);
+
+        ArgumentCaptor<LoggingEvent> captor = ArgumentCaptor.forClass(LoggingEvent.class);
+        verify(loggingClient).send(captor.capture());
+        assertEquals("ADMIN", captor.getValue().getEventType());
+        assertEquals("TOS_UPDATE", captor.getValue().getAction());
+    }
+
+    @Test
+    void shouldCategorizeTokenRefresh() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/token/refresh");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, filterChain);
+
+        ArgumentCaptor<LoggingEvent> captor = ArgumentCaptor.forClass(LoggingEvent.class);
+        verify(loggingClient).send(captor.capture());
+        assertEquals("ACCESS", captor.getValue().getEventType());
+        assertEquals("TOKEN_REFRESH", captor.getValue().getAction());
+    }
+
+    @Test
+    void shouldCategorizeOpenAccessValidate() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/open/validate");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, filterChain);
+
+        ArgumentCaptor<LoggingEvent> captor = ArgumentCaptor.forClass(LoggingEvent.class);
+        verify(loggingClient).send(captor.capture());
+        assertEquals("ACCESS", captor.getValue().getEventType());
+        assertEquals("OPEN_ACCESS_VALIDATE", captor.getValue().getAction());
+    }
+
+    @Test
+    void shouldCategorizeStudyAccessCreate() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/studyAccess");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, filterChain);
+
+        ArgumentCaptor<LoggingEvent> captor = ArgumentCaptor.forClass(LoggingEvent.class);
+        verify(loggingClient).send(captor.capture());
+        assertEquals("ADMIN", captor.getValue().getEventType());
+        assertEquals("STUDY_ACCESS_CREATE", captor.getValue().getAction());
+    }
+
+    @Test
+    void shouldCategorizeMappingDelete() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("DELETE", "/mapping/some-uuid");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, filterChain);
+
+        ArgumentCaptor<LoggingEvent> captor = ArgumentCaptor.forClass(LoggingEvent.class);
+        verify(loggingClient).send(captor.capture());
+        assertEquals("ADMIN", captor.getValue().getEventType());
+        assertEquals("MAPPING_DELETE", captor.getValue().getAction());
+    }
+
+    @Test
     void shouldSkipActuatorHealth() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/actuator/health");
         MockHttpServletResponse response = new MockHttpServletResponse();

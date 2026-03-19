@@ -3,10 +3,12 @@ package edu.harvard.hms.dbmi.avillach.auth.rest;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
 import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.PrivilegeService;
+import edu.harvard.hms.dbmi.avillach.auth.utils.AuditContext;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -60,7 +62,8 @@ public class PrivilegeController {
     @PostMapping(consumes = "application/json", produces = "application/json")
     public ResponseEntity<List<Privilege>> addPrivilege(
             @Parameter(required = true, description = "A list of privileges in JSON format")
-            @RequestBody List<Privilege> privileges){
+            @RequestBody List<Privilege> privileges, HttpServletRequest request){
+        AuditContext.put(request, "privilege_count", String.valueOf(privileges.size()));
         privileges = this.privilegeService.addPrivileges(privileges);
         return PICSUREResponse.success(privileges);
     }
@@ -70,7 +73,8 @@ public class PrivilegeController {
     @PutMapping(consumes = "application/json", produces = "application/json")
     public ResponseEntity<List<Privilege>> updatePrivilege(
             @Parameter(required = true, description = "A list of privilege with fields to be updated in JSON format")
-            @RequestBody List<Privilege> privileges){
+            @RequestBody List<Privilege> privileges, HttpServletRequest request){
+            AuditContext.put(request, "privilege_count", String.valueOf(privileges.size()));
             privileges = this.privilegeService.updatePrivileges(privileges);
             return ResponseEntity.ok(privileges);
     }
@@ -80,7 +84,8 @@ public class PrivilegeController {
     @DeleteMapping(path = "/{privilegeId}", produces = "application/json")
     public ResponseEntity<List<Privilege>> removeById(
             @Parameter(required = true, description = "A valid privilege Id")
-            @PathVariable("privilegeId") final String privilegeId) {
+            @PathVariable("privilegeId") final String privilegeId, HttpServletRequest request) {
+        AuditContext.put(request, "privilege_id", privilegeId);
         List<Privilege> privileges = this.privilegeService.deletePrivilegeByPrivilegeId(privilegeId);
         return ResponseEntity.ok(privileges);
     }

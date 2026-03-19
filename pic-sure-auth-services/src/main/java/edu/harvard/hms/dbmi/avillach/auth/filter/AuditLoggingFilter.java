@@ -50,15 +50,34 @@ public class AuditLoggingFilter extends OncePerRequestFilter {
         DEST_PORT = port;
     }
 
+    // Auth patterns
     private static final Pattern AUTH_LOGIN = Pattern.compile("^/authentication/.+$");
+
+    // Token patterns
     private static final Pattern TOKEN_INSPECT = Pattern.compile("^/token/inspect/?$");
+    private static final Pattern TOKEN_REFRESH = Pattern.compile("^/token/refresh/?$");
+
+    // User patterns
     private static final Pattern USER_ME = Pattern.compile("^/user/me(/.*)?$");
     private static final Pattern USER_ADMIN = Pattern.compile("^/user/?$");
-    private static final Pattern ROLE_ADMIN = Pattern.compile("^/role/?.*$");
-    private static final Pattern PRIVILEGE_ADMIN = Pattern.compile("^/privilege/?.*$");
-    private static final Pattern ACCESS_RULE_ADMIN = Pattern.compile("^/accessRule/?.*$");
-    private static final Pattern TOS = Pattern.compile("^/tos/.*$");
+
+    // Admin entity patterns (match both base path and path with ID)
+    private static final Pattern ROLE_ADMIN = Pattern.compile("^/role(/[^/]+)?/?$");
+    private static final Pattern PRIVILEGE_ADMIN = Pattern.compile("^/privilege(/[^/]+)?/?$");
+    private static final Pattern ACCESS_RULE_ADMIN = Pattern.compile("^/accessRule(/[^/]+)?/?$");
+    private static final Pattern APPLICATION_ADMIN = Pattern.compile("^/application(/[^/]+)?/?$");
+    private static final Pattern APPLICATION_TOKEN_REFRESH = Pattern.compile("^/application/refreshToken/.+$");
+    private static final Pattern CONNECTION_ADMIN = Pattern.compile("^/connection(/[^/]+)?/?$");
+    private static final Pattern MAPPING_ADMIN = Pattern.compile("^/mapping(/[^/]+)?/?$");
     private static final Pattern STUDY_ACCESS = Pattern.compile("^/studyAccess/?.*$");
+
+    // TOS patterns
+    private static final Pattern TOS_ACCEPT = Pattern.compile("^/tos/accept/?$");
+    private static final Pattern TOS_UPDATE = Pattern.compile("^/tos/update/?$");
+    private static final Pattern TOS = Pattern.compile("^/tos(/.*)?$");
+
+    // Open access
+    private static final Pattern OPEN_VALIDATE = Pattern.compile("^/open/validate/?$");
 
     private final LoggingClient loggingClient;
 
@@ -114,36 +133,73 @@ public class AuditLoggingFilter extends OncePerRequestFilter {
             String eventType = "OTHER";
             String action = method;
 
+            // Auth events
             if (AUTH_LOGIN.matcher(path).matches() && "POST".equals(method)) {
                 eventType = "AUTH";
                 action = "LOGIN";
             } else if (path.equals("/logout")) {
                 eventType = "AUTH";
                 action = "LOGOUT";
+
+            // Token events
             } else if (TOKEN_INSPECT.matcher(path).matches() && "POST".equals(method)) {
                 eventType = "ACCESS";
                 action = "TOKEN_INTROSPECT";
+            } else if (TOKEN_REFRESH.matcher(path).matches() && "GET".equals(method)) {
+                eventType = "ACCESS";
+                action = "TOKEN_REFRESH";
+
+            // User events
             } else if (USER_ME.matcher(path).matches() && "GET".equals(method)) {
                 eventType = "ACCESS";
                 action = "USER_PROFILE";
-            } else if (USER_ADMIN.matcher(path).matches() && ("POST".equals(method) || "PUT".equals(method))) {
+            } else if (USER_ADMIN.matcher(path).matches() && isMutating(method)) {
                 eventType = "ADMIN";
                 action = "USER_MODIFY";
-            } else if (ROLE_ADMIN.matcher(path).matches() && ("POST".equals(method) || "PUT".equals(method))) {
+
+            // TOS events (check specific paths before generic)
+            } else if (TOS_ACCEPT.matcher(path).matches() && "POST".equals(method)) {
+                eventType = "ACCESS";
+                action = "TOS_ACCEPT";
+            } else if (TOS_UPDATE.matcher(path).matches() && "POST".equals(method)) {
                 eventType = "ADMIN";
-                action = "ROLE_MODIFY";
-            } else if (PRIVILEGE_ADMIN.matcher(path).matches() && ("POST".equals(method) || "PUT".equals(method))) {
-                eventType = "ADMIN";
-                action = "PRIVILEGE_MODIFY";
-            } else if (ACCESS_RULE_ADMIN.matcher(path).matches() && ("POST".equals(method) || "PUT".equals(method))) {
-                eventType = "ADMIN";
-                action = "ACCESS_RULE_MODIFY";
+                action = "TOS_UPDATE";
             } else if (TOS.matcher(path).matches()) {
                 eventType = "ACCESS";
                 action = "TOS";
-            } else if (STUDY_ACCESS.matcher(path).matches() && ("POST".equals(method) || "PUT".equals(method))) {
+
+            // Open access
+            } else if (OPEN_VALIDATE.matcher(path).matches() && "POST".equals(method)) {
+                eventType = "ACCESS";
+                action = "OPEN_ACCESS_VALIDATE";
+
+            // Application events (check refreshToken before generic)
+            } else if (APPLICATION_TOKEN_REFRESH.matcher(path).matches() && "GET".equals(method)) {
                 eventType = "ADMIN";
-                action = "STUDY_ACCESS_MODIFY";
+                action = "APPLICATION_TOKEN_REFRESH";
+            } else if (APPLICATION_ADMIN.matcher(path).matches() && isMutating(method)) {
+                eventType = "ADMIN";
+                action = "DELETE".equals(method) ? "APPLICATION_DELETE" : "APPLICATION_MODIFY";
+
+            // Admin entity events
+            } else if (ROLE_ADMIN.matcher(path).matches() && isMutating(method)) {
+                eventType = "ADMIN";
+                action = "DELETE".equals(method) ? "ROLE_DELETE" : "ROLE_MODIFY";
+            } else if (PRIVILEGE_ADMIN.matcher(path).matches() && isMutating(method)) {
+                eventType = "ADMIN";
+                action = "DELETE".equals(method) ? "PRIVILEGE_DELETE" : "PRIVILEGE_MODIFY";
+            } else if (ACCESS_RULE_ADMIN.matcher(path).matches() && isMutating(method)) {
+                eventType = "ADMIN";
+                action = "DELETE".equals(method) ? "ACCESS_RULE_DELETE" : "ACCESS_RULE_MODIFY";
+            } else if (CONNECTION_ADMIN.matcher(path).matches() && isMutating(method)) {
+                eventType = "ADMIN";
+                action = "DELETE".equals(method) ? "CONNECTION_DELETE" : "CONNECTION_MODIFY";
+            } else if (MAPPING_ADMIN.matcher(path).matches() && isMutating(method)) {
+                eventType = "ADMIN";
+                action = "DELETE".equals(method) ? "MAPPING_DELETE" : "MAPPING_MODIFY";
+            } else if (STUDY_ACCESS.matcher(path).matches() && "POST".equals(method)) {
+                eventType = "ADMIN";
+                action = "STUDY_ACCESS_CREATE";
             }
 
             // Determine source IP
@@ -219,6 +275,10 @@ public class AuditLoggingFilter extends OncePerRequestFilter {
         } catch (Exception e) {
             logger.warn("AuditLoggingFilter failed to log request", e);
         }
+    }
+
+    private static boolean isMutating(String method) {
+        return "POST".equals(method) || "PUT".equals(method) || "DELETE".equals(method);
     }
 
 }

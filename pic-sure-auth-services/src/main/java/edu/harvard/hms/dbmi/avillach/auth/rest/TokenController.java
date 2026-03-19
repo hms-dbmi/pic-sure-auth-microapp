@@ -8,9 +8,11 @@ import edu.harvard.hms.dbmi.avillach.auth.model.ValidRefreshToken;
 import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization.AuthorizationService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.TokenService;
+import edu.harvard.hms.dbmi.avillach.auth.utils.AuditContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -46,7 +48,7 @@ public class TokenController {
     public ResponseEntity<Map<String, Object>> inspectToken(
             @Parameter(required = true, description = "A JSON object that at least" +
                     " include a user the token for validation")
-            @RequestBody Map<String, Object> inputMap) {
+            @RequestBody Map<String, Object> inputMap, HttpServletRequest request) {
         Map<String, Object> stringObjectMap = this.tokenService.inspectToken(inputMap);
 
         loggingClient.send(LoggingEvent.builder("ACCESS")
@@ -56,6 +58,7 @@ public class TokenController {
             ))
             .build());
 
+        AuditContext.put(request, "token_active", String.valueOf(stringObjectMap.getOrDefault("active", false)));
         return PICSUREResponse.success(stringObjectMap);
     }
 

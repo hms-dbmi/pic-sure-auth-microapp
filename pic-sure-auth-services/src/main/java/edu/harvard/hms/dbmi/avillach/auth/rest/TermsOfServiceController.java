@@ -6,11 +6,13 @@ import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
 import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.TOSService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.UserService;
+import edu.harvard.hms.dbmi.avillach.auth.utils.AuditContext;
 import edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,7 +58,7 @@ public class TermsOfServiceController {
     @Operation(description = "Update the Terms of Service html body")
     @RolesAllowed({AuthNaming.AuthRoleNaming.ADMIN, SUPER_ADMIN})
     @PostMapping(path = "/update", consumes = "text/html", produces = "application/json")
-    public ResponseEntity<?> updateTermsOfService(@RequestBody String html) {
+    public ResponseEntity<?> updateTermsOfService(@RequestBody String html, HttpServletRequest request) {
         SecurityContext context = SecurityContextHolder.getContext();
         CustomUserDetails customUserDetails = (CustomUserDetails) context.getAuthentication().getPrincipal();
         String userSubject = customUserDetails.getUser().getSubject();
@@ -67,6 +69,7 @@ public class TermsOfServiceController {
         }
         User user = tosService.acceptTermsOfService(userSubject);
         userService.updateUser(List.of(user));
+        AuditContext.put(request, "tos_updated", "true");
         return PICSUREResponse.success(termsOfService.get());
     }
 
@@ -82,12 +85,13 @@ public class TermsOfServiceController {
 
     @Operation(description = "Endpoint for current user to accept his terms of service")
     @PostMapping(path = "/accept", produces = "application/json")
-    public ResponseEntity<?> acceptTermsOfService() {
+    public ResponseEntity<?> acceptTermsOfService(HttpServletRequest request) {
         SecurityContext context = SecurityContextHolder.getContext();
         CustomUserDetails customUserDetails = (CustomUserDetails) context.getAuthentication().getPrincipal();
         String userSubject = customUserDetails.getUser().getSubject();
         User user = tosService.acceptTermsOfService(userSubject);
         userService.updateUser(List.of(user));
+        AuditContext.put(request, "tos_accepted", "true");
         return PICSUREResponse.success();
     }
 
