@@ -1,5 +1,6 @@
 package edu.harvard.hms.dbmi.avillach.auth.config;
 
+import edu.harvard.hms.dbmi.avillach.auth.filter.AuditLoggingFilter;
 import edu.harvard.hms.dbmi.avillach.auth.filter.JWTFilter;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.CacheEvictionService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.UserService;
@@ -24,6 +25,7 @@ import static org.springframework.security.config.http.SessionCreationPolicy.STA
 public class SecurityConfig {
 
     private final JWTFilter jwtFilter;
+    private final AuditLoggingFilter auditLoggingFilter;
     private final CacheEvictionService cacheEvictionService;
     private final AuthenticationProvider authenticationProvider;
     private final UserService userService;
@@ -31,10 +33,11 @@ public class SecurityConfig {
 
     @Autowired
     public SecurityConfig(
-        JWTFilter jwtFilter, AuthenticationProvider authenticationProvider, UserService userService,
+        JWTFilter jwtFilter, AuditLoggingFilter auditLoggingFilter, AuthenticationProvider authenticationProvider, UserService userService,
         CacheEvictionService cacheEvictionService, JWTUtil jwtUtil
     ) {
         this.jwtFilter = jwtFilter;
+        this.auditLoggingFilter = auditLoggingFilter;
         this.authenticationProvider = authenticationProvider;
         this.userService = userService;
         this.jwtUtil = jwtUtil;
@@ -56,7 +59,8 @@ public class SecurityConfig {
                     "/user/me/queryTemplate", "/user/me/queryTemplate/**", "/tos/latest", "/open/validate", "/logout", "/cache/**"
                 ).permitAll().anyRequest().authenticated()
             ).httpBasic(AbstractHttpConfigurer::disable).formLogin(AbstractHttpConfigurer::disable)
-            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class).logout(
+            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class).addFilterAfter(auditLoggingFilter, JWTFilter.class)
+            .logout(
                 (logout) -> logout.logoutUrl("/logout").addLogoutHandler(customLogoutHandler())
                     .logoutSuccessHandler((request, response, authentication) -> {
                         // We don't want to redirect to a login page, we just want to return a 200
