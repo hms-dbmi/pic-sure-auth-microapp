@@ -3,10 +3,12 @@ package edu.harvard.hms.dbmi.avillach.auth.rest;
 import edu.harvard.hms.dbmi.avillach.auth.entity.*;
 import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.UserService;
+import edu.harvard.hms.dbmi.avillach.auth.utils.AuditContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,7 +45,8 @@ public class UserController {
     @GetMapping(path = "/{userId}", produces = "application/json")
     public ResponseEntity<User> getUserById(
             @Parameter(required = true, description = "The UUID of the user to fetch information about")
-            @PathVariable("userId") String userId) {
+            @PathVariable("userId") String userId, HttpServletRequest request) {
+        AuditContext.put(request, "target_user_id", userId);
         User userById = this.userService.getUserById(userId);
         return PICSUREResponse.success(userById);
     }
@@ -61,7 +64,8 @@ public class UserController {
     @PostMapping(produces = "application/json")
     public ResponseEntity<?> addUser(
             @Parameter(required = true, description = "A list of user in JSON format")
-            @RequestBody List<User> users) {
+            @RequestBody List<User> users, HttpServletRequest request) {
+        AuditContext.put(request, "target_user_count", String.valueOf(users.size()));
         List<User> addedUsers = this.userService.addUsers(users);
         if (addedUsers == null) {
             return PICSUREResponse.applicationError("Inner application error, please contact admin.");
@@ -79,7 +83,8 @@ public class UserController {
     @RolesAllowed({ADMIN})
     @PutMapping(produces = "application/json")
     public ResponseEntity<?> updateUser(
-            @RequestBody List<User> users) {
+            @RequestBody List<User> users, HttpServletRequest request) {
+        AuditContext.put(request, "target_user_count", String.valueOf(users.size()));
         List<User> updatedUsers = this.userService.updateUser(users);
         if (updatedUsers == null) {
             return PICSUREResponse.applicationError("Inner application error, please contact admin.");
@@ -154,7 +159,8 @@ public class UserController {
     @Operation(description = "refresh the long term tokne of current user")
     @GetMapping(path = "/me/refresh_long_term_token", produces = "application/json")
     public ResponseEntity<?> refreshUserToken(
-            @RequestHeader HttpHeaders httpHeaders) {
+            @RequestHeader HttpHeaders httpHeaders, HttpServletRequest request) {
+        AuditContext.put(request, "token_type", "long_term");
         Map<String, String> stringStringMap = this.userService.refreshUserToken(httpHeaders);
         if (stringStringMap != null) {
             return PICSUREResponse.success(stringStringMap);
