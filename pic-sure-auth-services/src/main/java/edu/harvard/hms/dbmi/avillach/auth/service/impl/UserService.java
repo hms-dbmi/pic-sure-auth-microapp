@@ -9,6 +9,8 @@ import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
 import edu.harvard.hms.dbmi.avillach.auth.repository.ApplicationRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.ConnectionRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.UserRepository;
+import edu.harvard.dbmi.avillach.logging.LoggingClient;
+import edu.harvard.dbmi.avillach.logging.LoggingEvent;
 import edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming;
 import edu.harvard.hms.dbmi.avillach.auth.utils.JWTUtil;
 import edu.harvard.hms.dbmi.avillach.auth.utils.JsonUtils;
@@ -60,6 +62,7 @@ public class UserService {
     private final JWTUtil jwtUtil;
 
     private final List<String> tokenInclusionRoles;
+    private final LoggingClient loggingClient;
 
     @Autowired
     public UserService(BasicMailService basicMailService, TOSService tosService,
@@ -72,7 +75,8 @@ public class UserService {
                        @Value("${application.long.term.token.expiration.time}") long longTermTokenExpirationTime,
                        JWTUtil jwtUtil,
                        @Value("${open.idp.provider.is.enabled}") boolean openIdpProviderIsEnabled,
-                       @Value("${application.token.inclusionRoles}") String tokenInclusionRoles) {
+                       @Value("${application.token.inclusionRoles}") String tokenInclusionRoles,
+                       LoggingClient loggingClient) {
         this.basicMailService = basicMailService;
         this.tosService = tosService;
         this.userRepository = userRepository;
@@ -88,6 +92,7 @@ public class UserService {
         this.longTermTokenExpirationTime = longTermTokenExpirationTime > 0 ? longTermTokenExpirationTime : defaultLongTermTokenExpirationTime;
         this.openAccessIsEnabled = openIdpProviderIsEnabled;
         this.tokenInclusionRoles = Arrays.asList(tokenInclusionRoles.split(","));
+        this.loggingClient = loggingClient;
     }
 
     public HashMap<String, String> getUserProfileResponse(UserClaims userClaims) {
@@ -629,6 +634,19 @@ public class UserService {
 
         logger.info("createOpenAccessUser() created user, uuid: {}, subject: {}, role: {}, privilege: {}",
                 user.getUuid(), user.getSubject(), user.getRoleString(), user.getPrivilegeString());
+
+        if (loggingClient != null && loggingClient.isEnabled()) {
+            try {
+                loggingClient.send(LoggingEvent.builder("AUTHZ").action("OPEN_ACCESS_USER_CREATED")
+                    .metadata(Map.of(
+                        "user_uuid", user.getUuid().toString(),
+                        "assigned_role", "MANAGED_OPEN_ACCESS"
+                    )).build());
+            } catch (Exception e) {
+                logger.warn("Failed to send open access user creation logging event", e);
+            }
+        }
+
         return user;
     }
 
@@ -712,6 +730,22 @@ public class UserService {
             logger.debug("upsertRole() updated {} roles from user", newRoles.size());
             newRoles = roleService.persistAll(newRoles);
             current_user.getRoles().addAll(newRoles);
+        }
+
+        if (loggingClient != null && loggingClient.isEnabled()) {
+            try {
+                String addedNames = newRoles.stream().map(Role::getName).collect(Collectors.joining(","));
+                String removedNames = rolesToRemove.stream().map(Role::getName).collect(Collectors.joining(","));
+                loggingClient.send(LoggingEvent.builder("AUTHZ").action("ROLE_SYNC")
+                    .metadata(Map.of(
+                        "user_id", current_user.getUuid().toString(),
+                        "user_email", current_user.getEmail() != null ? current_user.getEmail() : "",
+                        "roles_added", addedNames,
+                        "roles_removed", removedNames
+                    )).build());
+            } catch (Exception e) {
+                logger.warn("Failed to send role sync logging event", e);
+            }
         }
 
         Role openAccessRole = roleService.findByName(MANAGED_OPEN_ACCESS_ROLE_NAME);

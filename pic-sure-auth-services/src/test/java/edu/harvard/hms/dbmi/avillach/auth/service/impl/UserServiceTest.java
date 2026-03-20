@@ -1,5 +1,6 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.impl;
 
+import edu.harvard.dbmi.avillach.logging.LoggingClient;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Application;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
@@ -53,6 +54,8 @@ public class UserServiceTest {
     private RoleService roleService;
     @MockBean
     private JWTUtil mockJwtUtil;
+    @MockBean
+    private LoggingClient loggingClient;
     private JWTUtil jwtUtil;
 
     private static final long defaultTokenExpirationTime = 1000L * 60 * 60; // 1 hour
@@ -82,7 +85,8 @@ public class UserServiceTest {
                 longTermTokenExpirationTime,
                 mockJwtUtil,
                 false,
-                "ADMIN,SUPER_ADMIN");
+                "ADMIN,SUPER_ADMIN",
+                null);
     }
 
     @Test
