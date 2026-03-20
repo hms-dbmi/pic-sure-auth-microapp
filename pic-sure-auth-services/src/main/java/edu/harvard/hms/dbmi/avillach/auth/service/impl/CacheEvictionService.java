@@ -1,15 +1,11 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.impl;
 
-import edu.harvard.dbmi.avillach.logging.LoggingClient;
-import edu.harvard.dbmi.avillach.logging.LoggingEvent;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import java.util.Map;
 
 @Service
 public class CacheEvictionService {
@@ -18,15 +14,12 @@ public class CacheEvictionService {
     private final SessionService sessionService;
     private final UserService userService;
     private final AccessRuleService accessRuleService;
-    private final LoggingClient loggingClient;
 
     @Autowired
-    public CacheEvictionService(SessionService sessionService, UserService userService, AccessRuleService accessRuleService,
-                                LoggingClient loggingClient) {
+    public CacheEvictionService(SessionService sessionService, UserService userService, AccessRuleService accessRuleService) {
         this.sessionService = sessionService;
         this.userService = userService;
         this.accessRuleService = accessRuleService;
-        this.loggingClient = loggingClient;
     }
 
     public void evictCache(String userSubject) {
