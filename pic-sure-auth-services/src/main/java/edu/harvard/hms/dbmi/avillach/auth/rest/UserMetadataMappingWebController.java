@@ -4,10 +4,12 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.Connection;
 import edu.harvard.hms.dbmi.avillach.auth.entity.UserMetadataMapping;
 import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.UserMetadataMappingService;
+import edu.harvard.hms.dbmi.avillach.auth.utils.AuditContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -55,8 +57,9 @@ public class UserMetadataMappingWebController {
     @PostMapping(consumes = "application/json", produces = "application/json")
     public ResponseEntity<?> addMapping(
             @Parameter(required = true, description = "A list of UserMetadataMapping in JSON format")
-            @RequestBody List<UserMetadataMapping> mappings) {
+            @RequestBody List<UserMetadataMapping> mappings, HttpServletRequest request) {
 
+        AuditContext.put(request, "mapping_count", String.valueOf(mappings.size()));
         try {
             List<UserMetadataMapping> userMetadataMappings = mappingService.addMappings(mappings);
             return PICSUREResponse.success(userMetadataMappings);
@@ -70,13 +73,13 @@ public class UserMetadataMappingWebController {
     @PutMapping(consumes = "application/json", produces = "application/json")
     public ResponseEntity<?> updateMapping(
             @Parameter(required = true, description = "A list of UserMetadataMapping with fields to be updated in JSON format")
-            @RequestBody List<UserMetadataMapping> mappings) {
+            @RequestBody List<UserMetadataMapping> mappings, HttpServletRequest request) {
+        AuditContext.put(request, "mapping_count", String.valueOf(mappings.size()));
         List<UserMetadataMapping> userMetadataMappings = this.mappingService.updateUserMetadataMappings(mappings);
 
         if (userMetadataMappings == null || userMetadataMappings.isEmpty()) {
             return PICSUREResponse.error("No UserMetadataMapping found with the given Ids");
         }
-
         return PICSUREResponse.success(userMetadataMappings);
     }
 
@@ -85,7 +88,8 @@ public class UserMetadataMappingWebController {
     @DeleteMapping(path = "/{mappingId}", produces = "application/json")
     public ResponseEntity<List<UserMetadataMapping>> removeById(
             @Parameter(required = true, description = "A valid UserMetadataMapping Id")
-            @PathVariable("mappingId") final String mappingId) {
+            @PathVariable("mappingId") final String mappingId, HttpServletRequest request) {
+        AuditContext.put(request, "mapping_id", mappingId);
         List<UserMetadataMapping> userMetadataMappings = this.mappingService.removeMetadataMappingByIdAndRetrieveAll(mappingId);
         return PICSUREResponse.success(userMetadataMappings);
     }

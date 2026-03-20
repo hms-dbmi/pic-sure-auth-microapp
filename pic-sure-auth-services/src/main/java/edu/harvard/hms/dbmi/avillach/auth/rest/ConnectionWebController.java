@@ -3,10 +3,12 @@ package edu.harvard.hms.dbmi.avillach.auth.rest;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Connection;
 import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.ConnectionWebService;
+import edu.harvard.hms.dbmi.avillach.auth.utils.AuditContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -61,7 +63,8 @@ public class ConnectionWebController {
     @PostMapping(produces = "application/json", consumes = "application/json")
     public ResponseEntity<?> addConnection(
             @Parameter(required = true, description = "A list of Connections in JSON format")
-            @RequestBody List<Connection> connections) {
+            @RequestBody List<Connection> connections, HttpServletRequest request) {
+        AuditContext.put(request, "connection_count", String.valueOf(connections.size()));
         try {
             connections = connectionWebService.addConnection(connections);
         } catch (IllegalArgumentException e) {
@@ -76,7 +79,8 @@ public class ConnectionWebController {
     @PutMapping(produces = "application/json", consumes = "application/json")
     public ResponseEntity<List<Connection>> updateConnection(
             @Parameter(required = true, description = "A list of Connection with fields to be updated in JSON format")
-            @RequestBody List<Connection> connections) {
+            @RequestBody List<Connection> connections, HttpServletRequest request) {
+        AuditContext.put(request, "connection_count", String.valueOf(connections.size()));
         List<Connection> responseEntity = connectionWebService.updateConnections(connections);
         return ResponseEntity.ok(responseEntity);
     }
@@ -86,7 +90,8 @@ public class ConnectionWebController {
     @DeleteMapping(path = "/{connectionId}", produces = "application/json")
     public ResponseEntity<List<Connection>> removeById(
             @Parameter(required = true, description = "A valid connection Id")
-            @PathVariable("connectionId") final String connectionId) {
+            @PathVariable("connectionId") final String connectionId, HttpServletRequest request) {
+        AuditContext.put(request, "connection_id", connectionId);
         List<Connection> connections = connectionWebService.removeConnectionById(connectionId);
         return ResponseEntity.ok(connections);
     }

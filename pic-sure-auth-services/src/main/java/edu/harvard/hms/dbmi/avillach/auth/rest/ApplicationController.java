@@ -3,10 +3,12 @@ package edu.harvard.hms.dbmi.avillach.auth.rest;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Application;
 import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.ApplicationService;
+import edu.harvard.hms.dbmi.avillach.auth.utils.AuditContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -60,7 +62,8 @@ public class ApplicationController {
     @PostMapping(consumes = "application/json", produces = "application/json")
     public ResponseEntity<List<Application>> addApplication(
             @Parameter(required = true, description = "A list of AccessRule in JSON format")
-            @RequestBody List<Application> applications) {
+            @RequestBody List<Application> applications, HttpServletRequest request) {
+        AuditContext.put(request, "app_count", String.valueOf(applications.size()));
         applications = applicationService.addNewApplications(applications);
         return PICSUREResponse.success(applications);
     }
@@ -70,7 +73,8 @@ public class ApplicationController {
     @PutMapping(consumes = "application/json", produces = "application/json")
     public ResponseEntity<List<Application>> updateApplication(
             @Parameter(required = true, description = "A list of AccessRule with fields to be updated in JSON format")
-            @RequestBody List<Application> applications) {
+            @RequestBody List<Application> applications, HttpServletRequest request) {
+        AuditContext.put(request, "app_count", String.valueOf(applications.size()));
         applications = applicationService.updateApplications(applications);
         return PICSUREResponse.success(applications);
     }
@@ -80,7 +84,8 @@ public class ApplicationController {
     @GetMapping(value = "/refreshToken/{applicationId}")
     public ResponseEntity<Map<String, String>> refreshApplicationToken(
             @Parameter(required = true, description = "A valid application Id")
-            @PathVariable("applicationId") String applicationId) {
+            @PathVariable("applicationId") String applicationId, HttpServletRequest request) {
+        AuditContext.put(request, "app_id", applicationId);
         String newApplicationToken = applicationService.refreshApplicationToken(applicationId);
         return PICSUREResponse.success(Map.of("token", newApplicationToken));
     }
@@ -90,7 +95,8 @@ public class ApplicationController {
     @DeleteMapping(value = "/{applicationId}")
     public ResponseEntity<?> removeById(
             @Parameter(required = true, description = "A valid accessRule Id")
-            @PathVariable("applicationId") final String applicationId) {
+            @PathVariable("applicationId") final String applicationId, HttpServletRequest request) {
+        AuditContext.put(request, "app_id", applicationId);
         try {
             List<Application> applications = applicationService.deleteApplicationById(applicationId);
             return PICSUREResponse.success(applications);

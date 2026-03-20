@@ -1,6 +1,8 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import edu.harvard.dbmi.avillach.logging.LoggingClient;
+import edu.harvard.dbmi.avillach.logging.LoggingEvent;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.enums.PassportValidationResponse;
 import edu.harvard.hms.dbmi.avillach.auth.model.ras.Ga4ghPassportV1;
@@ -32,15 +34,18 @@ public class RASPassPortService {
     private final UserService userService;
     private final String rasURI;
     private final CacheEvictionService cacheEvictionService;
+    private final LoggingClient loggingClient;
 
     @Autowired
     public RASPassPortService(RestClientUtil restClientUtil,
                               UserService userService,
-                              @Value("${ras.idp.uri}") String rasURI, CacheEvictionService cacheEvictionService) {
+                              @Value("${ras.idp.uri}") String rasURI, CacheEvictionService cacheEvictionService,
+                              LoggingClient loggingClient) {
         this.restClientUtil = restClientUtil;
         this.userService = userService;
         this.rasURI = rasURI.replaceAll("/$", "");
         this.cacheEvictionService = cacheEvictionService;
+        this.loggingClient = loggingClient;
 
         logger.info("RASPassPortService initialized with rasURI: {}", rasURI);
     }
@@ -59,6 +64,9 @@ public class RASPassPortService {
             return;
         }
 
+        java.util.concurrent.atomic.AtomicInteger totalValidated = new java.util.concurrent.atomic.AtomicInteger(0);
+        java.util.concurrent.atomic.AtomicInteger totalInvalidated = new java.util.concurrent.atomic.AtomicInteger(0);
+
         allUsersWithAPassport.parallelStream().forEach(user -> {
             logger.info("validateAllUserPassports() ATTEMPTING TO VALIDATE PASSPORT ___ USER {}", user.getSubject());
             if (StringUtils.isBlank(user.getPassport())) {
@@ -73,6 +81,16 @@ public class RASPassPortService {
                 user.setPassport(null);
                 userService.save(user);
                 cacheEvictionService.evictCache(user);
+                totalInvalidated.incrementAndGet();
+                if (loggingClient != null && loggingClient.isEnabled()) {
+                    try {
+                        loggingClient.send(LoggingEvent.builder("AUTHZ").action("PASSPORT_INVALIDATED")
+                            .metadata(Map.of("user_subject", user.getSubject(), "reason", "FAILED_TO_DECODE_PASSPORT"))
+                            .build());
+                    } catch (Exception e) {
+                        logger.warn("Failed to send PASSPORT_INVALIDATED audit log event", e);
+                    }
+                }
                 return;
             }
 
@@ -86,20 +104,51 @@ public class RASPassPortService {
 
                 if (parsedVisa.get().getExp() < System.currentTimeMillis() / 1000) {
                     handleFailedValidationResponse(PassportValidationResponse.VISA_EXPIRED.getValue(), user);
+                    totalInvalidated.incrementAndGet();
+                    if (loggingClient != null && loggingClient.isEnabled()) {
+                        try {
+                            loggingClient.send(LoggingEvent.builder("AUTHZ").action("PASSPORT_INVALIDATED")
+                                .metadata(Map.of("user_subject", user.getSubject(), "reason", PassportValidationResponse.VISA_EXPIRED.getValue()))
+                                .build());
+                        } catch (Exception e) {
+                            logger.warn("Failed to send PASSPORT_INVALIDATED audit log event", e);
+                        }
+                    }
                 } else {
                     Optional<String> response = validateVisa(visa);
                     if (response.isPresent()) {
                         boolean successfullyUpdated = handlePassportValidationResponse(response.get(), user);
                         if (!successfullyUpdated) {
                             logger.info("PASSPORT VALIDATION COMPLETE __ PASSPORT IS NO LONGER VALID ___ USER {} ___ USER LOGGED OUT", user.getSubject());
+                            totalInvalidated.incrementAndGet();
+                            if (loggingClient != null && loggingClient.isEnabled()) {
+                                try {
+                                    loggingClient.send(LoggingEvent.builder("AUTHZ").action("PASSPORT_INVALIDATED")
+                                        .metadata(Map.of("user_subject", user.getSubject(), "reason", response.get()))
+                                        .build());
+                                } catch (Exception e) {
+                                    logger.warn("Failed to send PASSPORT_INVALIDATED audit log event", e);
+                                }
+                            }
                             break;
                         } else {
                             logger.info("PASSPORT VALIDATION COMPLETE __ PASSPORT IS VALID ___ USER {}", user.getSubject());
+                            totalValidated.incrementAndGet();
                         }
                     }
                 }
             }
         });
+
+        if (loggingClient != null && loggingClient.isEnabled()) {
+            try {
+                loggingClient.send(LoggingEvent.builder("AUTHZ").action("PASSPORT_VALIDATION_BATCH")
+                    .metadata(Map.of("total_validated", totalValidated.get(), "total_invalidated", totalInvalidated.get()))
+                    .build());
+            } catch (Exception e) {
+                logger.warn("Failed to send PASSPORT_VALIDATION_BATCH audit log event", e);
+            }
+        }
 
     }
 

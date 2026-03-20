@@ -1,11 +1,15 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.impl;
 
+import edu.harvard.dbmi.avillach.logging.LoggingClient;
+import edu.harvard.dbmi.avillach.logging.LoggingEvent;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.Map;
 
 @Service
 public class CacheEvictionService {
@@ -14,12 +18,15 @@ public class CacheEvictionService {
     private final SessionService sessionService;
     private final UserService userService;
     private final AccessRuleService accessRuleService;
+    private final LoggingClient loggingClient;
 
     @Autowired
-    public CacheEvictionService(SessionService sessionService, UserService userService, AccessRuleService accessRuleService) {
+    public CacheEvictionService(SessionService sessionService, UserService userService, AccessRuleService accessRuleService,
+                                LoggingClient loggingClient) {
         this.sessionService = sessionService;
         this.userService = userService;
         this.accessRuleService = accessRuleService;
+        this.loggingClient = loggingClient;
     }
 
     public void evictCache(String userSubject) {
@@ -27,6 +34,8 @@ public class CacheEvictionService {
         this.userService.evictFromCache(userSubject);
         this.accessRuleService.evictFromMergedAccessRuleCache(userSubject);
         this.accessRuleService.evictFromPreProcessedAccessRules(userSubject);
+        // No audit logging here — evictCache is called from multiple paths (logout,
+        // passport invalidation, login flows) and each caller logs its own domain-specific event.
     }
 
     public void evictCache(User user) {
