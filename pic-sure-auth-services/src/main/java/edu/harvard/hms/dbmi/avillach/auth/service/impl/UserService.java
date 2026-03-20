@@ -637,7 +637,7 @@ public class UserService {
 
         if (loggingClient != null && loggingClient.isEnabled()) {
             try {
-                loggingClient.send(LoggingEvent.builder("AUTHZ").action("OPEN_ACCESS_USER_CREATED")
+                loggingClient.send(LoggingEvent.builder("AUTHZ").action("user.open_access_created")
                     .metadata(Map.of(
                         "user_uuid", user.getUuid().toString(),
                         "assigned_role", "MANAGED_OPEN_ACCESS"
@@ -736,7 +736,7 @@ public class UserService {
             try {
                 String addedNames = newRoles.stream().map(Role::getName).collect(Collectors.joining(","));
                 String removedNames = rolesToRemove.stream().map(Role::getName).collect(Collectors.joining(","));
-                loggingClient.send(LoggingEvent.builder("AUTHZ").action("ROLE_SYNC")
+                loggingClient.send(LoggingEvent.builder("AUTHZ").action("role.sync")
                     .metadata(Map.of(
                         "user_id", current_user.getUuid().toString(),
                         "user_email", current_user.getEmail() != null ? current_user.getEmail() : "",

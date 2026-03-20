@@ -34,7 +34,7 @@ public class SessionService {
     public long startSession(String userSubject) {
         if (loggingClient != null && loggingClient.isEnabled()) {
             try {
-                loggingClient.send(LoggingEvent.builder("AUTH").action("SESSION_START")
+                loggingClient.send(LoggingEvent.builder("AUTH").action("session.start")
                     .metadata(Map.of("user_subject", userSubject))
                     .build());
             } catch (Exception e) {

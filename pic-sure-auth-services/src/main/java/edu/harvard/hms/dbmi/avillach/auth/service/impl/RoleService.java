@@ -66,7 +66,7 @@ public class RoleService {
 
             if (loggingClient != null && loggingClient.isEnabled()) {
                 try {
-                    loggingClient.send(LoggingEvent.builder("AUTHZ").action("FENCE_ROLE_SYNC")
+                    loggingClient.send(LoggingEvent.builder("AUTHZ").action("role.fence_sync")
                         .metadata(Map.of(
                             "roles_synced_count", String.valueOf(roles.size())
                         )).build());
@@ -122,7 +122,7 @@ public class RoleService {
 
             if (loggingClient != null && loggingClient.isEnabled()) {
                 try {
-                    loggingClient.send(LoggingEvent.builder("AUTHZ").action("ROLE_CLEANUP")
+                    loggingClient.send(LoggingEvent.builder("AUTHZ").action("role.cleanup")
                         .metadata(Map.of(
                             "roles_deleted", managedRoles.stream().map(Role::getName).collect(Collectors.joining(", ")),
                             "trigger", "fence_mapping_sync"

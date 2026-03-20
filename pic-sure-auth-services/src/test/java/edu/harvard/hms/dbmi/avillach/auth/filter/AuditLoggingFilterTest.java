@@ -39,7 +39,7 @@ class AuditLoggingFilterTest {
         verify(loggingClient).send(captor.capture());
         LoggingEvent event = captor.getValue();
         assertEquals("AUTH", event.getEventType());
-        assertEquals("LOGIN", event.getAction());
+        assertEquals("auth.login", event.getAction());
     }
 
     @Test
@@ -52,7 +52,7 @@ class AuditLoggingFilterTest {
         ArgumentCaptor<LoggingEvent> captor = ArgumentCaptor.forClass(LoggingEvent.class);
         verify(loggingClient).send(captor.capture());
         assertEquals("AUTH", captor.getValue().getEventType());
-        assertEquals("LOGOUT", captor.getValue().getAction());
+        assertEquals("auth.logout", captor.getValue().getAction());
     }
 
     @Test
@@ -65,7 +65,7 @@ class AuditLoggingFilterTest {
         ArgumentCaptor<LoggingEvent> captor = ArgumentCaptor.forClass(LoggingEvent.class);
         verify(loggingClient).send(captor.capture());
         assertEquals("ACCESS", captor.getValue().getEventType());
-        assertEquals("TOKEN_INTROSPECT", captor.getValue().getAction());
+        assertEquals("token.introspect", captor.getValue().getAction());
     }
 
     @Test
@@ -78,7 +78,7 @@ class AuditLoggingFilterTest {
         ArgumentCaptor<LoggingEvent> captor = ArgumentCaptor.forClass(LoggingEvent.class);
         verify(loggingClient).send(captor.capture());
         assertEquals("ACCESS", captor.getValue().getEventType());
-        assertEquals("USER_PROFILE", captor.getValue().getAction());
+        assertEquals("user.profile", captor.getValue().getAction());
     }
 
     @Test
@@ -91,7 +91,7 @@ class AuditLoggingFilterTest {
         ArgumentCaptor<LoggingEvent> captor = ArgumentCaptor.forClass(LoggingEvent.class);
         verify(loggingClient).send(captor.capture());
         assertEquals("ADMIN", captor.getValue().getEventType());
-        assertEquals("USER_MODIFY", captor.getValue().getAction());
+        assertEquals("user.modify", captor.getValue().getAction());
     }
 
     @Test
@@ -104,7 +104,7 @@ class AuditLoggingFilterTest {
         ArgumentCaptor<LoggingEvent> captor = ArgumentCaptor.forClass(LoggingEvent.class);
         verify(loggingClient).send(captor.capture());
         assertEquals("ADMIN", captor.getValue().getEventType());
-        assertEquals("ROLE_MODIFY", captor.getValue().getAction());
+        assertEquals("role.modify", captor.getValue().getAction());
     }
 
     @Test
@@ -117,7 +117,7 @@ class AuditLoggingFilterTest {
         ArgumentCaptor<LoggingEvent> captor = ArgumentCaptor.forClass(LoggingEvent.class);
         verify(loggingClient).send(captor.capture());
         assertEquals("ADMIN", captor.getValue().getEventType());
-        assertEquals("ROLE_DELETE", captor.getValue().getAction());
+        assertEquals("role.delete", captor.getValue().getAction());
     }
 
     @Test
@@ -130,7 +130,7 @@ class AuditLoggingFilterTest {
         ArgumentCaptor<LoggingEvent> captor = ArgumentCaptor.forClass(LoggingEvent.class);
         verify(loggingClient).send(captor.capture());
         assertEquals("ADMIN", captor.getValue().getEventType());
-        assertEquals("CONNECTION_MODIFY", captor.getValue().getAction());
+        assertEquals("connection.modify", captor.getValue().getAction());
     }
 
     @Test
@@ -143,7 +143,7 @@ class AuditLoggingFilterTest {
         ArgumentCaptor<LoggingEvent> captor = ArgumentCaptor.forClass(LoggingEvent.class);
         verify(loggingClient).send(captor.capture());
         assertEquals("ADMIN", captor.getValue().getEventType());
-        assertEquals("CONNECTION_DELETE", captor.getValue().getAction());
+        assertEquals("connection.delete", captor.getValue().getAction());
     }
 
     @Test
@@ -156,7 +156,7 @@ class AuditLoggingFilterTest {
         ArgumentCaptor<LoggingEvent> captor = ArgumentCaptor.forClass(LoggingEvent.class);
         verify(loggingClient).send(captor.capture());
         assertEquals("ADMIN", captor.getValue().getEventType());
-        assertEquals("APPLICATION_MODIFY", captor.getValue().getAction());
+        assertEquals("application.modify", captor.getValue().getAction());
     }
 
     @Test
@@ -169,7 +169,7 @@ class AuditLoggingFilterTest {
         ArgumentCaptor<LoggingEvent> captor = ArgumentCaptor.forClass(LoggingEvent.class);
         verify(loggingClient).send(captor.capture());
         assertEquals("ADMIN", captor.getValue().getEventType());
-        assertEquals("APPLICATION_TOKEN_REFRESH", captor.getValue().getAction());
+        assertEquals("application.token_refresh", captor.getValue().getAction());
     }
 
     @Test
@@ -182,7 +182,7 @@ class AuditLoggingFilterTest {
         ArgumentCaptor<LoggingEvent> captor = ArgumentCaptor.forClass(LoggingEvent.class);
         verify(loggingClient).send(captor.capture());
         assertEquals("ACCESS", captor.getValue().getEventType());
-        assertEquals("TOS_ACCEPT", captor.getValue().getAction());
+        assertEquals("tos.accept", captor.getValue().getAction());
     }
 
     @Test
@@ -195,7 +195,7 @@ class AuditLoggingFilterTest {
         ArgumentCaptor<LoggingEvent> captor = ArgumentCaptor.forClass(LoggingEvent.class);
         verify(loggingClient).send(captor.capture());
         assertEquals("ADMIN", captor.getValue().getEventType());
-        assertEquals("TOS_UPDATE", captor.getValue().getAction());
+        assertEquals("tos.update", captor.getValue().getAction());
     }
 
     @Test
@@ -208,7 +208,7 @@ class AuditLoggingFilterTest {
         ArgumentCaptor<LoggingEvent> captor = ArgumentCaptor.forClass(LoggingEvent.class);
         verify(loggingClient).send(captor.capture());
         assertEquals("ACCESS", captor.getValue().getEventType());
-        assertEquals("TOKEN_REFRESH", captor.getValue().getAction());
+        assertEquals("token.refresh", captor.getValue().getAction());
     }
 
     @Test
@@ -221,7 +221,7 @@ class AuditLoggingFilterTest {
         ArgumentCaptor<LoggingEvent> captor = ArgumentCaptor.forClass(LoggingEvent.class);
         verify(loggingClient).send(captor.capture());
         assertEquals("ACCESS", captor.getValue().getEventType());
-        assertEquals("OPEN_ACCESS_VALIDATE", captor.getValue().getAction());
+        assertEquals("open.validate", captor.getValue().getAction());
     }
 
     @Test
@@ -234,7 +234,7 @@ class AuditLoggingFilterTest {
         ArgumentCaptor<LoggingEvent> captor = ArgumentCaptor.forClass(LoggingEvent.class);
         verify(loggingClient).send(captor.capture());
         assertEquals("ADMIN", captor.getValue().getEventType());
-        assertEquals("STUDY_ACCESS_CREATE", captor.getValue().getAction());
+        assertEquals("study_access.create", captor.getValue().getAction());
     }
 
     @Test
@@ -247,7 +247,7 @@ class AuditLoggingFilterTest {
         ArgumentCaptor<LoggingEvent> captor = ArgumentCaptor.forClass(LoggingEvent.class);
         verify(loggingClient).send(captor.capture());
         assertEquals("ADMIN", captor.getValue().getEventType());
-        assertEquals("MAPPING_DELETE", captor.getValue().getAction());
+        assertEquals("mapping.delete", captor.getValue().getAction());
     }
 
     @Test

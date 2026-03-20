@@ -84,7 +84,7 @@ public class RASPassPortService {
                 totalInvalidated.incrementAndGet();
                 if (loggingClient != null && loggingClient.isEnabled()) {
                     try {
-                        loggingClient.send(LoggingEvent.builder("AUTHZ").action("PASSPORT_INVALIDATED")
+                        loggingClient.send(LoggingEvent.builder("AUTHZ").action("passport.invalidated")
                             .metadata(Map.of("user_subject", user.getSubject(), "reason", "FAILED_TO_DECODE_PASSPORT"))
                             .build());
                     } catch (Exception e) {
@@ -107,7 +107,7 @@ public class RASPassPortService {
                     totalInvalidated.incrementAndGet();
                     if (loggingClient != null && loggingClient.isEnabled()) {
                         try {
-                            loggingClient.send(LoggingEvent.builder("AUTHZ").action("PASSPORT_INVALIDATED")
+                            loggingClient.send(LoggingEvent.builder("AUTHZ").action("passport.invalidated")
                                 .metadata(Map.of("user_subject", user.getSubject(), "reason", PassportValidationResponse.VISA_EXPIRED.getValue()))
                                 .build());
                         } catch (Exception e) {
@@ -123,7 +123,7 @@ public class RASPassPortService {
                             totalInvalidated.incrementAndGet();
                             if (loggingClient != null && loggingClient.isEnabled()) {
                                 try {
-                                    loggingClient.send(LoggingEvent.builder("AUTHZ").action("PASSPORT_INVALIDATED")
+                                    loggingClient.send(LoggingEvent.builder("AUTHZ").action("passport.invalidated")
                                         .metadata(Map.of("user_subject", user.getSubject(), "reason", response.get()))
                                         .build());
                                 } catch (Exception e) {
@@ -142,7 +142,7 @@ public class RASPassPortService {
 
         if (loggingClient != null && loggingClient.isEnabled()) {
             try {
-                loggingClient.send(LoggingEvent.builder("AUTHZ").action("PASSPORT_VALIDATION_BATCH")
+                loggingClient.send(LoggingEvent.builder("AUTHZ").action("passport.validation_batch")
                     .metadata(Map.of("total_validated", totalValidated.get(), "total_invalidated", totalInvalidated.get()))
                     .build());
             } catch (Exception e) {
