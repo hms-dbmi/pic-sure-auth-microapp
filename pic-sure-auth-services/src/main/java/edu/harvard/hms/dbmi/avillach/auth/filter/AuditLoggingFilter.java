@@ -136,70 +136,70 @@ public class AuditLoggingFilter extends OncePerRequestFilter {
             // Auth events
             if (AUTH_LOGIN.matcher(path).matches() && "POST".equals(method)) {
                 eventType = "AUTH";
-                action = "LOGIN";
+                action = "auth.login";
             } else if (path.equals("/logout")) {
                 eventType = "AUTH";
-                action = "LOGOUT";
+                action = "auth.logout";
 
             // Token events
             } else if (TOKEN_INSPECT.matcher(path).matches() && "POST".equals(method)) {
                 eventType = "ACCESS";
-                action = "TOKEN_INTROSPECT";
+                action = "token.introspect";
             } else if (TOKEN_REFRESH.matcher(path).matches() && "GET".equals(method)) {
                 eventType = "ACCESS";
-                action = "TOKEN_REFRESH";
+                action = "token.refresh";
 
             // User events
             } else if (USER_ME.matcher(path).matches() && "GET".equals(method)) {
                 eventType = "ACCESS";
-                action = "USER_PROFILE";
+                action = "user.profile";
             } else if (USER_ADMIN.matcher(path).matches() && isMutating(method)) {
                 eventType = "ADMIN";
-                action = "USER_MODIFY";
+                action = "user.modify";
 
             // TOS events (check specific paths before generic)
             } else if (TOS_ACCEPT.matcher(path).matches() && "POST".equals(method)) {
                 eventType = "ACCESS";
-                action = "TOS_ACCEPT";
+                action = "tos.accept";
             } else if (TOS_UPDATE.matcher(path).matches() && "POST".equals(method)) {
                 eventType = "ADMIN";
-                action = "TOS_UPDATE";
+                action = "tos.update";
             } else if (TOS.matcher(path).matches()) {
                 eventType = "ACCESS";
-                action = "TOS";
+                action = "tos.view";
 
             // Open access
             } else if (OPEN_VALIDATE.matcher(path).matches() && "POST".equals(method)) {
                 eventType = "ACCESS";
-                action = "OPEN_ACCESS_VALIDATE";
+                action = "open.validate";
 
             // Application events (check refreshToken before generic)
             } else if (APPLICATION_TOKEN_REFRESH.matcher(path).matches() && "GET".equals(method)) {
                 eventType = "ADMIN";
-                action = "APPLICATION_TOKEN_REFRESH";
+                action = "application.token_refresh";
             } else if (APPLICATION_ADMIN.matcher(path).matches() && isMutating(method)) {
                 eventType = "ADMIN";
-                action = "DELETE".equals(method) ? "APPLICATION_DELETE" : "APPLICATION_MODIFY";
+                action = "DELETE".equals(method) ? "application.delete" : "application.modify";
 
             // Admin entity events
             } else if (ROLE_ADMIN.matcher(path).matches() && isMutating(method)) {
                 eventType = "ADMIN";
-                action = "DELETE".equals(method) ? "ROLE_DELETE" : "ROLE_MODIFY";
+                action = "DELETE".equals(method) ? "role.delete" : "role.modify";
             } else if (PRIVILEGE_ADMIN.matcher(path).matches() && isMutating(method)) {
                 eventType = "ADMIN";
-                action = "DELETE".equals(method) ? "PRIVILEGE_DELETE" : "PRIVILEGE_MODIFY";
+                action = "DELETE".equals(method) ? "privilege.delete" : "privilege.modify";
             } else if (ACCESS_RULE_ADMIN.matcher(path).matches() && isMutating(method)) {
                 eventType = "ADMIN";
-                action = "DELETE".equals(method) ? "ACCESS_RULE_DELETE" : "ACCESS_RULE_MODIFY";
+                action = "DELETE".equals(method) ? "access_rule.delete" : "access_rule.modify";
             } else if (CONNECTION_ADMIN.matcher(path).matches() && isMutating(method)) {
                 eventType = "ADMIN";
-                action = "DELETE".equals(method) ? "CONNECTION_DELETE" : "CONNECTION_MODIFY";
+                action = "DELETE".equals(method) ? "connection.delete" : "connection.modify";
             } else if (MAPPING_ADMIN.matcher(path).matches() && isMutating(method)) {
                 eventType = "ADMIN";
-                action = "DELETE".equals(method) ? "MAPPING_DELETE" : "MAPPING_MODIFY";
+                action = "DELETE".equals(method) ? "mapping.delete" : "mapping.modify";
             } else if (STUDY_ACCESS.matcher(path).matches() && "POST".equals(method)) {
                 eventType = "ADMIN";
-                action = "STUDY_ACCESS_CREATE";
+                action = "study_access.create";
             }
 
             // Determine source IP
