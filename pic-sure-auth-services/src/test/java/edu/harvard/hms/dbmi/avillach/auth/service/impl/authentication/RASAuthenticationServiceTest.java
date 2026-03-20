@@ -3,6 +3,7 @@ package edu.harvard.hms.dbmi.avillach.auth.service.impl.authentication;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import edu.harvard.dbmi.avillach.logging.LoggingClient;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Connection;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
@@ -49,6 +50,8 @@ public class RASAuthenticationServiceTest {
     private UserRepository userRepository;
     @MockBean
     private ApplicationContext applicationContext;
+    @MockBean
+    private LoggingClient loggingClient;
 
     private RASPassPortService rasPassPortService;
     private RASAuthenticationService rasAuthenticationService;
@@ -62,8 +65,8 @@ public class RASAuthenticationServiceTest {
     @BeforeEach
     public void setUp() throws Exception {
         MockitoAnnotations.openMocks(this);
-        RoleService roleService = new RoleService(mock(UserRepository.class), mock(RoleRepository.class), mock(PrivilegeService.class), mock(FenceMappingUtility.class), mock(ApplicationContext.class));
-        this.rasPassPortService = spy(new RASPassPortService(restClientUtil, userService, "", cacheEvictionService));
+        RoleService roleService = new RoleService(mock(UserRepository.class), mock(RoleRepository.class), mock(PrivilegeService.class), mock(FenceMappingUtility.class), mock(ApplicationContext.class), null);
+        this.rasPassPortService = spy(new RASPassPortService(restClientUtil, userService, "", cacheEvictionService, null));
         doReturn(false).when(rasPassPortService).isExpired(any());
 
         rasAuthenticationService = new RASAuthenticationService(

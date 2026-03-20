@@ -16,6 +16,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.core.GrantedAuthorityDefaults;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.logout.LogoutFilter;
 
 import static org.springframework.security.config.http.SessionCreationPolicy.STATELESS;
 
@@ -59,7 +60,10 @@ public class SecurityConfig {
                     "/user/me/queryTemplate", "/user/me/queryTemplate/**", "/tos/latest", "/open/validate", "/logout", "/cache/**"
                 ).permitAll().anyRequest().authenticated()
             ).httpBasic(AbstractHttpConfigurer::disable).formLogin(AbstractHttpConfigurer::disable)
-            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class).addFilterAfter(auditLoggingFilter, JWTFilter.class)
+            // AuditLoggingFilter must wrap the entire chain (including LogoutFilter and JWTFilter)
+            // so its try/finally captures events even when JWTFilter short-circuits or LogoutFilter handles /logout
+            .addFilterBefore(auditLoggingFilter, LogoutFilter.class)
+            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
             .logout(
                 (logout) -> logout.logoutUrl("/logout").addLogoutHandler(customLogoutHandler())
                     .logoutSuccessHandler((request, response, authentication) -> {
