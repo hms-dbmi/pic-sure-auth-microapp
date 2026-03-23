@@ -207,7 +207,7 @@ public class AuthorizationService {
 
         for (AccessRule accessRule : accessRules) {
             try {
-                if (accessRule.getType().equals(AccessRule.TypeNaming.USER_CONSENT_ACCESS)) {
+                if (AccessRule.TypeNaming.USER_CONSENT_ACCESS == accessRule.getType()) {
                     UserConsents userConsents = userConsentsRepository.findByUserId(user.getUuid());
 
                     // This is an HPDS query inside a PIC-SURE query
