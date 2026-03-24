@@ -779,6 +779,15 @@ public class UserService {
     }
 
     public UserConsents getUserConsents(UUID userId) {
+        SecurityContext securityContext = SecurityContextHolder.getContext();
+        CustomUserDetails customUserDetails = (CustomUserDetails) securityContext.getAuthentication().getPrincipal();
+        if (customUserDetails == null || customUserDetails.getUser() == null || customUserDetails.getUser().getUuid() == null) {
+            logger.error("Security context didn't have a user stored.");
+            return null;
+        } else if (customUserDetails.getUser().getUuid() != userId) {
+            logger.error("User " + customUserDetails.getUser().getUuid() + " tried to access consents for user " + userId);
+            return null;
+        }
         return userConsentsRepository.findByUserId(userId);
     }
 }
