@@ -1,6 +1,7 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.harvard.hms.dbmi.avillach.auth.entity.*;
 import edu.harvard.hms.dbmi.avillach.auth.model.EvaluateAccessRuleResult;
@@ -212,7 +213,14 @@ public class AuthorizationService {
 
                     // This is an HPDS query inside a PIC-SURE query
                     Map queryMap  = (Map) ((Map) requestBody).get("query");
-                    Query query = new ObjectMapper().convertValue(queryMap.get("query"), Query.class);
+                    Object queryObject = queryMap.get("query");
+                    Query query;
+
+                    if (queryObject instanceof String) {
+                        query = new ObjectMapper().readValue((String) queryObject, Query.class);
+                    } else {
+                        query = new ObjectMapper().convertValue(queryObject, Query.class);
+                    }
 
                     if (consentBasedAccessRuleEvaluator.evaluateAccessRule(query, accessRule, userConsents)) {
                         result = true;
@@ -247,6 +255,8 @@ public class AuthorizationService {
                         }
                     }
                 }
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
             } finally {
                 // Clear the evaluation tree to prevent memory leaks
                 this.accessRuleService.clearEvaluationTree();
