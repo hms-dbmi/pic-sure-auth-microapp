@@ -6,7 +6,8 @@ import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
 import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.TOSService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.UserService;
-import edu.harvard.hms.dbmi.avillach.auth.utils.AuditContext;
+import edu.harvard.hms.dbmi.avillach.auth.utils.AuditAttributes;
+import edu.harvard.dbmi.avillach.logging.AuditEvent;
 import edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -49,6 +50,7 @@ public class TermsOfServiceController {
     }
 
     @Operation(description = "GET the latest Terms of Service")
+    @AuditEvent(type = "ACCESS", action = "tos.view")
     @GetMapping(path = "/latest", produces = "text/html")
     public ResponseEntity<String> getLatestTermsOfService() {
         logger.info("Getting latest Terms of Service");
@@ -56,6 +58,7 @@ public class TermsOfServiceController {
     }
 
     @Operation(description = "Update the Terms of Service html body")
+    @AuditEvent(type = "ADMIN", action = "tos.update")
     @RolesAllowed({AuthNaming.AuthRoleNaming.ADMIN, SUPER_ADMIN})
     @PostMapping(path = "/update", consumes = "text/html", produces = "application/json")
     public ResponseEntity<?> updateTermsOfService(@RequestBody String html, HttpServletRequest request) {
@@ -69,11 +72,12 @@ public class TermsOfServiceController {
         }
         User user = tosService.acceptTermsOfService(userSubject);
         userService.updateUser(List.of(user));
-        AuditContext.put(request, "tos_updated", "true");
+        AuditAttributes.putMetadata(request, "tos_updated", "true");
         return PICSUREResponse.success(termsOfService.get());
     }
 
     @Operation(description = "GET if current user has acceptted his TOS or not")
+    @AuditEvent(type = "ACCESS", action = "tos.view")
     @GetMapping(produces = "text/plain")
     public ResponseEntity<Boolean> hasUserAcceptedTOS() {
         SecurityContext context = SecurityContextHolder.getContext();
@@ -84,6 +88,7 @@ public class TermsOfServiceController {
     }
 
     @Operation(description = "Endpoint for current user to accept his terms of service")
+    @AuditEvent(type = "ACCESS", action = "tos.accept")
     @PostMapping(path = "/accept", produces = "application/json")
     public ResponseEntity<?> acceptTermsOfService(HttpServletRequest request) {
         SecurityContext context = SecurityContextHolder.getContext();
@@ -91,7 +96,7 @@ public class TermsOfServiceController {
         String userSubject = customUserDetails.getUser().getSubject();
         User user = tosService.acceptTermsOfService(userSubject);
         userService.updateUser(List.of(user));
-        AuditContext.put(request, "tos_accepted", "true");
+        AuditAttributes.putMetadata(request, "tos_accepted", "true");
         return PICSUREResponse.success();
     }
 

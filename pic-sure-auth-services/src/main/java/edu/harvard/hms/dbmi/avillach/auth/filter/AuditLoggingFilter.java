@@ -3,14 +3,13 @@ package edu.harvard.hms.dbmi.avillach.auth.filter;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.regex.Pattern;
 
 import edu.harvard.dbmi.avillach.logging.LoggingClient;
 import edu.harvard.dbmi.avillach.logging.LoggingEvent;
 import edu.harvard.dbmi.avillach.logging.RequestInfo;
 import edu.harvard.hms.dbmi.avillach.auth.model.CustomApplicationDetails;
 import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
-import edu.harvard.hms.dbmi.avillach.auth.utils.AuditContext;
+import edu.harvard.hms.dbmi.avillach.auth.utils.AuditAttributes;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -49,35 +48,6 @@ public class AuditLoggingFilter extends OncePerRequestFilter {
         }
         DEST_PORT = port;
     }
-
-    // Auth patterns
-    private static final Pattern AUTH_LOGIN = Pattern.compile("^/authentication/.+$");
-
-    // Token patterns
-    private static final Pattern TOKEN_INSPECT = Pattern.compile("^/token/inspect/?$");
-    private static final Pattern TOKEN_REFRESH = Pattern.compile("^/token/refresh/?$");
-
-    // User patterns
-    private static final Pattern USER_ME = Pattern.compile("^/user/me(/.*)?$");
-    private static final Pattern USER_ADMIN = Pattern.compile("^/user/?$");
-
-    // Admin entity patterns (match both base path and path with ID)
-    private static final Pattern ROLE_ADMIN = Pattern.compile("^/role(/[^/]+)?/?$");
-    private static final Pattern PRIVILEGE_ADMIN = Pattern.compile("^/privilege(/[^/]+)?/?$");
-    private static final Pattern ACCESS_RULE_ADMIN = Pattern.compile("^/accessRule(/[^/]+)?/?$");
-    private static final Pattern APPLICATION_ADMIN = Pattern.compile("^/application(/[^/]+)?/?$");
-    private static final Pattern APPLICATION_TOKEN_REFRESH = Pattern.compile("^/application/refreshToken/.+$");
-    private static final Pattern CONNECTION_ADMIN = Pattern.compile("^/connection(/[^/]+)?/?$");
-    private static final Pattern MAPPING_ADMIN = Pattern.compile("^/mapping(/[^/]+)?/?$");
-    private static final Pattern STUDY_ACCESS = Pattern.compile("^/studyAccess/?.*$");
-
-    // TOS patterns
-    private static final Pattern TOS_ACCEPT = Pattern.compile("^/tos/accept/?$");
-    private static final Pattern TOS_UPDATE = Pattern.compile("^/tos/update/?$");
-    private static final Pattern TOS = Pattern.compile("^/tos(/.*)?$");
-
-    // Open access
-    private static final Pattern OPEN_VALIDATE = Pattern.compile("^/open/validate/?$");
 
     private final LoggingClient loggingClient;
 
@@ -128,82 +98,15 @@ public class AuditLoggingFilter extends OncePerRequestFilter {
                 duration = System.currentTimeMillis() - startTime;
             }
 
-            // Categorize event
+            // Read event type and action from request attributes (set by AuditInterceptor from @AuditEvent annotations)
             String method = request.getMethod();
-            String eventType = "OTHER";
-            String action = method;
-
-            // Auth events
-            if (AUTH_LOGIN.matcher(path).matches() && "POST".equals(method)) {
-                eventType = "AUTH";
-                action = "auth.login";
-            } else if (path.equals("/logout")) {
-                eventType = "AUTH";
-                action = "auth.logout";
-
-            // Token events
-            } else if (TOKEN_INSPECT.matcher(path).matches() && "POST".equals(method)) {
-                eventType = "ACCESS";
-                action = "token.introspect";
-            } else if (TOKEN_REFRESH.matcher(path).matches() && "GET".equals(method)) {
-                eventType = "ACCESS";
-                action = "token.refresh";
-
-            // User events
-            } else if (USER_ME.matcher(path).matches() && "GET".equals(method)) {
-                eventType = "ACCESS";
-                action = "user.profile";
-            } else if (USER_ADMIN.matcher(path).matches() && isMutating(method)) {
-                eventType = "ADMIN";
-                action = "user.modify";
-
-            // TOS events (check specific paths before generic)
-            } else if (TOS_ACCEPT.matcher(path).matches() && "POST".equals(method)) {
-                eventType = "ACCESS";
-                action = "tos.accept";
-            } else if (TOS_UPDATE.matcher(path).matches() && "POST".equals(method)) {
-                eventType = "ADMIN";
-                action = "tos.update";
-            } else if (TOS.matcher(path).matches()) {
-                eventType = "ACCESS";
-                action = "tos.view";
-
-            // Open access
-            } else if (OPEN_VALIDATE.matcher(path).matches() && "POST".equals(method)) {
-                eventType = "ACCESS";
-                action = "open.validate";
-
-            // Application events (check refreshToken before generic)
-            } else if (APPLICATION_TOKEN_REFRESH.matcher(path).matches() && "GET".equals(method)) {
-                eventType = "ADMIN";
-                action = "application.token_refresh";
-            } else if (APPLICATION_ADMIN.matcher(path).matches() && isMutating(method)) {
-                eventType = "ADMIN";
-                action = "DELETE".equals(method) ? "application.delete" : "application.modify";
-
-            // Admin entity events
-            } else if (ROLE_ADMIN.matcher(path).matches() && isMutating(method)) {
-                eventType = "ADMIN";
-                action = "DELETE".equals(method) ? "role.delete" : "role.modify";
-            } else if (PRIVILEGE_ADMIN.matcher(path).matches() && isMutating(method)) {
-                eventType = "ADMIN";
-                action = "DELETE".equals(method) ? "privilege.delete" : "privilege.modify";
-            } else if (ACCESS_RULE_ADMIN.matcher(path).matches() && isMutating(method)) {
-                eventType = "ADMIN";
-                action = "DELETE".equals(method) ? "access_rule.delete" : "access_rule.modify";
-            } else if (CONNECTION_ADMIN.matcher(path).matches() && isMutating(method)) {
-                eventType = "ADMIN";
-                action = "DELETE".equals(method) ? "connection.delete" : "connection.modify";
-            } else if (MAPPING_ADMIN.matcher(path).matches() && isMutating(method)) {
-                eventType = "ADMIN";
-                action = "DELETE".equals(method) ? "mapping.delete" : "mapping.modify";
-            } else if (STUDY_ACCESS.matcher(path).matches() && "POST".equals(method)) {
-                eventType = "ADMIN";
-                action = "study_access.create";
-            }
+            String eventType = (String) request.getAttribute(AuditAttributes.EVENT_TYPE);
+            String action = (String) request.getAttribute(AuditAttributes.ACTION);
+            if (eventType == null) eventType = "OTHER";
+            if (action == null) action = method.toLowerCase();
 
             // Determine source IP
-            String srcIp = AuditContext.extractClientIp(request);
+            String srcIp = AuditAttributes.extractClientIp(request);
 
             // Determine dest IP and port
             String destIp = DEST_IP != null ? DEST_IP : request.getLocalAddr();
@@ -239,11 +142,11 @@ public class AuditLoggingFilter extends OncePerRequestFilter {
             }
 
             // Session ID
-            metadata.put("session_id", AuditContext.extractSessionId(request));
+            metadata.put("session_id", AuditAttributes.extractSessionId(request));
 
-            // Merge domain-specific metadata from AuditContext (set by services).
-            // Filter-managed keys take precedence over AuditContext values.
-            AuditContext.getAll(request).forEach(metadata::putIfAbsent);
+            // Merge domain-specific metadata from AuditAttributes (set by services).
+            // Filter-managed keys take precedence over AuditAttributes values.
+            AuditAttributes.getMetadata(request).forEach(metadata::putIfAbsent);
 
             // Build error map for 4xx/5xx
             Map<String, Object> errorMap = null;
@@ -275,10 +178,6 @@ public class AuditLoggingFilter extends OncePerRequestFilter {
         } catch (Exception e) {
             logger.warn("AuditLoggingFilter failed to log request", e);
         }
-    }
-
-    private static boolean isMutating(String method) {
-        return "POST".equals(method) || "PUT".equals(method) || "DELETE".equals(method);
     }
 
 }

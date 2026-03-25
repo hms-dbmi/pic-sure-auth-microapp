@@ -1,7 +1,8 @@
 package edu.harvard.hms.dbmi.avillach.auth.rest;
 
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization.AuthorizationService;
-import edu.harvard.hms.dbmi.avillach.auth.utils.AuditContext;
+import edu.harvard.hms.dbmi.avillach.auth.utils.AuditAttributes;
+import edu.harvard.dbmi.avillach.logging.AuditEvent;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +27,7 @@ public class OpenAccessController {
         this.openIdpProviderIsEnabled = openIdpProviderIsEnabled;
     }
 
+    @AuditEvent(type = "ACCESS", action = "open.validate")
     @RequestMapping(value = "/validate", produces = "application/json")
     public ResponseEntity<?> validate(@Parameter(required = true, description = "A JSON object that at least" +
             " include a user the token for validation")
@@ -35,7 +37,7 @@ public class OpenAccessController {
         }
 
         boolean isValid = authorizationService.openAccessRequestIsValid(inputMap);
-        AuditContext.put(request, "validation_result", String.valueOf(isValid));
+        AuditAttributes.putMetadata(request, "validation_result", String.valueOf(isValid));
         return ResponseEntity.ok(isValid);
     }
 

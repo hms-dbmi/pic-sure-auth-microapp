@@ -1,46 +1,38 @@
 package edu.harvard.hms.dbmi.avillach.auth.utils;
 
-import java.util.Enumeration;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.Map;
 
-import jakarta.servlet.http.HttpServletRequest;
+public final class AuditAttributes {
+    public static final String EVENT_TYPE = "audit.event_type";
+    public static final String ACTION = "audit.action";
+    private static final String METADATA_PREFIX = "audit.ctx.";
 
-/**
- * Utility for passing domain-specific audit metadata from services to the AuditLoggingFilter via request attributes. Uses request
- * attributes instead of a request-scoped bean to avoid proxy issues in the filter chain.
- */
-public class AuditContext {
+    private AuditAttributes() {}
 
-    private static final String ATTR_PREFIX = "audit.ctx.";
-
-    private AuditContext() {}
-
-    public static void put(HttpServletRequest request, String key, Object value) {
+    public static void putMetadata(HttpServletRequest request, String key, Object value) {
         if (request != null && key != null && value != null) {
-            request.setAttribute(ATTR_PREFIX + key, value);
+            request.setAttribute(METADATA_PREFIX + key, value);
         }
     }
 
-    public static Map<String, Object> getAll(HttpServletRequest request) {
-        Map<String, Object> metadata = new HashMap<>();
+    public static Map<String, Object> getMetadata(HttpServletRequest request) {
+        Map<String, Object> result = new HashMap<>();
         if (request == null) {
-            return metadata;
+            return result;
         }
-        Enumeration<String> names = request.getAttributeNames();
+        var names = request.getAttributeNames();
         while (names.hasMoreElements()) {
             String name = names.nextElement();
-            if (name.startsWith(ATTR_PREFIX)) {
-                metadata.put(name.substring(ATTR_PREFIX.length()), request.getAttribute(name));
+            if (name.startsWith(METADATA_PREFIX)) {
+                result.put(name.substring(METADATA_PREFIX.length()), request.getAttribute(name));
             }
         }
-        return metadata;
+        return result;
     }
 
     public static String extractClientIp(HttpServletRequest request) {
-        if (request == null) {
-            return null;
-        }
         String xff = request.getHeader("X-Forwarded-For");
         if (xff != null && !xff.isEmpty()) {
             return xff.split(",")[0].trim();
@@ -49,9 +41,6 @@ public class AuditContext {
     }
 
     public static String extractSessionId(HttpServletRequest request) {
-        if (request == null) {
-            return null;
-        }
         String sessionHeader = request.getHeader("X-Session-Id");
         if (sessionHeader != null && !sessionHeader.isEmpty()) {
             return sessionHeader;

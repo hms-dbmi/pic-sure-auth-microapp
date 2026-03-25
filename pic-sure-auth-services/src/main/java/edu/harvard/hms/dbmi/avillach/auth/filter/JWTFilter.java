@@ -8,7 +8,7 @@ import edu.harvard.hms.dbmi.avillach.auth.model.CustomApplicationDetails;
 import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.CustomUserDetailService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.TOSService;
-import edu.harvard.hms.dbmi.avillach.auth.utils.AuditContext;
+import edu.harvard.hms.dbmi.avillach.auth.utils.AuditAttributes;
 import edu.harvard.hms.dbmi.avillach.auth.utils.AuthNaming;
 import edu.harvard.hms.dbmi.avillach.auth.utils.JWTUtil;
 import io.jsonwebtoken.Claims;
@@ -247,16 +247,16 @@ public class JWTFilter extends OncePerRequestFilter {
         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        // Populate AuditContext for the AuditLoggingFilter to include in its event.
+        // Populate AuditAttributes for the AuditLoggingFilter to include in its event.
         // user_id and user_email are read from SecurityContext by the filter directly.
-        AuditContext.put(request, "auth_result", "success");
+        AuditAttributes.putMetadata(request, "auth_result", "success");
     }
 
     private void sendAuthFailure(HttpServletRequest request, String reason, String message) {
-        AuditContext.put(request, "auth_result", "failure");
-        AuditContext.put(request, "auth_failure_reason", reason);
+        AuditAttributes.putMetadata(request, "auth_result", "failure");
+        AuditAttributes.putMetadata(request, "auth_failure_reason", reason);
         if (message != null) {
-            AuditContext.put(request, "auth_failure_message", message);
+            AuditAttributes.putMetadata(request, "auth_failure_message", message);
         }
     }
 

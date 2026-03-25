@@ -6,7 +6,8 @@ import edu.harvard.hms.dbmi.avillach.auth.model.ValidRefreshToken;
 import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.authorization.AuthorizationService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.TokenService;
-import edu.harvard.hms.dbmi.avillach.auth.utils.AuditContext;
+import edu.harvard.hms.dbmi.avillach.auth.utils.AuditAttributes;
+import edu.harvard.dbmi.avillach.logging.AuditEvent;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -40,6 +41,7 @@ public class TokenController {
     }
 
     @Operation(description = "Token introspection endpoint for user to retrieve a valid token")
+    @AuditEvent(type = "ACCESS", action = "token.introspect")
     @PostMapping(path = "/inspect", produces = "application/json")
     public ResponseEntity<Map<String, Object>> inspectToken(
             @Parameter(required = true, description = "A JSON object that at least" +
@@ -48,31 +50,32 @@ public class TokenController {
         Map<String, Object> resultMap = this.tokenService.inspectToken(inputMap);
 
         boolean active = Boolean.TRUE.equals(resultMap.getOrDefault("active", false));
-        AuditContext.put(request, "authz_result", active ? "granted" : "denied");
-        AuditContext.put(request, "authz_user_sub", String.valueOf(resultMap.getOrDefault("sub", "")));
+        AuditAttributes.putMetadata(request, "authz_result", active ? "granted" : "denied");
+        AuditAttributes.putMetadata(request, "authz_user_sub", String.valueOf(resultMap.getOrDefault("sub", "")));
         if (resultMap.containsKey("message")) {
-            AuditContext.put(request, "authz_message", String.valueOf(resultMap.get("message")));
+            AuditAttributes.putMetadata(request, "authz_message", String.valueOf(resultMap.get("message")));
         }
         if (resultMap.containsKey("tokenRefreshed")) {
-            AuditContext.put(request, "authz_token_refreshed", String.valueOf(resultMap.get("tokenRefreshed")));
+            AuditAttributes.putMetadata(request, "authz_token_refreshed", String.valueOf(resultMap.get("tokenRefreshed")));
         }
 
         return PICSUREResponse.success(resultMap);
     }
 
     @Operation(description = "To refresh current user's token if the user is an active user")
+    @AuditEvent(type = "ACCESS", action = "token.refresh")
     @GetMapping(path = "/refresh", produces = "application/json")
     public ResponseEntity<?> refreshToken(@RequestHeader("Authorization") String authorizationHeader, HttpServletRequest request) {
         RefreshToken refreshTokenResp = this.tokenService.refreshToken(authorizationHeader);
 
         if (refreshTokenResp instanceof InvalidRefreshToken invalidRefreshToken) {
-            AuditContext.put(request, "token_refresh_result", "failure");
-            AuditContext.put(request, "token_refresh_error", invalidRefreshToken.error());
+            AuditAttributes.putMetadata(request, "token_refresh_result", "failure");
+            AuditAttributes.putMetadata(request, "token_refresh_error", invalidRefreshToken.error());
             return PICSUREResponse.protocolError(invalidRefreshToken.error());
         }
 
         if (refreshTokenResp instanceof ValidRefreshToken validRefreshToken) {
-            AuditContext.put(request, "token_refresh_result", "success");
+            AuditAttributes.putMetadata(request, "token_refresh_result", "success");
             return PICSUREResponse.success(Map.of("token", validRefreshToken.token(), "expirationDate", validRefreshToken.expirationDate()));
         }
 

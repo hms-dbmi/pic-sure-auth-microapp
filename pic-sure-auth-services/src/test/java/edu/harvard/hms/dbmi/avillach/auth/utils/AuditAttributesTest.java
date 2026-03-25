@@ -7,15 +7,15 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class AuditContextTest {
+class AuditAttributesTest {
 
     @Test
     void shouldPutAndRetrieveMetadata() {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        AuditContext.put(request, "key1", "value1");
-        AuditContext.put(request, "key2", 42);
+        AuditAttributes.putMetadata(request, "key1", "value1");
+        AuditAttributes.putMetadata(request, "key2", 42);
 
-        Map<String, Object> all = AuditContext.getAll(request);
+        Map<String, Object> all = AuditAttributes.getMetadata(request);
         assertEquals("value1", all.get("key1"));
         assertEquals(42, all.get("key2"));
         assertEquals(2, all.size());
@@ -24,17 +24,17 @@ class AuditContextTest {
     @Test
     void shouldIgnoreNullKeyOrValue() {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        AuditContext.put(request, null, "value");
-        AuditContext.put(request, "key", null);
+        AuditAttributes.putMetadata(request, null, "value");
+        AuditAttributes.putMetadata(request, "key", null);
 
-        Map<String, Object> all = AuditContext.getAll(request);
+        Map<String, Object> all = AuditAttributes.getMetadata(request);
         assertTrue(all.isEmpty());
     }
 
     @Test
     void shouldIgnoreNullRequest() {
-        AuditContext.put(null, "key", "value");
-        Map<String, Object> all = AuditContext.getAll(null);
+        AuditAttributes.putMetadata(null, "key", "value");
+        Map<String, Object> all = AuditAttributes.getMetadata(null);
         assertTrue(all.isEmpty());
     }
 
@@ -42,9 +42,9 @@ class AuditContextTest {
     void shouldNotIncludeNonAuditAttributes() {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.setAttribute("some.other.attr", "not-audit");
-        AuditContext.put(request, "audit_key", "audit_value");
+        AuditAttributes.putMetadata(request, "audit_key", "audit_value");
 
-        Map<String, Object> all = AuditContext.getAll(request);
+        Map<String, Object> all = AuditAttributes.getMetadata(request);
         assertEquals(1, all.size());
         assertEquals("audit_value", all.get("audit_key"));
     }

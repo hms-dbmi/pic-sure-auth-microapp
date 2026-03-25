@@ -4,7 +4,8 @@ import edu.harvard.hms.dbmi.avillach.auth.model.response.PICSUREResponse;
 import edu.harvard.hms.dbmi.avillach.auth.service.AuthenticationService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.SessionService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.authentication.AuthenticationServiceRegistry;
-import edu.harvard.hms.dbmi.avillach.auth.utils.AuditContext;
+import edu.harvard.hms.dbmi.avillach.auth.utils.AuditAttributes;
+import edu.harvard.dbmi.avillach.logging.AuditEvent;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -45,6 +46,7 @@ public class AuthenticationController {
     }
 
     @Operation(description = "The authentication endpoint for retrieving a valid user token")
+    @AuditEvent(type = "AUTH", action = "auth.login")
     @PostMapping(path = "/authentication/{idpProvider}", consumes = "application/json", produces = "application/json")
     public ResponseEntity<?> authentication(
             @PathVariable("idpProvider") String idpProvider,
@@ -53,20 +55,20 @@ public class AuthenticationController {
         logger.debug("authentication() starting...");
         logger.debug("authentication() requestHost: {}", request.getServerName());
 
-        AuditContext.put(request, "idp", idpProvider);
+        AuditAttributes.putMetadata(request, "idp", idpProvider);
 
         if (authRequest == null) {
             logger.error("authentication() authRequest is null");
-            AuditContext.put(request, "login_result", "failure");
-            AuditContext.put(request, "reason", "null_request");
+            AuditAttributes.putMetadata(request, "login_result", "failure");
+            AuditAttributes.putMetadata(request, "reason", "null_request");
             return ResponseEntity.badRequest().body("authRequest is null");
         }
 
         AuthenticationService authenticationService = authenticationServiceRegistry.getAuthenticationService(idpProvider);
         if (authenticationService == null) {
             logger.error("authentication() authenticationService is null");
-            AuditContext.put(request, "login_result", "failure");
-            AuditContext.put(request, "reason", "unknown_idp");
+            AuditAttributes.putMetadata(request, "login_result", "failure");
+            AuditAttributes.putMetadata(request, "reason", "unknown_idp");
             return ResponseEntity.badRequest().body("authenticationService is null");
         }
 
@@ -77,19 +79,19 @@ public class AuthenticationController {
             } else {
                 logger.error("authentication() userId authentication is null");
                 logger.error("User claims must contain a userId to start their session.");
-                AuditContext.put(request, "login_result", "failure");
-                AuditContext.put(request, "reason", "missing_user_id");
+                AuditAttributes.putMetadata(request, "login_result", "failure");
+                AuditAttributes.putMetadata(request, "reason", "missing_user_id");
                 return PICSUREResponse.unauthorizedError("User not authenticated.");
             }
             logger.info("authentication() User authenticated successfully.");
-            AuditContext.put(request, "login_result", "success");
-            AuditContext.put(request, "user_id", authenticate.get("userId"));
+            AuditAttributes.putMetadata(request, "login_result", "success");
+            AuditAttributes.putMetadata(request, "user_id", authenticate.get("userId"));
             return PICSUREResponse.success(authenticate);
         }
 
         logger.error("authentication() User not authenticated.");
-        AuditContext.put(request, "login_result", "failure");
-        AuditContext.put(request, "reason", "authentication_failed");
+        AuditAttributes.putMetadata(request, "login_result", "failure");
+        AuditAttributes.putMetadata(request, "reason", "authentication_failed");
         return PICSUREResponse.unauthorizedError("User not authenticated.");
     }
 }

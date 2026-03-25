@@ -2,7 +2,7 @@ package edu.harvard.hms.dbmi.avillach.auth.filter;
 
 import edu.harvard.dbmi.avillach.logging.LoggingClient;
 import edu.harvard.dbmi.avillach.logging.LoggingEvent;
-import edu.harvard.hms.dbmi.avillach.auth.utils.AuditContext;
+import edu.harvard.hms.dbmi.avillach.auth.utils.AuditAttributes;
 import jakarta.servlet.FilterChain;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,6 +30,8 @@ class AuditLoggingFilterTest {
     @Test
     void shouldCategorizeLoginEvent() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/authentication/ras");
+        request.setAttribute(AuditAttributes.EVENT_TYPE, "AUTH");
+        request.setAttribute(AuditAttributes.ACTION, "auth.login");
         MockHttpServletResponse response = new MockHttpServletResponse();
         response.setStatus(200);
 
@@ -45,6 +47,8 @@ class AuditLoggingFilterTest {
     @Test
     void shouldCategorizeLogoutEvent() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/logout");
+        request.setAttribute(AuditAttributes.EVENT_TYPE, "AUTH");
+        request.setAttribute(AuditAttributes.ACTION, "auth.logout");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         filter.doFilter(request, response, filterChain);
@@ -58,6 +62,8 @@ class AuditLoggingFilterTest {
     @Test
     void shouldCategorizeTokenIntrospect() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/token/inspect");
+        request.setAttribute(AuditAttributes.EVENT_TYPE, "ACCESS");
+        request.setAttribute(AuditAttributes.ACTION, "token.introspect");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         filter.doFilter(request, response, filterChain);
@@ -71,6 +77,8 @@ class AuditLoggingFilterTest {
     @Test
     void shouldCategorizeUserProfile() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/user/me");
+        request.setAttribute(AuditAttributes.EVENT_TYPE, "ACCESS");
+        request.setAttribute(AuditAttributes.ACTION, "user.profile");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         filter.doFilter(request, response, filterChain);
@@ -84,6 +92,8 @@ class AuditLoggingFilterTest {
     @Test
     void shouldCategorizeAdminUserModify() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/user");
+        request.setAttribute(AuditAttributes.EVENT_TYPE, "ADMIN");
+        request.setAttribute(AuditAttributes.ACTION, "user.modify");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         filter.doFilter(request, response, filterChain);
@@ -97,6 +107,8 @@ class AuditLoggingFilterTest {
     @Test
     void shouldCategorizeRoleModify() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("PUT", "/role");
+        request.setAttribute(AuditAttributes.EVENT_TYPE, "ADMIN");
+        request.setAttribute(AuditAttributes.ACTION, "role.modify");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         filter.doFilter(request, response, filterChain);
@@ -110,6 +122,8 @@ class AuditLoggingFilterTest {
     @Test
     void shouldCategorizeRoleDelete() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("DELETE", "/role/some-uuid");
+        request.setAttribute(AuditAttributes.EVENT_TYPE, "ADMIN");
+        request.setAttribute(AuditAttributes.ACTION, "role.delete");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         filter.doFilter(request, response, filterChain);
@@ -123,6 +137,8 @@ class AuditLoggingFilterTest {
     @Test
     void shouldCategorizeConnectionModify() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/connection");
+        request.setAttribute(AuditAttributes.EVENT_TYPE, "ADMIN");
+        request.setAttribute(AuditAttributes.ACTION, "connection.modify");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         filter.doFilter(request, response, filterChain);
@@ -136,6 +152,8 @@ class AuditLoggingFilterTest {
     @Test
     void shouldCategorizeConnectionDelete() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("DELETE", "/connection/some-uuid");
+        request.setAttribute(AuditAttributes.EVENT_TYPE, "ADMIN");
+        request.setAttribute(AuditAttributes.ACTION, "connection.delete");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         filter.doFilter(request, response, filterChain);
@@ -149,6 +167,8 @@ class AuditLoggingFilterTest {
     @Test
     void shouldCategorizeApplicationModify() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("PUT", "/application");
+        request.setAttribute(AuditAttributes.EVENT_TYPE, "ADMIN");
+        request.setAttribute(AuditAttributes.ACTION, "application.modify");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         filter.doFilter(request, response, filterChain);
@@ -162,6 +182,8 @@ class AuditLoggingFilterTest {
     @Test
     void shouldCategorizeApplicationTokenRefresh() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/application/refreshToken/some-uuid");
+        request.setAttribute(AuditAttributes.EVENT_TYPE, "ADMIN");
+        request.setAttribute(AuditAttributes.ACTION, "application.token_refresh");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         filter.doFilter(request, response, filterChain);
@@ -175,6 +197,8 @@ class AuditLoggingFilterTest {
     @Test
     void shouldCategorizeTosAccept() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/tos/accept");
+        request.setAttribute(AuditAttributes.EVENT_TYPE, "ACCESS");
+        request.setAttribute(AuditAttributes.ACTION, "tos.accept");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         filter.doFilter(request, response, filterChain);
@@ -188,6 +212,8 @@ class AuditLoggingFilterTest {
     @Test
     void shouldCategorizeTosUpdate() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/tos/update");
+        request.setAttribute(AuditAttributes.EVENT_TYPE, "ADMIN");
+        request.setAttribute(AuditAttributes.ACTION, "tos.update");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         filter.doFilter(request, response, filterChain);
@@ -201,6 +227,8 @@ class AuditLoggingFilterTest {
     @Test
     void shouldCategorizeTokenRefresh() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/token/refresh");
+        request.setAttribute(AuditAttributes.EVENT_TYPE, "ACCESS");
+        request.setAttribute(AuditAttributes.ACTION, "token.refresh");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         filter.doFilter(request, response, filterChain);
@@ -214,6 +242,8 @@ class AuditLoggingFilterTest {
     @Test
     void shouldCategorizeOpenAccessValidate() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/open/validate");
+        request.setAttribute(AuditAttributes.EVENT_TYPE, "ACCESS");
+        request.setAttribute(AuditAttributes.ACTION, "open.validate");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         filter.doFilter(request, response, filterChain);
@@ -227,6 +257,8 @@ class AuditLoggingFilterTest {
     @Test
     void shouldCategorizeStudyAccessCreate() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/studyAccess");
+        request.setAttribute(AuditAttributes.EVENT_TYPE, "ADMIN");
+        request.setAttribute(AuditAttributes.ACTION, "study_access.create");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         filter.doFilter(request, response, filterChain);
@@ -240,6 +272,8 @@ class AuditLoggingFilterTest {
     @Test
     void shouldCategorizeMappingDelete() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("DELETE", "/mapping/some-uuid");
+        request.setAttribute(AuditAttributes.EVENT_TYPE, "ADMIN");
+        request.setAttribute(AuditAttributes.ACTION, "mapping.delete");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         filter.doFilter(request, response, filterChain);
@@ -286,7 +320,7 @@ class AuditLoggingFilterTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("X-Forwarded-For", "1.2.3.4, 5.6.7.8");
 
-        assertEquals("1.2.3.4", AuditContext.extractClientIp(request));
+        assertEquals("1.2.3.4", AuditAttributes.extractClientIp(request));
     }
 
     @Test
@@ -294,7 +328,7 @@ class AuditLoggingFilterTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.setRemoteAddr("10.0.0.1");
 
-        assertEquals("10.0.0.1", AuditContext.extractClientIp(request));
+        assertEquals("10.0.0.1", AuditAttributes.extractClientIp(request));
     }
 
     @Test
@@ -302,7 +336,7 @@ class AuditLoggingFilterTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("X-Session-Id", "my-session-123");
 
-        assertEquals("my-session-123", AuditContext.extractSessionId(request));
+        assertEquals("my-session-123", AuditAttributes.extractSessionId(request));
     }
 
     @Test
@@ -311,7 +345,7 @@ class AuditLoggingFilterTest {
         request.setRemoteAddr("10.0.0.1");
         request.addHeader("User-Agent", "Mozilla/5.0");
 
-        String sessionId = AuditContext.extractSessionId(request);
+        String sessionId = AuditAttributes.extractSessionId(request);
         assertNotNull(sessionId);
         assertFalse(sessionId.isEmpty());
     }
@@ -330,9 +364,9 @@ class AuditLoggingFilterTest {
     }
 
     @Test
-    void shouldMergeAuditContextMetadata() throws Exception {
+    void shouldMergeAuditAttributesMetadata() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/some/endpoint");
-        AuditContext.put(request, "custom_field", "custom_value");
+        AuditAttributes.putMetadata(request, "custom_field", "custom_value");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         filter.doFilter(request, response, filterChain);
