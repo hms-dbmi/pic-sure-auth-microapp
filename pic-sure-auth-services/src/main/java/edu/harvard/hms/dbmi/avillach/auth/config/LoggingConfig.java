@@ -13,7 +13,7 @@ public class LoggingConfig implements WebMvcConfigurer {
 
     @Bean
     public LoggingClient loggingClient() {
-        return LoggingClientFactory.create("auth");
+        return LoggingClientFactory.create("pic-sure-auth-microapp");
     }
 
     @Bean
