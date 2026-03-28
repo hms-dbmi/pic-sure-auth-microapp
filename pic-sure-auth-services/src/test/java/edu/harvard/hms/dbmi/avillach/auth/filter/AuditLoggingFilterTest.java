@@ -2,6 +2,7 @@ package edu.harvard.hms.dbmi.avillach.auth.filter;
 
 import edu.harvard.dbmi.avillach.logging.LoggingClient;
 import edu.harvard.dbmi.avillach.logging.LoggingEvent;
+import edu.harvard.dbmi.avillach.logging.SessionIdResolver;
 import edu.harvard.hms.dbmi.avillach.auth.utils.AuditAttributes;
 import jakarta.servlet.FilterChain;
 import org.junit.jupiter.api.BeforeEach;
@@ -333,25 +334,19 @@ class AuditLoggingFilterTest {
 
     @Test
     void shouldUseSessionIdHeader() {
-        MockHttpServletRequest request = new MockHttpServletRequest();
-        request.addHeader("X-Session-Id", "my-session-123");
-
-        assertEquals("my-session-123", AuditAttributes.extractSessionId(request));
+        assertEquals("my-session-123", SessionIdResolver.resolve("my-session-123", "10.0.0.1", "Mozilla/5.0"));
     }
 
     @Test
     void shouldGenerateSessionIdFromHash() {
-        MockHttpServletRequest request = new MockHttpServletRequest();
-        request.setRemoteAddr("10.0.0.1");
-        request.addHeader("User-Agent", "Mozilla/5.0");
-
-        String sessionId = AuditAttributes.extractSessionId(request);
+        String sessionId = SessionIdResolver.resolve(null, "10.0.0.1", "Mozilla/5.0");
         assertNotNull(sessionId);
         assertFalse(sessionId.isEmpty());
+        assertEquals(16, sessionId.length());
     }
 
     @Test
-    void shouldIncludeSessionIdInMetadata() throws Exception {
+    void shouldIncludeSessionIdOnEvent() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/some/endpoint");
         request.addHeader("X-Session-Id", "test-session");
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -360,7 +355,7 @@ class AuditLoggingFilterTest {
 
         ArgumentCaptor<LoggingEvent> captor = ArgumentCaptor.forClass(LoggingEvent.class);
         verify(loggingClient).send(captor.capture());
-        assertEquals("test-session", captor.getValue().getMetadata().get("session_id"));
+        assertEquals("test-session", captor.getValue().getSessionId());
     }
 
     @Test

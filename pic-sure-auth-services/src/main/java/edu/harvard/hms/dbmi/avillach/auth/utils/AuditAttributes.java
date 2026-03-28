@@ -40,14 +40,4 @@ public final class AuditAttributes {
         return request.getRemoteAddr();
     }
 
-    public static String extractSessionId(HttpServletRequest request) {
-        String sessionHeader = request.getHeader("X-Session-Id");
-        if (sessionHeader != null && !sessionHeader.isEmpty()) {
-            return sessionHeader;
-        }
-        String ip = extractClientIp(request);
-        String ua = request.getHeader("User-Agent");
-        String raw = (ip != null ? ip : "") + "|" + (ua != null ? ua : "");
-        return Integer.toHexString(raw.hashCode());
-    }
 }

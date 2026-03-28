@@ -7,6 +7,7 @@ import java.util.Map;
 import edu.harvard.dbmi.avillach.logging.LoggingClient;
 import edu.harvard.dbmi.avillach.logging.LoggingEvent;
 import edu.harvard.dbmi.avillach.logging.RequestInfo;
+import edu.harvard.dbmi.avillach.logging.SessionIdResolver;
 import edu.harvard.hms.dbmi.avillach.auth.model.CustomApplicationDetails;
 import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
 import edu.harvard.hms.dbmi.avillach.auth.utils.AuditAttributes;
@@ -142,7 +143,7 @@ public class AuditLoggingFilter extends OncePerRequestFilter {
             }
 
             // Session ID
-            metadata.put("session_id", AuditAttributes.extractSessionId(request));
+            String sessionId = SessionIdResolver.resolve(request.getHeader("X-Session-Id"), srcIp, request.getHeader("User-Agent"));
 
             // Merge domain-specific metadata from AuditAttributes (set by services).
             // Filter-managed keys take precedence over AuditAttributes values.
@@ -157,7 +158,8 @@ public class AuditLoggingFilter extends OncePerRequestFilter {
             }
 
             // Build the event
-            LoggingEvent.Builder eventBuilder = LoggingEvent.builder(eventType).action(action).request(requestInfo).metadata(metadata);
+            LoggingEvent.Builder eventBuilder =
+                LoggingEvent.builder(eventType).action(action).sessionId(sessionId).request(requestInfo).metadata(metadata);
 
             if (errorMap != null) {
                 eventBuilder.error(errorMap);
