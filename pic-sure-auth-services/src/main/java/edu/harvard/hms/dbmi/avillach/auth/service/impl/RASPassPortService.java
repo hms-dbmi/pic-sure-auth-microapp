@@ -24,10 +24,13 @@ import org.springframework.util.MultiValueMap;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
 public class RASPassPortService {
+
+    enum ValidationOutcome { VALIDATED, INVALIDATED, SKIPPED }
 
     private final Logger logger = LoggerFactory.getLogger(RASPassPortService.class);
     private final RestClientUtil restClientUtil;
@@ -64,92 +67,83 @@ public class RASPassPortService {
             return;
         }
 
-        java.util.concurrent.atomic.AtomicInteger totalValidated = new java.util.concurrent.atomic.AtomicInteger(0);
-        java.util.concurrent.atomic.AtomicInteger totalInvalidated = new java.util.concurrent.atomic.AtomicInteger(0);
+        Map<ValidationOutcome, Long> counts = allUsersWithAPassport.parallelStream()
+            .map(this::validateUserPassport)
+            .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
 
-        allUsersWithAPassport.parallelStream().forEach(user -> {
-            logger.info("validateAllUserPassports() ATTEMPTING TO VALIDATE PASSPORT ___ USER {}", user.getSubject());
-            if (StringUtils.isBlank(user.getPassport())) {
-                logger.error("NO PASSPORT FOUND ___ USER {}", user.getSubject());
-                return;
-            }
-
-            String encodedPassport = user.getPassport();
-            Optional<Passport> passportOptional = JWTUtil.parsePassportJWTV11(encodedPassport);
-            if (passportOptional.isEmpty()) {
-                logger.error("FAILED TO DECODE PASSPORT ___ USER: {}", user.getSubject());
-                user.setPassport(null);
-                userService.save(user);
-                cacheEvictionService.evictCache(user);
-                totalInvalidated.incrementAndGet();
-                if (loggingClient != null && loggingClient.isEnabled()) {
-                    try {
-                        loggingClient.send(LoggingEvent.builder("AUTHZ").action("passport.invalidated")
-                            .metadata(Map.of("user_subject", user.getSubject(), "reason", "FAILED_TO_DECODE_PASSPORT"))
-                            .build());
-                    } catch (Exception e) {
-                        logger.warn("Failed to send PASSPORT_INVALIDATED audit log event", e);
-                    }
-                }
-                return;
-            }
-
-            List<String> ga4ghPassportV1 = passportOptional.get().getGa4ghPassportV1();
-            for (String visa : ga4ghPassportV1) {
-                Optional<Ga4ghPassportV1> parsedVisa = JWTUtil.parseGa4ghPassportV1(visa);
-                if (parsedVisa.isEmpty()) {
-                    logger.error("validatePassport() ga4ghPassportV1 PASSPORT VISA IS EMPTY ___ USER {}", user.getSubject());
-                    return;
-                }
-
-                if (parsedVisa.get().getExp() < System.currentTimeMillis() / 1000) {
-                    handleFailedValidationResponse(PassportValidationResponse.VISA_EXPIRED.getValue(), user);
-                    totalInvalidated.incrementAndGet();
-                    if (loggingClient != null && loggingClient.isEnabled()) {
-                        try {
-                            loggingClient.send(LoggingEvent.builder("AUTHZ").action("passport.invalidated")
-                                .metadata(Map.of("user_subject", user.getSubject(), "reason", PassportValidationResponse.VISA_EXPIRED.getValue()))
-                                .build());
-                        } catch (Exception e) {
-                            logger.warn("Failed to send PASSPORT_INVALIDATED audit log event", e);
-                        }
-                    }
-                } else {
-                    Optional<String> response = validateVisa(visa);
-                    if (response.isPresent()) {
-                        boolean successfullyUpdated = handlePassportValidationResponse(response.get(), user);
-                        if (!successfullyUpdated) {
-                            logger.info("PASSPORT VALIDATION COMPLETE __ PASSPORT IS NO LONGER VALID ___ USER {} ___ USER LOGGED OUT", user.getSubject());
-                            totalInvalidated.incrementAndGet();
-                            if (loggingClient != null && loggingClient.isEnabled()) {
-                                try {
-                                    loggingClient.send(LoggingEvent.builder("AUTHZ").action("passport.invalidated")
-                                        .metadata(Map.of("user_subject", user.getSubject(), "reason", response.get()))
-                                        .build());
-                                } catch (Exception e) {
-                                    logger.warn("Failed to send PASSPORT_INVALIDATED audit log event", e);
-                                }
-                            }
-                            break;
-                        } else {
-                            logger.info("PASSPORT VALIDATION COMPLETE __ PASSPORT IS VALID ___ USER {}", user.getSubject());
-                            totalValidated.incrementAndGet();
-                        }
-                    }
-                }
-            }
-        });
+        long totalValidated = counts.getOrDefault(ValidationOutcome.VALIDATED, 0L);
+        long totalInvalidated = counts.getOrDefault(ValidationOutcome.INVALIDATED, 0L);
 
         if (loggingClient != null && loggingClient.isEnabled()) {
             try {
                 loggingClient.send(LoggingEvent.builder("AUTHZ").action("passport.validation_batch")
-                    .metadata(Map.of("total_validated", totalValidated.get(), "total_invalidated", totalInvalidated.get()))
+                    .metadata(Map.of("total_validated", totalValidated, "total_invalidated", totalInvalidated))
                     .build());
             } catch (Exception e) {
                 logger.warn("Failed to send PASSPORT_VALIDATION_BATCH audit log event", e);
             }
         }
+    }
 
+    ValidationOutcome validateUserPassport(User user) {
+        logger.info("validateAllUserPassports() ATTEMPTING TO VALIDATE PASSPORT ___ USER {}", user.getSubject());
+        if (StringUtils.isBlank(user.getPassport())) {
+            logger.error("NO PASSPORT FOUND ___ USER {}", user.getSubject());
+            return ValidationOutcome.SKIPPED;
+        }
+
+        String encodedPassport = user.getPassport();
+        Optional<Passport> passportOptional = JWTUtil.parsePassportJWTV11(encodedPassport);
+        if (passportOptional.isEmpty()) {
+            logger.error("FAILED TO DECODE PASSPORT ___ USER: {}", user.getSubject());
+            user.setPassport(null);
+            userService.save(user);
+            cacheEvictionService.evictCache(user);
+            sendInvalidatedEvent(user.getSubject(), "FAILED_TO_DECODE_PASSPORT");
+            return ValidationOutcome.INVALIDATED;
+        }
+
+        List<String> ga4ghPassportV1 = passportOptional.get().getGa4ghPassportV1();
+        for (String visa : ga4ghPassportV1) {
+            Optional<Ga4ghPassportV1> parsedVisa = JWTUtil.parseGa4ghPassportV1(visa);
+            if (parsedVisa.isEmpty()) {
+                logger.error("validatePassport() ga4ghPassportV1 PASSPORT VISA IS EMPTY ___ USER {}", user.getSubject());
+                return ValidationOutcome.SKIPPED;
+            }
+
+            if (parsedVisa.get().getExp() < System.currentTimeMillis() / 1000) {
+                handleFailedValidationResponse(PassportValidationResponse.VISA_EXPIRED.getValue(), user);
+                sendInvalidatedEvent(user.getSubject(), PassportValidationResponse.VISA_EXPIRED.getValue());
+                return ValidationOutcome.INVALIDATED;
+            }
+
+            Optional<String> response = validateVisa(visa);
+            if (response.isPresent()) {
+                boolean successfullyUpdated = handlePassportValidationResponse(response.get(), user);
+                if (!successfullyUpdated) {
+                    logger.info("PASSPORT VALIDATION COMPLETE __ PASSPORT IS NO LONGER VALID ___ USER {} ___ USER LOGGED OUT", user.getSubject());
+                    sendInvalidatedEvent(user.getSubject(), response.get());
+                    return ValidationOutcome.INVALIDATED;
+                } else {
+                    logger.info("PASSPORT VALIDATION COMPLETE __ PASSPORT IS VALID ___ USER {}", user.getSubject());
+                    return ValidationOutcome.VALIDATED;
+                }
+            }
+        }
+
+        return ValidationOutcome.SKIPPED;
+    }
+
+    private void sendInvalidatedEvent(String userSubject, String reason) {
+        if (loggingClient != null && loggingClient.isEnabled()) {
+            try {
+                loggingClient.send(LoggingEvent.builder("AUTHZ").action("passport.invalidated")
+                    .metadata(Map.of("user_subject", userSubject, "reason", reason))
+                    .build());
+            } catch (Exception e) {
+                logger.warn("Failed to send PASSPORT_INVALIDATED audit log event", e);
+            }
+        }
     }
 
     private boolean handlePassportValidationResponse(String response, User user) {
