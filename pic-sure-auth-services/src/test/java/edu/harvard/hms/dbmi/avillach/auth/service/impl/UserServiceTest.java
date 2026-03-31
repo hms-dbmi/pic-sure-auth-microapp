@@ -294,10 +294,9 @@ public class UserServiceTest {
     public void testGetUserProfileResponse_missingClaims() {
         UserClaims userClaims = new UserClaims();
         userClaims.setEmail("test@example.com");
-        // Missing "sub" - should still return a response but with null userId
+        // Missing "sub" - should return null since subject is required
         HashMap<String, String> result = userService.getUserProfileResponse(userClaims);
-        assertNotNull(result);
-        assertNull(result.get("userId"));
+        assertNull(result);
     }
 
     @Test
