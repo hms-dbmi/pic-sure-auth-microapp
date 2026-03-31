@@ -234,9 +234,9 @@ public class AuthorizationService {
                 }
                 else {
                     String targetService = (String) ((Map) requestBody).get("Target Service");
+                    logger.info("Target service = " + targetService);
                     if (targetService != null && targetService.startsWith("/v3")) {
-                        // ignore
-                        // TODO: remove this workaround!
+                        logger.info("Skipping access rule {}", accessRule.getName());
                     }
                     else if (this.accessRuleService.evaluateAccessRule(requestBody, accessRule)) {
                         result = true;
