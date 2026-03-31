@@ -18,6 +18,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.annotation.Order;
 import org.springframework.lang.NonNull;
 import org.springframework.security.core.Authentication;
@@ -33,22 +34,11 @@ public class AuditLoggingFilter extends OncePerRequestFilter {
 
     private static final String AUDIT_START_TIME = "audit_start_time";
 
-    private static final String DEST_IP;
-    private static final Integer DEST_PORT;
+    @Value("${DEST_IP:#{null}}")
+    private String destIp;
 
-    static {
-        DEST_IP = System.getenv("DEST_IP");
-        Integer port = null;
-        String portStr = System.getenv("DEST_PORT");
-        if (portStr != null) {
-            try {
-                port = Integer.parseInt(portStr);
-            } catch (NumberFormatException e) {
-                // ignore, will fallback to request
-            }
-        }
-        DEST_PORT = port;
-    }
+    @Value("${DEST_PORT:#{null}}")
+    private Integer destPort;
 
     private final LoggingClient loggingClient;
 
@@ -110,16 +100,16 @@ public class AuditLoggingFilter extends OncePerRequestFilter {
             String srcIp = AuditAttributes.extractClientIp(request);
 
             // Determine dest IP and port
-            String destIp = DEST_IP != null ? DEST_IP : request.getLocalAddr();
-            int destPort = DEST_PORT != null ? DEST_PORT : request.getLocalPort();
+            String resolvedDestIp = destIp != null ? destIp : request.getLocalAddr();
+            int resolvedDestPort = destPort != null ? destPort : request.getLocalPort();
 
             // Response info
             int responseStatus = response.getStatus();
             String contentType = response.getContentType();
 
             // Build RequestInfo
-            RequestInfo requestInfo = RequestInfo.builder().method(method).url(request.getRequestURI()).srcIp(srcIp).destIp(destIp)
-                .destPort(destPort).httpUserAgent(request.getHeader("User-Agent")).status(responseStatus).duration(duration)
+            RequestInfo requestInfo = RequestInfo.builder().method(method).url(request.getRequestURI()).srcIp(srcIp).destIp(resolvedDestIp)
+                .destPort(resolvedDestPort).httpUserAgent(request.getHeader("User-Agent")).status(responseStatus).duration(duration)
                 .httpContentType(contentType).build();
 
             // Build metadata
