@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -79,6 +80,9 @@ public class BdcConsentBasedAccessRuleEvaluator implements ConsentBasedAccessRul
             }
             return true;
         }).map(entry -> new AuthorizationFilter(entry.getKey(), entry.getValue())).toList();
+
+        log.debug("Adding authorization filters to query:");
+        authorizationFilter.stream().map(Objects::toString).forEach(log::debug);
 
         return query.setAuthorizationFilters(authorizationFilter);
     }
