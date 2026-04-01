@@ -25,17 +25,14 @@ public class BdcConsentsBuilder {
     public static final String TOPMED_CONSENTS_KEY = "\\_topmed_consents\\";
     private final Map<String, StudyMetaData> fenceMappingByConsent;
 
-    private final Set<RasDbgapPermission> dbgapRoleNames;
+    private final Set<String> userConsentStrings;
 
-    public BdcConsentsBuilder(Map<String, StudyMetaData> fenceMappingByConsent, Set<RasDbgapPermission> dbgapRoleNames) {
+    public BdcConsentsBuilder(Map<String, StudyMetaData> fenceMappingByConsent, Set<String> userConsentStrings) {
         this.fenceMappingByConsent = fenceMappingByConsent;
-        this.dbgapRoleNames = dbgapRoleNames;
+        this.userConsentStrings = userConsentStrings;
     }
 
     public Map<String, Set<String>> createConsents() {
-        Set<String> userConsentStrings = dbgapRoleNames.stream()
-            .map(permission -> permission.getPhsId() + "." + permission.getConsentGroup()).collect(Collectors.toSet());
-
         Map<String, Set<String>> result = new HashMap<>();
         result.put(CONSENTS_KEY, new HashSet<>());
 

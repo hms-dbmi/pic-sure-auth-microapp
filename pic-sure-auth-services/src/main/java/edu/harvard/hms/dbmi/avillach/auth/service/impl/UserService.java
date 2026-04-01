@@ -766,12 +766,12 @@ public class UserService {
         }
     }
 
-    public User updateUserConsents(User user, Set<RasDbgapPermission> dbgapRoleNames) {
+    public User updateUserConsents(User user, Set<String> userConsentStrings) {
         UserConsents userConsents = userConsentsRepository.findByUserId(user.getUuid());
         if (userConsents == null) {
             logger.info("Creating user consents");
             userConsents = new UserConsents()
-                .setConsents(new BdcConsentsBuilder(fenceMappingUtility.getFENCEMapping(), dbgapRoleNames).createConsents())
+                .setConsents(new BdcConsentsBuilder(fenceMappingUtility.getFENCEMapping(), userConsentStrings).createConsents())
                 .setUserId(user.getUuid());
             logger.info("{} User consents created", userConsents.getConsents().size());
         }

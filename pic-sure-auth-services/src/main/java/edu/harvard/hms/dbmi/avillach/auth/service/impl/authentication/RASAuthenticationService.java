@@ -149,7 +149,10 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
         Set<RasDbgapPermission> dbgapPermissions = this.rasPassPortService.ga4gpPassportToRasDbgapPermissions(ga4ghPassports);
         Set<String> dbgapRoleNames = this.roleService.getRoleNamesForDbgapPermissions(dbgapPermissions);
         user = userService.updateUserRoles(user, dbgapRoleNames);
-        user = userService.updateUserConsents(user, dbgapPermissions);
+
+        Set<String> userConsentStrings = dbgapPermissions.stream()
+                .map(permission -> permission.getPhsId() + "." + permission.getConsentGroup()).collect(Collectors.toSet());
+        user = userService.updateUserConsents(user, userConsentStrings);
         logger.debug("USER {} ROLES UPDATED {} ___ CODE {}",
                 user.getSubject(),
                 user.getRoles().stream().map(role -> role.getName().replace("MANAGED_", "")).toArray(),
