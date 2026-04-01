@@ -81,8 +81,8 @@ public class BdcConsentBasedAccessRuleEvaluator implements ConsentBasedAccessRul
             return true;
         }).map(entry -> new AuthorizationFilter(entry.getKey(), entry.getValue())).toList();
 
-        log.debug("Adding authorization filters to query:");
-        authorizationFilter.stream().map(Objects::toString).forEach(log::debug);
+        log.info("Adding authorization filters to query:");
+        authorizationFilter.stream().map(Objects::toString).forEach(log::info);
 
         return query.setAuthorizationFilters(authorizationFilter);
     }
