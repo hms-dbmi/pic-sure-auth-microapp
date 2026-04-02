@@ -62,6 +62,12 @@ public class BdcConsentsBuilder {
         fenceMappingByConsent.forEach((key, value) -> {
             if (PUBLIC_STUDY_TYPE.equalsIgnoreCase(value.getStudyType())) {
                 result.computeIfAbsent(CONSENTS_KEY, _ -> new HashSet<>()).add(key);
+
+                if (value.getDataType() != null && value.getDataType().contains(GENOMIC_DATA_TYPE_VALUE)) {
+                    Set<String> topmedConsents = result.getOrDefault(TOPMED_CONSENTS_KEY, new HashSet<>());
+                    topmedConsents.add(key);
+                    result.put(TOPMED_CONSENTS_KEY, topmedConsents);
+                }
             }
         });
 

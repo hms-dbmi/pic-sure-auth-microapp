@@ -5,6 +5,7 @@ import edu.harvard.hms.dbmi.avillach.auth.model.fenceMapping.StudyMetaData;
 import edu.harvard.hms.dbmi.avillach.auth.model.ras.RasDbgapPermission;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -25,7 +26,6 @@ public class BdcConsentsBuilderTest {
 
     @Test
     public void createConsents_noConsents_addPublic() {
-        // TODO: test NO consents does not allow full access
         Set<String> userStudies = Set.of();
         Map<String, Set<String>> consents = new BdcConsentsBuilder(DEFAULT_FENCE_MAPPING, userStudies).createConsents();
         assertEquals(Set.of(BdcConsentsBuilder.CONSENTS_KEY), consents.keySet());
@@ -153,5 +153,17 @@ public class BdcConsentsBuilderTest {
         );
         assertEquals(Set.of("phs999.c1"), consents.get(BdcConsentsBuilder.TOPMED_CONSENTS_KEY));
         assertEquals(Set.of("phs999.c1"), consents.get(BdcConsentsBuilder.HARMONIZED_CONSENTS_KEY));
+    }
+
+    @Test
+    public void createConsents_publicGenomicStudy_shouldBeAddedToTopmedConsents() {
+        HashMap<String, StudyMetaData> studyMetaData= new HashMap<>(DEFAULT_FENCE_MAPPING);
+        studyMetaData.put("open_access-1000Genomes",
+                new StudyMetaData().setHarmonized(false).setDataType("P/G").setStudyType("public"));
+        Set<String> userStudies = Set.of();
+        Map<String, Set<String>> consents = new BdcConsentsBuilder(studyMetaData, userStudies).createConsents();
+        assertEquals(Set.of(BdcConsentsBuilder.CONSENTS_KEY, BdcConsentsBuilder.TOPMED_CONSENTS_KEY), consents.keySet());
+        assertEquals(consents.get(BdcConsentsBuilder.CONSENTS_KEY), Set.of("open_access-1000Genomes", "tutorial-biolincc_framingham"));
+        assertEquals(consents.get(BdcConsentsBuilder.TOPMED_CONSENTS_KEY), Set.of("open_access-1000Genomes"));
     }
 }
