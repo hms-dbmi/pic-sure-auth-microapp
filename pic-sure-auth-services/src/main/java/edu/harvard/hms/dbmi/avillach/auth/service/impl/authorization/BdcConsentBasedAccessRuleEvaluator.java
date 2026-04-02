@@ -38,7 +38,7 @@ public class BdcConsentBasedAccessRuleEvaluator implements ConsentBasedAccessRul
 
         if (!query.genomicFilters().isEmpty()) {
             if (!consents.getConsents().containsKey(GENOMIC_AUTHORIZATION_FILTER)) {
-                log.info(
+                log.debug(
                     "Genomic filters must contain the following authorization concepts: " + String.join(", ", GENOMIC_AUTHORIZATION_FILTER)
                 );
                 return false;
@@ -56,11 +56,11 @@ public class BdcConsentBasedAccessRuleEvaluator implements ConsentBasedAccessRul
         if (filterConsent.equals("DCC Harmonized data set")) {
             Set<String> harmonizedConsents = consents.getConsents().getOrDefault(HARMONIZED_AUTHORIZATION_FILTER, Set.of());
             if (harmonizedConsents.isEmpty()) {
-                log.info("User must have at least one consent in " + HARMONIZED_AUTHORIZATION_FILTER + " to use filter " + conceptPath);
+                log.debug("User must have at least one consent in " + HARMONIZED_AUTHORIZATION_FILTER + " to use filter " + conceptPath);
                 return false;
             }
         } else if (!userStudies.contains(filterConsent)) {
-            log.info("User does not have study: " + filterConsent + " to access " + conceptPath);
+            log.debug("User does not have study: " + filterConsent + " to access " + conceptPath);
             return false;
         }
         return true;
@@ -81,8 +81,8 @@ public class BdcConsentBasedAccessRuleEvaluator implements ConsentBasedAccessRul
             return true;
         }).map(entry -> new AuthorizationFilter(entry.getKey(), entry.getValue())).toList();
 
-        log.info("Adding authorization filters to query:");
-        authorizationFilter.stream().map(Objects::toString).forEach(log::info);
+        log.debug("Adding authorization filters to query:");
+        authorizationFilter.stream().map(Objects::toString).forEach(log::debug);
 
         return query.setAuthorizationFilters(authorizationFilter);
     }
