@@ -221,7 +221,7 @@ class BdcConsentBasedAccessRuleEvaluatorTest {
     public void evaluateAccessRule_filterIncludesTopmedAndParentStudyId_accept() {
         UserConsents userConsents = new UserConsents().setConsents(Map.of("\\_consents\\", Set.of("phs123.c1", "phs456.c2")));
         Query query = new Query(
-                List.of("\\_Topmed Study Accession with Subject ID\\", "\\_Parent Study Accession with Subject ID\\"), List.of(),
+                List.of(), List.of(),
                 new PhenotypicSubquery(
                         null,
                         List.of(
