@@ -22,7 +22,7 @@ public class BdcConsentBasedAccessRuleEvaluator implements ConsentBasedAccessRul
 
     private static final String GENOMIC_AUTHORIZATION_FILTER = "\\_topmed_consents\\";
     private static final String HARMONIZED_AUTHORIZATION_FILTER = "\\_harmonized_consent\\";
-    private static final Set<String> ALWAYS_ALLOWED_CONCEPT_ROOTS = Set.of("_Topmed Study Accession with Subject ID", "_Parent Study Accession with Subject ID");
+    private static final Set<String> ALWAYS_ALLOWED_CONCEPT_ROOTS = Set.of("_Topmed Study Accession with Subject ID", "_Parent Study Accession with Subject ID", "_consents", "_harmonized_consent", "_topmed_consents");
 
     @Override
     public boolean evaluateAccessRule(Query query, AccessRule accessRule, UserConsents consents) {
