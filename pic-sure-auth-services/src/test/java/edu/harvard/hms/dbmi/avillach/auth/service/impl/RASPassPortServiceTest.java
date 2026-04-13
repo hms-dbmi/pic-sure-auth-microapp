@@ -92,7 +92,7 @@ public class RASPassPortServiceTest {
                     Ga4ghPassportV1 ga4ghPassportV1 = optionalPassport.get();
                     List<RasDbgapPermission> rasDbgapPermissions = ga4ghPassportV1.getRasDbgagPermissions();
                     List<RasDbgapPermission> newExpires = rasDbgapPermissions.stream().peek(rasDbgapPermission -> rasDbgapPermission.setExpiration(futureDate)).toList();
-                    ga4ghPassportV1.setRasDbgagPermissions(newExpires);
+                    ga4ghPassportV1.setRasDbgapPermissions(newExpires);
                     return Optional.of(ga4ghPassportV1);
                 })
                 .collect(Collectors.toSet());
@@ -136,7 +136,7 @@ public class RASPassPortServiceTest {
                             })
                             .collect(Collectors.toList());
 
-                    ga4ghPassportV1.setRasDbgagPermissions(updatedPermissions);
+                    ga4ghPassportV1.setRasDbgapPermissions(updatedPermissions);
                     return Optional.of(ga4ghPassportV1);
                 })
                 .collect(Collectors.toSet());
@@ -281,7 +281,7 @@ public class RASPassPortServiceTest {
                     List<RasDbgapPermission> newExpires = rasDbgapPermissions.stream()
                             .peek(rasDbgapPermission -> rasDbgapPermission.setExpiration(futureDate))
                             .toList();
-                    ga4ghPassportV1.setRasDbgagPermissions(newExpires);
+                    ga4ghPassportV1.setRasDbgapPermissions(newExpires);
                     return Optional.of(ga4ghPassportV1);
                 })
                 .collect(Collectors.toSet());
