@@ -101,7 +101,7 @@ public class Ga4ghPassportV1 {
     }
 
     public void setRasDbgagPermissions(List<RasDbgapPermission> rasDbgapPermissions) {
-        this.rasDbgapPermissions = rasDbgapPermissions;
+        this.rasDbgapPermissions = rasDbgapPermissions != null ? rasDbgapPermissions : new ArrayList<>();
     }
 
     @Override
