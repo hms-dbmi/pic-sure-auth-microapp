@@ -90,8 +90,8 @@ public class RASPassPortServiceTest {
                 .filter(Optional::isPresent)
                 .map(optionalPassport -> {
                     Ga4ghPassportV1 ga4ghPassportV1 = optionalPassport.get();
-                    List<RasDbgapPermission> rasDbgagPermissions = ga4ghPassportV1.getRasDbgagPermissions();
-                    List<RasDbgapPermission> newExpires = rasDbgagPermissions.stream().peek(rasDbgapPermission -> rasDbgapPermission.setExpiration(futureDate)).toList();
+                    List<RasDbgapPermission> rasDbgapPermissions = ga4ghPassportV1.getRasDbgagPermissions();
+                    List<RasDbgapPermission> newExpires = rasDbgapPermissions.stream().peek(rasDbgapPermission -> rasDbgapPermission.setExpiration(futureDate)).toList();
                     ga4ghPassportV1.setRasDbgagPermissions(newExpires);
                     return Optional.of(ga4ghPassportV1);
                 })
@@ -119,10 +119,10 @@ public class RASPassPortServiceTest {
                 .filter(Optional::isPresent)
                 .map(optionalPassport -> {
                     Ga4ghPassportV1 ga4ghPassportV1 = optionalPassport.get();
-                    List<RasDbgapPermission> rasDbgagPermissions = ga4ghPassportV1.getRasDbgagPermissions();
+                    List<RasDbgapPermission> rasDbgapPermissions = ga4ghPassportV1.getRasDbgagPermissions();
 
                     AtomicInteger index = new AtomicInteger();
-                    List<RasDbgapPermission> updatedPermissions = rasDbgagPermissions.stream()
+                    List<RasDbgapPermission> updatedPermissions = rasDbgapPermissions.stream()
                             .peek(permission -> {
                                 if (index.getAndIncrement() % 2 == 0) {
                                     // For even indices, use a valid future expiration.
@@ -277,8 +277,8 @@ public class RASPassPortServiceTest {
                 .filter(Optional::isPresent)
                 .map(optionalPassport -> {
                     Ga4ghPassportV1 ga4ghPassportV1 = optionalPassport.get();
-                    List<RasDbgapPermission> rasDbgagPermissions = ga4ghPassportV1.getRasDbgagPermissions();
-                    List<RasDbgapPermission> newExpires = rasDbgagPermissions.stream()
+                    List<RasDbgapPermission> rasDbgapPermissions = ga4ghPassportV1.getRasDbgagPermissions();
+                    List<RasDbgapPermission> newExpires = rasDbgapPermissions.stream()
                             .peek(rasDbgapPermission -> rasDbgapPermission.setExpiration(futureDate))
                             .toList();
                     ga4ghPassportV1.setRasDbgagPermissions(newExpires);

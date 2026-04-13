@@ -30,7 +30,7 @@ public class Ga4ghPassportV1 {
     private Ga4ghVisaV1 ga4ghVisaV1;
 
     @JsonProperty("ras_dbgap_permissions")
-    private List<RasDbgapPermission> rasDbgagPermissions = new ArrayList<>();
+    private List<RasDbgapPermission> rasDbgapPermissions = new ArrayList<>();
 
     public String getIss() {
         return iss;
@@ -97,11 +97,11 @@ public class Ga4ghPassportV1 {
     }
 
     public List<RasDbgapPermission> getRasDbgagPermissions() {
-        return rasDbgagPermissions;
+        return rasDbgapPermissions;
     }
 
-    public void setRasDbgagPermissions(List<RasDbgapPermission> rasDbgagPermissions) {
-        this.rasDbgagPermissions = rasDbgagPermissions;
+    public void setRasDbgagPermissions(List<RasDbgapPermission> rasDbgapPermissions) {
+        this.rasDbgapPermissions = rasDbgapPermissions;
     }
 
     @Override
@@ -115,7 +115,7 @@ public class Ga4ghPassportV1 {
                 ", jti='" + jti + '\'' +
                 ", txn='" + txn + '\'' +
                 ", ga4ghVisaV1=" + ga4ghVisaV1 +
-                ", rasDbgagPermissions=" + rasDbgagPermissions +
+                ", rasDbgapPermissions=" + rasDbgapPermissions +
                 '}';
     }
 }
