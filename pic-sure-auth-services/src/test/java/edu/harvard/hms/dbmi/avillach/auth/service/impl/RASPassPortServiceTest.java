@@ -65,7 +65,7 @@ public class RASPassPortServiceTest {
 
     @Test
     public void testGa4ghPassPortStudies_IsNull() {
-        Set<RasDbgapPermission> permissions = rasPassPortService.ga4gpPassportToRasDbgapPermissions(null);
+        Set<RasDbgapPermission> permissions = rasPassPortService.ga4ghPassportToRasDbgapPermissions(null);
         assertNull(permissions);
     }
 
@@ -73,7 +73,7 @@ public class RASPassPortServiceTest {
     public void testGa4gpPassportStudies_IsNotNull_And_ExpiredPermissionsExcluded() {
         Optional<Passport> passport = JWTUtil.parsePassportJWTV11(exampleRasPassport);
         Set<Optional<Ga4ghPassportV1>> ga4ghPassports = passport.get().getGa4ghPassportV1().stream().map(JWTUtil::parseGa4ghPassportV1).filter(Optional::isPresent).collect(Collectors.toSet());
-        Set<RasDbgapPermission> permissions = rasPassPortService.ga4gpPassportToRasDbgapPermissions(ga4ghPassports);
+        Set<RasDbgapPermission> permissions = rasPassPortService.ga4ghPassportToRasDbgapPermissions(ga4ghPassports);
         assertNotNull(permissions);
         assertTrue(permissions.isEmpty());
     }
@@ -97,7 +97,7 @@ public class RASPassPortServiceTest {
                 })
                 .collect(Collectors.toSet());
 
-        Set<RasDbgapPermission> permissions = rasPassPortService.ga4gpPassportToRasDbgapPermissions(ga4ghPassports);
+        Set<RasDbgapPermission> permissions = rasPassPortService.ga4ghPassportToRasDbgapPermissions(ga4ghPassports);
 
         assertEquals(2, permissions.size());
         assertTrue(permissions.stream().anyMatch(p -> p.getPhsId().equals("phs000300")));
@@ -143,7 +143,7 @@ public class RASPassPortServiceTest {
 
         // Convert the GA4GH passports to RAS DbGaP permissions. The underlying conversion
         // should filter out the ones with invalid expiration dates.
-        Set<RasDbgapPermission> permissions = rasPassPortService.ga4gpPassportToRasDbgapPermissions(ga4ghPassports);
+        Set<RasDbgapPermission> permissions = rasPassPortService.ga4ghPassportToRasDbgapPermissions(ga4ghPassports);
 
         // We expect only the valid (future-dated) permissions to be returned.
         assertEquals(validPHS.size(), permissions.size());
@@ -259,7 +259,7 @@ public class RASPassPortServiceTest {
                 .collect(Collectors.toSet());
 
         // Should not throw NPE even though LinkedIdentities visa has no ras_dbgap_permissions
-        Set<RasDbgapPermission> permissions = rasPassPortService.ga4gpPassportToRasDbgapPermissions(ga4ghPassports);
+        Set<RasDbgapPermission> permissions = rasPassPortService.ga4ghPassportToRasDbgapPermissions(ga4ghPassports);
         assertNotNull(permissions);
         assertTrue(permissions.isEmpty());
     }
@@ -286,7 +286,7 @@ public class RASPassPortServiceTest {
                 })
                 .collect(Collectors.toSet());
 
-        Set<RasDbgapPermission> permissions = rasPassPortService.ga4gpPassportToRasDbgapPermissions(ga4ghPassports);
+        Set<RasDbgapPermission> permissions = rasPassPortService.ga4ghPassportToRasDbgapPermissions(ga4ghPassports);
 
         // Only the dbGaP visa has permissions - LinkedIdentities visa has none
         assertEquals(2, permissions.size());

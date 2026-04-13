@@ -202,7 +202,7 @@ public class RASPassPortService {
         return Optional.ofNullable(responseVal);
     }
 
-    public Set<RasDbgapPermission> ga4gpPassportToRasDbgapPermissions(Set<Optional<Ga4ghPassportV1>> ga4ghPassports) {
+    public Set<RasDbgapPermission> ga4ghPassportToRasDbgapPermissions(Set<Optional<Ga4ghPassportV1>> ga4ghPassports) {
         if (ga4ghPassports == null) {
             return null;
         }
