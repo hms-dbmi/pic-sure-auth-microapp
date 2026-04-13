@@ -2,6 +2,7 @@ package edu.harvard.hms.dbmi.avillach.auth.model.ras;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -29,7 +30,7 @@ public class Ga4ghPassportV1 {
     private Ga4ghVisaV1 ga4ghVisaV1;
 
     @JsonProperty("ras_dbgap_permissions")
-    private List<RasDbgapPermission> rasDbgagPermissions;
+    private List<RasDbgapPermission> rasDbgagPermissions = new ArrayList<>();
 
     public String getIss() {
         return iss;

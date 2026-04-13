@@ -213,7 +213,8 @@ public class RASPassPortService {
         ga4ghPassports.forEach(ga4ghPassport -> {
             if (ga4ghPassport.isPresent()) {
                 Ga4ghPassportV1 ga4ghPassportV1 = ga4ghPassport.get();
-                rasDbgapPermissions.addAll(ga4ghPassportV1.getRasDbgagPermissions().stream().filter(rasDbgapPermission -> date <= rasDbgapPermission.getExpiration()).collect(Collectors.toSet()));
+                List<RasDbgapPermission> permissions = ga4ghPassportV1.getRasDbgagPermissions();
+                rasDbgapPermissions.addAll(permissions.stream().filter(rasDbgapPermission -> date <= rasDbgapPermission.getExpiration()).collect(Collectors.toSet()));
             }
         });
 
