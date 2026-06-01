@@ -189,13 +189,10 @@ public class TokenService {
 
         if (isLongTermToken && isAuthorizationPassed) {
             tokenInspection.addField("active", true);
+            tokenInspection.addField("roles", String.join(",", getUserRoles(user)));
         } else if (isAuthorizationPassed) {
             tokenInspection.addField("active", true);
-            ArrayList<String> roles = new ArrayList<>();
-            for (Privilege p : user.getTotalPrivilege()) {
-                roles.add(p.getName());
-            }
-            tokenInspection.addField("roles", String.join(",", roles));
+            tokenInspection.addField("roles", String.join(",", getUserRoles(user)));
 
             // Refresh token if expiring soon
             Date expiration = jws.getPayload().getExpiration();
@@ -228,7 +225,14 @@ public class TokenService {
         );
 
         return tokenInspection;
+    }
 
+    private static ArrayList<String> getUserRoles(User user) {
+        ArrayList<String> roles = new ArrayList<>();
+        for (Privilege p : user.getTotalPrivilege()) {
+            roles.add(p.getName());
+        }
+        return roles;
     }
 
     public RefreshToken refreshToken(String authorizationHeader) {
