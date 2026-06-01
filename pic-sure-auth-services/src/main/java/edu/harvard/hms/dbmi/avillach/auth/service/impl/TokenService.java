@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Application;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
+import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.exceptions.NotAuthorizedException;
 import edu.harvard.hms.dbmi.avillach.auth.model.*;
@@ -229,8 +230,8 @@ public class TokenService {
 
     private static ArrayList<String> getUserRoles(User user) {
         ArrayList<String> roles = new ArrayList<>();
-        for (Privilege p : user.getTotalPrivilege()) {
-            roles.add(p.getName());
+        for (Role role : user.getRoles()) {
+            roles.add(role.getName());
         }
         return roles;
     }
