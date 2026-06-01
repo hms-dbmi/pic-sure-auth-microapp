@@ -229,6 +229,7 @@ public class TokenService {
     }
 
     private static ArrayList<String> getUserRoles(User user) {
+        logger.info("TokenService.getUserRoles: {}", user.getRoleString());
         ArrayList<String> roles = new ArrayList<>();
         for (Role role : user.getRoles()) {
             roles.add(role.getName());
