@@ -21,6 +21,7 @@ public class UserClaims {
     private String era_commons_id;
     private String preferred_username;
     private String user_permission_group;
+    private String federated_identities_ial2;
 
     public String getUuid() {
         return uuid;
@@ -101,7 +102,15 @@ public class UserClaims {
     public void setUser_permission_group(String user_permission_group) {
         this.user_permission_group = user_permission_group;
     }
-    
+
+    public String getFederated_identities_ial2() {
+        return federated_identities_ial2;
+    }
+
+    public void setFederated_identities_ial2(String federated_identities_ial2) {
+        this.federated_identities_ial2 = federated_identities_ial2;
+    }
+
     public HashMap<String, Object> toHashMap() {
         HashMap<String, Object> map = new HashMap<>();
         if (uuid != null) map.put("uuid", uuid);
@@ -114,6 +123,7 @@ public class UserClaims {
         if (era_commons_id != null) map.put("era_commons_id", era_commons_id);
         if (preferred_username != null) map.put("preferred_username", preferred_username);
         if (user_permission_group != null) map.put("user_permission_group", user_permission_group);
+        if (federated_identities_ial2 != null) map.put("federated_identities_ial2", federated_identities_ial2);
         return map;
     }
 }
