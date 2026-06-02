@@ -3,6 +3,7 @@ package edu.harvard.hms.dbmi.avillach.auth.service.impl.authentication;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import edu.harvard.dbmi.avillach.logging.LoggingClient;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Connection;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
@@ -52,6 +53,8 @@ public class RASAuthenticationServiceTest {
     private ApplicationContext applicationContext;
     @MockBean
     private LoggingClient loggingClient;
+    @MockBean
+    private RasUserinfoService rasUserinfoService;
 
     private RASPassPortService rasPassPortService;
     private RASAuthenticationService rasAuthenticationService;
@@ -81,8 +84,11 @@ public class RASAuthenticationServiceTest {
                 roleService,
                 rasPassPortService,
                 connectionService,
-                cacheEvictionService
+                cacheEvictionService,
+                rasUserinfoService
         );
+
+        when(rasUserinfoService.fetchUserinfo(any())).thenReturn(null);
 
         Connection rasConnection = new Connection();
         rasConnection.setSubPrefix("okta-ras|");
@@ -104,6 +110,7 @@ public class RASAuthenticationServiceTest {
         String queryString = "grant_type=authorization_code" + "&code=" + code + "&redirect_uri=" + redirectUri;
         String introspectionResponse =
                 "{\"active\":true,\"sub\":\"example_email@test.com\",\"client_id\":\"test_client_id\"," +
+                "\"uid\":\"00uTEST\"," +
                 "\"userid\":\"test_userid\",\"preferred_username\":\"testuser\"," +
                 "\"email\":\"okta_email@test.com\",\"firstName\":\"Test\",\"lastName\":\"User\"," +
                 "\"passport_jwt_v11\":\""+ exampleRasPassport +"\"}";
@@ -133,6 +140,99 @@ public class RASAuthenticationServiceTest {
         assertEquals("test@email.com", capturedClaims.getEmail());
         assertEquals("RAS", capturedClaims.getIdp());
         assertEquals("https://ncbi.nlm.nih.gov/gap", capturedClaims.getUser_permission_group());
+
+        verify(rasUserinfoService).fetchUserinfo("00uTEST");
+        assertNull(capturedClaims.getFederated_identities_ial2());
+    }
+
+    @Test
+    public void testAuthorizationCodeFlow_PopulatesFederatedIdentitiesFromUserinfo() throws Exception {
+        String data = "{\"access_token\":\"" + testAccessToken + "\", \"active\":true, \"id_token\":\"SomeRandomToken\"}";
+        String payload = "token_type_hint=access_token&token=" + testAccessToken;
+        String redirectUri = "https://" + testDomain + "/login/loading";
+        String queryString = "grant_type=authorization_code" + "&code=" + code + "&redirect_uri=" + redirectUri;
+        String introspectionResponse =
+                "{\"active\":true,\"sub\":\"example_email@test.com\",\"client_id\":\"test_client_id\"," +
+                "\"uid\":\"00uTEST\",\"userid\":\"test_userid\",\"preferred_username\":\"testuser\"," +
+                "\"passport_jwt_v11\":\""+ exampleRasPassport +"\"}";
+
+        when(restClientUtil.retrievePostResponse(anyString(), any(), eq(queryString))).thenReturn(ResponseEntity.ok(data));
+        when(restClientUtil.retrievePostResponse(anyString(), any(), eq(payload))).thenReturn(ResponseEntity.ok(introspectionResponse));
+        doNothing().when(cacheEvictionService).evictCache(any(User.class));
+
+        User user = createTestUser();
+        user.setSubject("okta-ras|adfadfaf");
+        when(userService.createRasUser(any(), any())).thenReturn(Optional.of(user));
+        when(userService.updateUserRoles(any(), any())).thenReturn(user);
+        when(userService.updateUserConsents(any(), any())).thenReturn(user);
+
+        JsonNode userinfo = new ObjectMapper().readTree(
+                "{\"federated_identities_ial2\":{\"nih\":{\"userid\":\"x\"}}," +
+                "\"default_identity\":\"nih\",\"authenticated_identity\":\"nih\"}");
+        when(rasUserinfoService.fetchUserinfo("00uTEST")).thenReturn(userinfo);
+
+        ArgumentCaptor<UserClaims> claimsCaptor = ArgumentCaptor.forClass(UserClaims.class);
+        when(userService.getUserProfileResponse(claimsCaptor.capture())).thenReturn(new HashMap<>());
+
+        HashMap<String, String> authenticate = rasAuthenticationService.authenticate(authRequest, testDomain);
+
+        assertNotNull(authenticate);
+        assertEquals("{\"nih\":{\"userid\":\"x\"}}", claimsCaptor.getValue().getFederated_identities_ial2());
+    }
+
+    @Test
+    public void testGenerateRasUserMetadata_includesIdentities_fromUserinfo() throws Exception {
+        User user = createTestUser();
+        JsonNode userinfo = new ObjectMapper().readTree(
+                "{\"default_identity\":\"nih\",\"authenticated_identity\":\"nih\"}");
+
+        ObjectNode metadata = rasAuthenticationService.generateRasUserMetadata(user, userinfo);
+
+        assertEquals("nih", metadata.get("default_identity").asText());
+        assertEquals("nih", metadata.get("authenticated_identity").asText());
+    }
+
+    @Test
+    public void testGenerateRasUserMetadata_nullUserinfo_omitsIdentities() {
+        User user = createTestUser();
+
+        ObjectNode metadata = rasAuthenticationService.generateRasUserMetadata(user, null);
+
+        assertFalse(metadata.has("default_identity"));
+        assertFalse(metadata.has("authenticated_identity"));
+    }
+
+    @Test
+    public void testAuthorizationCodeFlow_MissingUid_LoginSucceedsWithoutEnrichment() {
+        String data = "{\"access_token\":\"" + testAccessToken + "\", \"active\":true, \"id_token\":\"SomeRandomToken\"}";
+        String payload = "token_type_hint=access_token&token=" + testAccessToken;
+        String redirectUri = "https://" + testDomain + "/login/loading";
+        String queryString = "grant_type=authorization_code" + "&code=" + code + "&redirect_uri=" + redirectUri;
+        // No "uid" claim in the introspection response.
+        String introspectionResponse =
+                "{\"active\":true,\"sub\":\"example_email@test.com\",\"client_id\":\"test_client_id\"," +
+                "\"userid\":\"test_userid\",\"preferred_username\":\"testuser\"," +
+                "\"passport_jwt_v11\":\""+ exampleRasPassport +"\"}";
+
+        when(restClientUtil.retrievePostResponse(anyString(), any(), eq(queryString))).thenReturn(ResponseEntity.ok(data));
+        when(restClientUtil.retrievePostResponse(anyString(), any(), eq(payload))).thenReturn(ResponseEntity.ok(introspectionResponse));
+        doNothing().when(cacheEvictionService).evictCache(any(User.class));
+
+        User user = createTestUser();
+        user.setSubject("okta-ras|adfadfaf");
+        when(userService.createRasUser(any(), any())).thenReturn(Optional.of(user));
+        when(userService.updateUserRoles(any(), any())).thenReturn(user);
+        when(userService.updateUserConsents(any(), any())).thenReturn(user);
+
+        ArgumentCaptor<UserClaims> claimsCaptor = ArgumentCaptor.forClass(UserClaims.class);
+        when(userService.getUserProfileResponse(claimsCaptor.capture())).thenReturn(new HashMap<>());
+
+        HashMap<String, String> authenticate = rasAuthenticationService.authenticate(authRequest, testDomain);
+
+        // Login still succeeds; enrichment skipped because uid is absent (fetchUserinfo(null) -> null).
+        assertNotNull(authenticate);
+        verify(rasUserinfoService).fetchUserinfo(null);
+        assertNull(claimsCaptor.getValue().getFederated_identities_ial2());
     }
 
     @Test

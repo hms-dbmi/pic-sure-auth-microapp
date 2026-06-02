@@ -35,6 +35,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
     private final CacheEvictionService cacheEvictionService;
     private Connection rasConnection;
     private final String rasPassportIssuer;
+    private final RasUserinfoService rasUserinfoService;
 
     /**
      * Constructor for the RASAuthenticationService
@@ -56,7 +57,8 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
                                     @Value("${ras.passport.issuer}") String rasPassportIssuer,
                                     RoleService roleService,
                                     RASPassPortService rasPassPortService,
-                                    ConnectionWebService connectionService, CacheEvictionService cacheEvictionService) {
+                                    ConnectionWebService connectionService, CacheEvictionService cacheEvictionService,
+                                    RasUserinfoService rasUserinfoService) {
         super(idp_provider_uri, clientId, clientSecret, restClientUtil);
 
         this.userService = userService;
@@ -72,6 +74,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
 
         this.rasConnection = connectionService.getConnectionByLabel("RAS");
         this.cacheEvictionService = cacheEvictionService;
+        this.rasUserinfoService = rasUserinfoService;
     }
 
     /**
@@ -101,7 +104,10 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
             return null;
         }
 
-        Optional<User> initializedUser = initializeUser(introspectResponse);
+        String oktaUserId = extractOktaUserId(introspectResponse);
+        JsonNode rasUserinfo = rasUserinfoService.fetchUserinfo(oktaUserId);
+
+        Optional<User> initializedUser = initializeUser(introspectResponse, rasUserinfo);
         if (initializedUser.isEmpty()) {
             logger.info("LOGIN FAILED ___ COULD NOT CREATE USER ___ INTROSPECTION RESPONSE {} ___ CODE {}", introspectResponse, authRequest.get("code"));
             return null;
@@ -112,7 +118,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
         if (rasPassport.isEmpty()) return null;
         user = updateRasUserRoles(authRequest.get("code"), user, rasPassport.get());
         setUserPassport(authRequest, introspectResponse, user);
-        UserClaims userClaims = buildUserClaims(user, introspectResponse, rasPassport.get());
+        UserClaims userClaims = buildUserClaims(user, introspectResponse, rasPassport.get(), rasUserinfo);
         HashMap<String, String> responseMap = userService.getUserProfileResponse(userClaims);
 
         if (responseMap != null) {
@@ -124,6 +130,20 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
         }
 
         return responseMap;
+    }
+
+    /**
+     * Extract the OKTA user id (the "uid" claim) used to look up the stored RAS token in the Okta
+     * Management API. This is NOT the RAS "sub" used as the user lookup key. Returns null if absent,
+     * in which case userinfo enrichment is skipped (login still succeeds).
+     */
+    private String extractOktaUserId(JsonNode introspectResponse) {
+        JsonNode uid = introspectResponse.get("uid");
+        if (uid == null || uid.isNull() || uid.asText().isBlank()) {
+            logger.warn("Introspection response missing 'uid'; RAS userinfo enrichment will be skipped");
+            return null;
+        }
+        return uid.asText();
     }
 
     private Optional<Passport> extractAndVerifyPassport(Map<String, String> authRequest, JsonNode introspectResponse, User user) {
@@ -164,7 +184,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
         return user;
     }
 
-    private Optional<User> initializeUser(JsonNode introspectResponse) {
+    private Optional<User> initializeUser(JsonNode introspectResponse, JsonNode rasUserinfo) {
         Optional<User> user = userService.createRasUser(introspectResponse, this.rasConnection);
         if (user.isEmpty()) {
             logger.info("FAILED TO LOAD OR CREATE USER");
@@ -172,7 +192,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
         }
 
         User currentUser = user.get();
-        currentUser.setGeneralMetadata(generateRasUserMetadata(currentUser).toString());
+        currentUser.setGeneralMetadata(generateRasUserMetadata(currentUser, rasUserinfo).toString());
         logger.info("USER METADATA SUCCESSFULLY ADDED - USER DATA: {}", currentUser.getGeneralMetadata());
 
         cacheEvictionService.evictCache(currentUser);
@@ -187,7 +207,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
      * @param rasPassport        The RAS passport
      * @return The user claims as a HashMap
      */
-    private UserClaims buildUserClaims(User user, JsonNode introspectResponse, Passport rasPassport) {
+    private UserClaims buildUserClaims(User user, JsonNode introspectResponse, Passport rasPassport, JsonNode rasUserinfo) {
         UserClaims userClaims = new UserClaims();
         userClaims.setUuid(user.getUuid().toString());
         userClaims.setSub(user.getSubject());
@@ -198,6 +218,13 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
         userClaims.setPreferred_username(introspectResponse.get("preferred_username").asText());
         userClaims.setUser_permission_group(extractPermissionGroupFromPassport(rasPassport));
         userClaims.setRoles(userService.addRoleClaims(user));
+
+        if (rasUserinfo != null) {
+            JsonNode federated = rasUserinfo.get("federated_identities_ial2");
+            if (federated != null && !federated.isNull()) {
+                userClaims.setFederated_identities_ial2(federated.toString());
+            }
+        }
 
         return userClaims;
     }
@@ -225,7 +252,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
      * @param user The user
      * @return The user metadata as an ObjectNode
      */
-    protected ObjectNode generateRasUserMetadata(User user) {
+    protected ObjectNode generateRasUserMetadata(User user, JsonNode rasUserinfo) {
         // JsonNode is immutable, so we need to convert it to an ObjectNode
         ObjectNode objectNode = new ObjectMapper().createObjectNode();
 
@@ -235,6 +262,17 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
         objectNode.put("username", user.getEmail());
         objectNode.put("email", user.getEmail());
         objectNode.put("idp", this.rasConnection.getLabel());
+
+        if (rasUserinfo != null) {
+            JsonNode defaultIdentity = rasUserinfo.get("default_identity");
+            if (defaultIdentity != null && !defaultIdentity.isNull()) {
+                objectNode.set("default_identity", defaultIdentity);
+            }
+            JsonNode authenticatedIdentity = rasUserinfo.get("authenticated_identity");
+            if (authenticatedIdentity != null && !authenticatedIdentity.isNull()) {
+                objectNode.set("authenticated_identity", authenticatedIdentity);
+            }
+        }
 
         return objectNode;
     }
