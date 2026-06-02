@@ -215,7 +215,7 @@ public class TokenService {
 
         // Include token payload and privileges
         tokenInspection.addAllFields(jws.getPayload());
-        tokenInspection.addField("roles", String.join(",", getUserRoles(user)));
+        tokenInspection.addField("roles", user.getRoleString());
         tokenInspection.addField("privileges", user.getPrivilegeNameSetByApplication(application));
 
         logger.debug(
@@ -225,15 +225,6 @@ public class TokenService {
         );
 
         return tokenInspection;
-    }
-
-    private static ArrayList<String> getUserRoles(User user) {
-        logger.info("TokenService.getUserRoles: {}", user.getRoleString());
-        ArrayList<String> roles = new ArrayList<>();
-        for (Role role : user.getRoles()) {
-            roles.add(role.getName());
-        }
-        return roles;
     }
 
     public RefreshToken refreshToken(String authorizationHeader) {
