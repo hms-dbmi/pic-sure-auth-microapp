@@ -74,7 +74,9 @@ public class RasUserinfoService {
             }
             return callUserinfo(rasAccessToken);
         } catch (Exception ex) {
-            logger.warn("RAS userinfo fetch failed: {}", ex.getMessage());
+            // Log the exception type only: a JSON-parse exception message embeds a snippet of the
+            // unparseable body, which here can contain the RAS access token or userinfo PII.
+            logger.warn("RAS userinfo fetch failed: {}", ex.getClass().getSimpleName());
             return null;
         }
     }

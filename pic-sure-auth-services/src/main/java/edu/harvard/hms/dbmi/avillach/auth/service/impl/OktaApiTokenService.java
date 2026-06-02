@@ -130,8 +130,9 @@ public class OktaApiTokenService {
             logger.info("Minted new Okta API access token (expires in {}s)", expiresInSec);
             return token;
         } catch (Exception ex) {
-            // Never log assertion/token material.
-            logger.warn("Failed to mint Okta API access token: {}", ex.getMessage());
+            // Log the exception type only: a JSON-parse exception message embeds a snippet of the
+            // response body, which on the token endpoint can contain access-token material.
+            logger.warn("Failed to mint Okta API access token: {}", ex.getClass().getSimpleName());
             this.cache = null;
             return null;
         }
