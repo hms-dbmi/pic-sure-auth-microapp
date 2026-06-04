@@ -223,8 +223,10 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
         if (rasUserinfo != null) {
             JsonNode federated = rasUserinfo.get("federated_identities_ial2");
             if (federated != null && !federated.isNull()) {
-                userClaims.setFederated_identities_ial2(federated.toString());
+                userClaims.setFederated_sources(federated.toString());
             }
+
+            JsonNode eraCommons = rasUserinfo.get()
         }
 
         return userClaims;

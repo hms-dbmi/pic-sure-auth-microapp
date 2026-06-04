@@ -12,7 +12,7 @@ public class UserClaimsTest {
     @Test
     public void toHashMap_includesFederatedIdentitiesIal2_whenSet() {
         UserClaims claims = new UserClaims();
-        claims.setFederated_identities_ial2("{\"foo\":\"bar\"}");
+        claims.setFederated_sources("{\"foo\":\"bar\"}");
 
         HashMap<String, Object> map = claims.toHashMap();
 

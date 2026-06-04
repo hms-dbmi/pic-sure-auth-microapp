@@ -142,7 +142,7 @@ public class RASAuthenticationServiceTest {
         assertEquals("https://ncbi.nlm.nih.gov/gap", capturedClaims.getUser_permission_group());
 
         verify(rasUserinfoService).fetchUserinfo("00uTEST");
-        assertNull(capturedClaims.getFederated_identities_ial2());
+        assertNull(capturedClaims.getFederated_sources());
     }
 
     @Test
@@ -177,7 +177,7 @@ public class RASAuthenticationServiceTest {
         HashMap<String, String> authenticate = rasAuthenticationService.authenticate(authRequest, testDomain);
 
         assertNotNull(authenticate);
-        assertEquals("{\"nih\":{\"userid\":\"x\"}}", claimsCaptor.getValue().getFederated_identities_ial2());
+        assertEquals("{\"nih\":{\"userid\":\"x\"}}", claimsCaptor.getValue().getFederated_sources());
     }
 
     @Test
@@ -232,7 +232,7 @@ public class RASAuthenticationServiceTest {
         // Login still succeeds; enrichment skipped because uid is absent (fetchUserinfo(null) -> null).
         assertNotNull(authenticate);
         verify(rasUserinfoService).fetchUserinfo(null);
-        assertNull(claimsCaptor.getValue().getFederated_identities_ial2());
+        assertNull(claimsCaptor.getValue().getFederated_sources());
     }
 
     @Test
