@@ -232,8 +232,6 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
                     }
                 }
             }
-
-
         }
 
         return userClaims;
