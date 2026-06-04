@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.*;
 
+import static edu.harvard.hms.dbmi.avillach.auth.service.impl.RoleService.MANAGED_AUTH_ACCESS_ROLE_NAME;
 import static edu.harvard.hms.dbmi.avillach.auth.service.impl.RoleService.MANAGED_OPEN_ACCESS_ROLE_NAME;
 
 @Service
@@ -171,7 +172,16 @@ JsonNode introspectResponse = super.introspectToken(userToken);
                 user.get().setSubject("okta|" + introspectResponse.get("uid").asText());
             }
 
-            // todo: MANAGED_AUTH_ACCESS_ROLE_NAME too?
+            Role authAccessRole = this.roleService.getRoleByName(MANAGED_AUTH_ACCESS_ROLE_NAME);
+            if (authAccessRole != null) {
+                logger.info("Adding auth access role to user: {}", user.get().getUuid());
+                Set<Role> roles = user.get().getRoles();
+                roles.add(authAccessRole);
+                user = Optional.ofNullable(userService.changeRole(user.orElse(null), roles));
+            } else {
+                logger.info("{} has not be created for this environment. Please create the role and its permissions before attempting to use auth access.", MANAGED_AUTH_ACCESS_ROLE_NAME);
+            }
+
             // All users that login through OKTA should have the fence_open_access role, or they will not be able to interact with the UI
             Role openAccessRole = roleService.getRoleByName(MANAGED_OPEN_ACCESS_ROLE_NAME);
             if (!user.get().getRoles().contains(openAccessRole)) {
