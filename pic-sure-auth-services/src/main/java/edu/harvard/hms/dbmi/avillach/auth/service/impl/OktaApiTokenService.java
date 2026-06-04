@@ -12,6 +12,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -46,44 +47,64 @@ public class OktaApiTokenService {
     private final String managementApiUrl;
     private final String apiClientId;
     private final String apiScope;
+    private final boolean dpopEnabled;
     private final RestClientUtil restClientUtil;
+    private final DpopProofService dpopProofService;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final PrivateKey signingKey; // null if not configured / unparseable
 
-    /** Immutable (token, expiry) pair held in one volatile reference so reads are atomic and consistent. */
+    /** Server-supplied DPoP nonce for the token endpoint; reused across mints, refreshed on challenge. */
+    private volatile String tokenEndpointNonce;
+
+    /** Immutable (token, expiry, dpopBound) triple held in one volatile reference so reads are atomic. */
     private volatile CachedToken cache;
 
-    private record CachedToken(String token, long expiresAtMillis) {}
+    private record CachedToken(String token, long expiresAtMillis, boolean dpopBound) {}
+
+    /** Token value plus whether it is DPoP-bound (use DPoP scheme) or a plain Bearer token. */
+    public record OktaApiToken(String value, boolean dpopBound) {}
 
     @Autowired
     public OktaApiTokenService(@Value("${ras.okta.management.api.url}") String managementApiUrl,
                                @Value("${ras.okta.api.client.id}") String apiClientId,
                                @Value("${ras.okta.api.private.key}") String apiPrivateKey,
                                @Value("${ras.okta.api.scope}") String apiScope,
-                               RestClientUtil restClientUtil) {
+                               @Value("${ras.okta.api.dpop.enabled}") boolean dpopEnabled,
+                               RestClientUtil restClientUtil,
+                               DpopProofService dpopProofService) {
         this.managementApiUrl = managementApiUrl;
         this.apiClientId = apiClientId;
         this.apiScope = apiScope;
+        this.dpopEnabled = dpopEnabled;
         this.restClientUtil = restClientUtil;
+        this.dpopProofService = dpopProofService;
         this.signingKey = parsePrivateKey(apiPrivateKey);
     }
 
     /**
-     * @return a valid cached Okta API access token, minting a fresh one if the cache is empty or
-     *         within the expiry-skew window; {@code null} if a token could not be obtained.
+     * @return a valid cached Okta API token (value + DPoP-bound flag), minting a fresh one if the
+     *         cache is empty or within the expiry-skew window; {@code null} if none could be obtained.
      */
-    public String getAccessToken() {
+    public OktaApiToken getToken() {
         CachedToken current = this.cache;       // lock-free fast path for the common cache hit
         if (isValid(current)) {
-            return current.token();
+            return new OktaApiToken(current.token(), current.dpopBound());
         }
         synchronized (this) {
             current = this.cache;                // re-check under lock; another thread may have minted
             if (isValid(current)) {
-                return current.token();
+                return new OktaApiToken(current.token(), current.dpopBound());
             }
-            return mintToken();
+            mintToken();
+            CachedToken minted = this.cache;
+            return (minted == null) ? null : new OktaApiToken(minted.token(), minted.dpopBound());
         }
+    }
+
+    /** @return the cached token value only, or {@code null}. Convenience wrapper around {@link #getToken()}. */
+    public String getAccessToken() {
+        OktaApiToken token = getToken();
+        return (token == null) ? null : token.value();
     }
 
     private boolean isValid(CachedToken c) {
@@ -95,47 +116,74 @@ public class OktaApiTokenService {
         this.cache = null;
     }
 
-    private String mintToken() {
+    private void mintToken() {
         if (signingKey == null) {
             logger.warn("OktaApiTokenService cannot mint a token: signing key is not configured");
-            return null;
+            this.cache = null;
+            return;
         }
         String tokenUrl = this.managementApiUrl + "/oauth2/v1/token";
         try {
-            String assertion = buildClientAssertion(tokenUrl);
-            String body = "grant_type=client_credentials"
-                    + "&scope=" + URLEncoder.encode(this.apiScope, StandardCharsets.UTF_8)
-                    + "&client_assertion_type=" + URLEncoder.encode(CLIENT_ASSERTION_TYPE, StandardCharsets.UTF_8)
-                    + "&client_assertion=" + URLEncoder.encode(assertion, StandardCharsets.UTF_8);
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-            headers.setAccept(List.of(MediaType.APPLICATION_JSON));
-
-            ResponseEntity<String> resp = this.restClientUtil.retrievePostResponse(tokenUrl, headers, body);
+            ResponseEntity<String> resp;
+            try {
+                resp = postTokenRequest(tokenUrl);
+            } catch (HttpClientErrorException ex) {
+                String nonce = nonceFrom(ex);
+                if (nonce == null || !this.dpopEnabled) {
+                    throw ex; // genuine failure (or DPoP disabled) -> outer catch
+                }
+                logger.info("Okta token endpoint requires a DPoP nonce; retrying once");
+                this.tokenEndpointNonce = nonce;
+                resp = postTokenRequest(tokenUrl);
+            }
             String rawBody = resp.getBody();
             if (rawBody == null) {
                 logger.warn("Okta API token response had a null body");
-                return null;
+                this.cache = null;
+                return;
             }
             JsonNode json = objectMapper.readTree(rawBody);
             JsonNode accessToken = json.get("access_token");
             if (accessToken == null || accessToken.isNull()) {
                 logger.warn("Okta API token response did not contain an access_token");
-                return null;
+                this.cache = null;
+                return;
             }
             long expiresInSec = json.has("expires_in") ? json.get("expires_in").asLong() : 0L;
+            String tokenType = json.has("token_type") ? json.get("token_type").asText("Bearer") : "Bearer";
+            boolean dpopBound = "DPoP".equalsIgnoreCase(tokenType);
             String token = accessToken.asText();
-            this.cache = new CachedToken(token, System.currentTimeMillis() + (expiresInSec * 1000L));
-            logger.info("Minted new Okta API access token (expires in {}s)", expiresInSec);
-            return token;
+            this.cache = new CachedToken(token, System.currentTimeMillis() + (expiresInSec * 1000L), dpopBound);
+            logger.info("Minted new Okta API access token (expires in {}s, dpop={})", expiresInSec, dpopBound);
         } catch (Exception ex) {
             // Log the exception type only: a JSON-parse exception message embeds a snippet of the
             // response body, which on the token endpoint can contain access-token material.
             logger.warn("Failed to mint Okta API access token: {}", ex.getClass().getSimpleName());
             this.cache = null;
-            return null;
         }
+    }
+
+    private ResponseEntity<String> postTokenRequest(String tokenUrl) {
+        String assertion = buildClientAssertion(tokenUrl);
+        String body = "grant_type=client_credentials"
+                + "&scope=" + URLEncoder.encode(this.apiScope, StandardCharsets.UTF_8)
+                + "&client_assertion_type=" + URLEncoder.encode(CLIENT_ASSERTION_TYPE, StandardCharsets.UTF_8)
+                + "&client_assertion=" + URLEncoder.encode(assertion, StandardCharsets.UTF_8);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+        if (this.dpopEnabled) {
+            headers.set("DPoP", this.dpopProofService.createProof("POST", tokenUrl, this.tokenEndpointNonce, null));
+        }
+        return this.restClientUtil.retrievePostResponse(tokenUrl, headers, body);
+    }
+
+    /** @return the {@code dpop-nonce} response header value if present and non-blank, else null. */
+    private String nonceFrom(HttpClientErrorException ex) {
+        HttpHeaders responseHeaders = ex.getResponseHeaders();
+        String nonce = (responseHeaders == null) ? null : responseHeaders.getFirst("dpop-nonce");
+        return (nonce != null && !nonce.isBlank()) ? nonce : null;
     }
 
     private String buildClientAssertion(String audience) {
