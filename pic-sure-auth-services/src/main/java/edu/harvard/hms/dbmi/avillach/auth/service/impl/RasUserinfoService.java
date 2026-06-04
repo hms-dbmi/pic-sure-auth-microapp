@@ -36,7 +36,11 @@ public class RasUserinfoService {
     private final String userinfoUri;
     private final RestClientUtil restClientUtil;
     private final OktaApiTokenService oktaApiTokenService;
+    private final DpopProofService dpopProofService;
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    /** Server-supplied DPoP nonce for the Okta Management API; reused across calls, refreshed on challenge. */
+    private volatile String resourceNonce;
 
     @Autowired
     public RasUserinfoService(@Value("${ras.fetch.userinfo.enabled}") boolean fetchEnabled,
@@ -44,13 +48,15 @@ public class RasUserinfoService {
                               @Value("${ras.okta.idp.id}") String idpId,
                               @Value("${ras.userinfo.uri}") String userinfoUri,
                               RestClientUtil restClientUtil,
-                              OktaApiTokenService oktaApiTokenService) {
+                              OktaApiTokenService oktaApiTokenService,
+                              DpopProofService dpopProofService) {
         this.fetchEnabled = fetchEnabled;
         this.managementApiUrl = managementApiUrl;
         this.idpId = idpId;
         this.userinfoUri = userinfoUri;
         this.restClientUtil = restClientUtil;
         this.oktaApiTokenService = oktaApiTokenService;
+        this.dpopProofService = dpopProofService;
     }
 
     /**
@@ -83,19 +89,34 @@ public class RasUserinfoService {
 
     /**
      * GET the Okta-stored credential tokens and return the RAS access token value, or null.
-     * Retries once after re-minting the Okta API token if the Management API returns 401.
+     * Handles two distinct 401-class failures, each retried at most once:
+     *   - a DPoP resource nonce challenge ({@code dpop-nonce} header) -> set nonce, retry (token unchanged);
+     *   - an expired/invalid Okta API token (401, no nonce) -> invalidate, re-mint, retry.
      */
     private String retrieveStoredRasToken(String oktaUserId) throws JsonProcessingException {
         String url = this.managementApiUrl + "/api/v1/idps/" + this.idpId
                 + "/users/" + oktaUserId + "/credentials/tokens";
+        OktaApiTokenService.OktaApiToken token = this.oktaApiTokenService.getToken();
+        if (token == null || token.value() == null) {
+            throw new IllegalStateException("could not obtain Okta API token");
+        }
         ResponseEntity<String> resp;
         try {
-            resp = getWithApiToken(url);
+            resp = getManagementApi(url, token);
         } catch (HttpClientErrorException ex) {
-            if (ex.getStatusCode() == HttpStatus.UNAUTHORIZED) {
+            String nonce = nonceFrom(ex);
+            if (nonce != null) {
+                logger.info("Okta Management API requires a DPoP nonce; retrying once");
+                this.resourceNonce = nonce;
+                resp = getManagementApi(url, token); // a second failure propagates to fetchUserinfo's catch
+            } else if (ex.getStatusCode() == HttpStatus.UNAUTHORIZED) {
                 logger.info("Okta Management API returned 401; re-minting Okta API token and retrying once");
                 this.oktaApiTokenService.invalidate();
-                resp = getWithApiToken(url); // a second failure propagates to fetchUserinfo's catch
+                token = this.oktaApiTokenService.getToken();
+                if (token == null || token.value() == null) {
+                    throw new IllegalStateException("could not obtain Okta API token");
+                }
+                resp = getManagementApi(url, token); // a second failure propagates to fetchUserinfo's catch
             } else {
                 logger.warn("Okta Management API token lookup failed: {}", ex.getStatusCode());
                 return null;
@@ -104,14 +125,26 @@ public class RasUserinfoService {
         return extractAccessToken(resp.getBody());
     }
 
-    private ResponseEntity<String> getWithApiToken(String url) {
-        String apiToken = this.oktaApiTokenService.getAccessToken();
-        if (apiToken == null) {
-            throw new IllegalStateException("could not obtain Okta API token");
-        }
+    /**
+     * Issue the Management API GET using the scheme the token was bound as: DPoP (Authorization: DPoP +
+     * a fresh proof carrying ath and the current resource nonce) or plain Bearer.
+     */
+    private ResponseEntity<String> getManagementApi(String url, OktaApiTokenService.OktaApiToken token) {
         HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(apiToken);
+        if (token.dpopBound()) {
+            headers.set(HttpHeaders.AUTHORIZATION, "DPoP " + token.value());
+            headers.set("DPoP", this.dpopProofService.createProof("GET", url, this.resourceNonce, token.value()));
+        } else {
+            headers.setBearerAuth(token.value());
+        }
         return this.restClientUtil.retrieveGetResponse(url, headers);
+    }
+
+    /** @return the {@code dpop-nonce} response header value if present and non-blank, else null. */
+    private String nonceFrom(HttpClientErrorException ex) {
+        HttpHeaders responseHeaders = ex.getResponseHeaders();
+        String nonce = (responseHeaders == null) ? null : responseHeaders.getFirst("dpop-nonce");
+        return (nonce != null && !nonce.isBlank()) ? nonce : null;
     }
 
     /** Select the element whose tokenType ends with "access_token" and return its "token" value. */

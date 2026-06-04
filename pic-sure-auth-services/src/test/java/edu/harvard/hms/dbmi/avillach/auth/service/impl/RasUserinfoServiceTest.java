@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import edu.harvard.hms.dbmi.avillach.auth.utils.RestClientUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,16 +12,14 @@ import org.springframework.web.client.HttpClientErrorException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.contains;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 public class RasUserinfoServiceTest {
 
     private RestClientUtil restClientUtil;
     private OktaApiTokenService oktaApiTokenService;
+    private DpopProofService dpopProofService;
 
     private static final String MGMT_URL = "https://example.okta.com";
     private static final String IDP_ID = "0oaIdpId";
@@ -37,15 +36,23 @@ public class RasUserinfoServiceTest {
     public void setUp() {
         restClientUtil = mock(RestClientUtil.class);
         oktaApiTokenService = mock(OktaApiTokenService.class);
-        when(oktaApiTokenService.getAccessToken()).thenReturn("OKTA_API_TOKEN");
+        dpopProofService = mock(DpopProofService.class);
+        when(oktaApiTokenService.getToken())
+                .thenReturn(new OktaApiTokenService.OktaApiToken("OKTA_API_TOKEN", false));
     }
 
     private RasUserinfoService newService(boolean enabled) {
-        return new RasUserinfoService(enabled, MGMT_URL, IDP_ID, USERINFO_URI, restClientUtil, oktaApiTokenService);
+        return new RasUserinfoService(enabled, MGMT_URL, IDP_ID, USERINFO_URI, restClientUtil, oktaApiTokenService, dpopProofService);
     }
 
     private HttpClientErrorException httpError(HttpStatus status) {
         return HttpClientErrorException.create(status, status.getReasonPhrase(), HttpHeaders.EMPTY, null, null);
+    }
+
+    private HttpClientErrorException dpopNonce(HttpStatus status, String nonce) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("dpop-nonce", nonce);
+        return HttpClientErrorException.create(status, status.getReasonPhrase(), headers, null, null);
     }
 
     @Test
@@ -116,7 +123,7 @@ public class RasUserinfoServiceTest {
 
     @Test
     public void fetchUserinfo_returnsNull_whenOktaApiTokenUnavailable() {
-        when(oktaApiTokenService.getAccessToken()).thenReturn(null);
+        when(oktaApiTokenService.getToken()).thenReturn(null);
 
         assertNull(newService(true).fetchUserinfo(OKTA_USER_ID));
         verifyNoInteractions(restClientUtil);
@@ -154,5 +161,45 @@ public class RasUserinfoServiceTest {
         assertNull(svc.fetchUserinfo("  "));
         assertNull(svc.fetchUserinfo(null));
         verifyNoInteractions(restClientUtil);
+    }
+
+    @Test
+    public void fetchUserinfo_usesDpopScheme_whenTokenDpopBound() {
+        when(oktaApiTokenService.getToken())
+                .thenReturn(new OktaApiTokenService.OktaApiToken("OKTA_API_TOKEN", true));
+        when(dpopProofService.createProof(eq("GET"), contains("/credentials/tokens"), isNull(), eq("OKTA_API_TOKEN")))
+                .thenReturn("PROOF1");
+        when(restClientUtil.retrieveGetResponse(contains("/credentials/tokens"), any(HttpHeaders.class)))
+                .thenReturn(ResponseEntity.ok(TOKENS_RESPONSE));
+        when(restClientUtil.retrieveGetResponse(eq(USERINFO_URI), any(HttpHeaders.class)))
+                .thenReturn(ResponseEntity.ok(USERINFO_BODY));
+
+        assertEquals("ras-sub", newService(true).fetchUserinfo(OKTA_USER_ID).get("sub").asText());
+
+        ArgumentCaptor<HttpHeaders> headers = ArgumentCaptor.forClass(HttpHeaders.class);
+        verify(restClientUtil).retrieveGetResponse(contains("/credentials/tokens"), headers.capture());
+        assertEquals("DPoP OKTA_API_TOKEN", headers.getValue().getFirst(HttpHeaders.AUTHORIZATION));
+        assertEquals("PROOF1", headers.getValue().getFirst("DPoP"));
+    }
+
+    @Test
+    public void fetchUserinfo_retriesWithNonce_onManagementApiDpopNonceChallenge() {
+        when(oktaApiTokenService.getToken())
+                .thenReturn(new OktaApiTokenService.OktaApiToken("OKTA_API_TOKEN", true));
+        when(dpopProofService.createProof(eq("GET"), contains("/credentials/tokens"), isNull(), eq("OKTA_API_TOKEN")))
+                .thenReturn("P1");
+        when(dpopProofService.createProof(eq("GET"), contains("/credentials/tokens"), eq("RNONCE"), eq("OKTA_API_TOKEN")))
+                .thenReturn("P2");
+        when(restClientUtil.retrieveGetResponse(contains("/credentials/tokens"), any(HttpHeaders.class)))
+                .thenThrow(dpopNonce(HttpStatus.UNAUTHORIZED, "RNONCE"))
+                .thenReturn(ResponseEntity.ok(TOKENS_RESPONSE));
+        when(restClientUtil.retrieveGetResponse(eq(USERINFO_URI), any(HttpHeaders.class)))
+                .thenReturn(ResponseEntity.ok(USERINFO_BODY));
+
+        assertEquals("ras-sub", newService(true).fetchUserinfo(OKTA_USER_ID).get("sub").asText());
+
+        verify(oktaApiTokenService, never()).invalidate();
+        verify(restClientUtil, times(2)).retrieveGetResponse(contains("/credentials/tokens"), any(HttpHeaders.class));
+        verify(dpopProofService).createProof("GET", MGMT_URL + "/api/v1/idps/" + IDP_ID + "/users/" + OKTA_USER_ID + "/credentials/tokens", "RNONCE", "OKTA_API_TOKEN");
     }
 }
