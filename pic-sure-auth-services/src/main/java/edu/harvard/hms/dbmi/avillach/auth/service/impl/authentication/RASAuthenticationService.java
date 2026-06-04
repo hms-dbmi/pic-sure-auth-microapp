@@ -106,6 +106,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
 
         String oktaUserId = extractOktaUserId(introspectResponse);
         JsonNode rasUserinfo = rasUserinfoService.fetchUserinfo(oktaUserId);
+        logger.info("RAS USERINFO RESPONSE FOR OKTA USER ID {} ___ RAS USERINFO RESPONSE {}", oktaUserId, rasUserinfo);
 
         Optional<User> initializedUser = initializeUser(introspectResponse, rasUserinfo);
         if (initializedUser.isEmpty()) {
