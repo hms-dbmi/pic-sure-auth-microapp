@@ -216,7 +216,9 @@ public class TokenService {
         // Include token payload and privileges
         tokenInspection.addAllFields(jws.getPayload());
         tokenInspection.addField("roles", user.getRoleString());
-        tokenInspection.addField("privileges", user.getPrivilegeNameSetByApplication(application));
+        Set<String> userPrivileges = user.getPrivilegeNameSetByApplication(application);
+        userPrivileges.addAll(user.getPrivilegeNameSet());
+        tokenInspection.addField("privileges", userPrivileges);
 
         logger.debug(
             "_inspectToken() Successfully inspect and return response map: {}",
