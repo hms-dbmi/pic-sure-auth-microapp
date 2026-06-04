@@ -158,7 +158,7 @@ public class User extends BaseEntity implements Serializable, Principal {
 		Set<Privilege> totalPrivilegeSet = getTotalPrivilege();
 
 		if (totalPrivilegeSet == null)
-			return null;
+			return Set.of();
 
 		Set<String> nameSet = new HashSet<>();
 		if (application == null)
