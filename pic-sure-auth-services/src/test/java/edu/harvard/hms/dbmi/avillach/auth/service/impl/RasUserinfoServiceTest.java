@@ -203,4 +203,19 @@ public class RasUserinfoServiceTest {
         verify(restClientUtil, times(2)).retrieveGetResponse(contains("/credentials/tokens"), any(HttpHeaders.class));
         verify(dpopProofService).createProof("GET", MGMT_URL + "/api/v1/idps/" + IDP_ID + "/users/" + OKTA_USER_ID + "/credentials/tokens", "RNONCE", "OKTA_API_TOKEN");
     }
+
+    @Test
+    public void fetchUserinfo_urlEncodesOktaUserIdPathSegment() {
+        when(restClientUtil.retrieveGetResponse(contains("/credentials/tokens"), any(HttpHeaders.class)))
+                .thenReturn(ResponseEntity.ok(TOKENS_RESPONSE));
+        when(restClientUtil.retrieveGetResponse(eq(USERINFO_URI), any(HttpHeaders.class)))
+                .thenReturn(ResponseEntity.ok(USERINFO_BODY));
+
+        newService(true).fetchUserinfo("ab/../cd id");
+
+        // Path-unsafe characters must be percent-encoded so the user id cannot alter the request path.
+        verify(restClientUtil).retrieveGetResponse(
+                eq(MGMT_URL + "/api/v1/idps/" + IDP_ID + "/users/ab%2F..%2Fcd%20id/credentials/tokens"),
+                any(HttpHeaders.class));
+    }
 }

@@ -14,15 +14,23 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.util.UriUtils;
+
+import java.nio.charset.StandardCharsets;
 
 /**
  * Retrieves the RAS userinfo object (which Okta cannot map through token introspection) by:
  *   1. reading the Okta-stored RAS access token from the Okta Management API, then
  *   2. calling the RAS userinfo endpoint directly with that token.
  *
- * This is non-blocking enrichment: {@link #fetchUserinfo(String)} NEVER throws. On any failure
- * (disabled, missing Okta API token, missing stored RAS token, HTTP error, malformed body) it
- * logs a warning and returns {@code null} so login proceeds with the federated data absent.
+ * {@link #fetchUserinfo(String)} NEVER throws: on any failure (disabled, missing Okta API token,
+ * missing stored RAS token, HTTP error, malformed body) it logs a warning and returns {@code null}.
+ *
+ * IMPORTANT: RAS userinfo is the identity source for the RAS login flow, so a {@code null} result is
+ * NOT silently tolerated by the caller -- it causes the login to fail. Consequently, if this
+ * enrichment is enabled ({@code ras.fetch.userinfo.enabled=true}) but the application is not
+ * correctly configured (Okta management API URL, API client id, API private key, IDP id, or RAS
+ * userinfo URI), every RAS login will fail. Disable enrichment to allow login to proceed without it.
  *
  * Never logs the Okta API token, the RAS access token, or the raw userinfo body (PII).
  */
@@ -96,7 +104,7 @@ public class RasUserinfoService {
      */
     private String retrieveStoredRasToken(String oktaUserId) throws JsonProcessingException {
         String url = this.managementApiUrl + "/api/v1/idps/" + this.idpId
-                + "/users/" + oktaUserId + "/credentials/tokens";
+                + "/users/" + UriUtils.encodePathSegment(oktaUserId, StandardCharsets.UTF_8) + "/credentials/tokens";
         OktaApiTokenService.OktaApiToken token = this.oktaApiTokenService.getToken();
         if (token == null || token.value() == null) {
             throw new IllegalStateException("could not obtain Okta API token");

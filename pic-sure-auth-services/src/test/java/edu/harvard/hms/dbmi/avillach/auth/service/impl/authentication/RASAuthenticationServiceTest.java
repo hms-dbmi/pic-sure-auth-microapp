@@ -173,7 +173,7 @@ public class RASAuthenticationServiceTest {
         when(userService.updateUserConsents(any(), any())).thenReturn(user);
 
         RasIal2UserInfo userinfo = new ObjectMapper().readValue(
-                "{\"federated_identities\":{\"sources\":{\"nih\":{\"identity_username\":\"x\"}}}}", RasIal2UserInfo.class);
+                "{\"federated_identities_ial2\":{\"sources\":{\"nih\":{\"identity_username\":\"x\"}}}}", RasIal2UserInfo.class);
         when(rasUserinfoService.fetchUserinfo("00uTEST")).thenReturn(userinfo);
 
         ArgumentCaptor<UserClaims> claimsCaptor = ArgumentCaptor.forClass(UserClaims.class);

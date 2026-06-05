@@ -90,7 +90,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
      * @return The response from the authentication attempt
      */
     @Override
-    public HashMap<String, String> authenticate(Map<String, String> authRequest, String host) throws JsonProcessingException {
+    public HashMap<String, String> authenticate(Map<String, String> authRequest, String host) {
         logger.info("RAS OKTA LOGIN ATTEMPT ___ CODE {}", authRequest.get("code"));
 
         JsonNode introspectResponse = null;
@@ -126,6 +126,10 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
         user = updateRasUserRoles(authRequest.get("code"), user, rasPassport.get());
         setUserPassport(authRequest, introspectResponse, user);
         UserClaims userClaims = buildUserClaims(user, rasPassport.get(), rasUserinfo);
+        if (userClaims == null) {
+            logger.info("LOGIN FAILED ___ COULD NOT BUILD USER CLAIMS ___ USER: {} ___ CODE {}", user.getSubject(), authRequest.get("code"));
+            return null;
+        }
         HashMap<String, String> responseMap = userService.getUserProfileResponse(userClaims);
 
         if (responseMap != null) {
@@ -141,8 +145,9 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
 
     /**
      * Extract the OKTA user id (the "uid" claim) used to look up the stored RAS token in the Okta
-     * Management API. This is NOT the RAS "sub" used as the user lookup key. Returns null if absent,
-     * in which case userinfo enrichment is skipped (login still succeeds).
+     * Management API. This is NOT the RAS "sub" used as the user lookup key. Returns null if absent.
+     * Because RAS userinfo is the identity source for the RAS login flow, a null uid means enrichment
+     * cannot run, which causes the login to fail downstream (see {@link RasUserinfoService}).
      */
     private String extractOktaUserId(JsonNode introspectResponse) {
         JsonNode uid = introspectResponse.get("uid");
@@ -215,7 +220,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
      * @param rasUserinfo        The RAS userinfo response
      * @return The user claims as a HashMap
      */
-    private UserClaims buildUserClaims(User user, Passport rasPassport, RasIal2UserInfo rasUserinfo) throws JsonProcessingException {
+    private UserClaims buildUserClaims(User user, Passport rasPassport, RasIal2UserInfo rasUserinfo) {
         UserClaims userClaims = new UserClaims();
         userClaims.setUuid(user.getUuid().toString());
         userClaims.setSub(user.getSubject());
@@ -229,7 +234,12 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
 
         RasIal2UserInfo.FederatedIdentities federated = rasUserinfo.getFederatedIdentitiesIal2();
         if (federated != null) {
-            userClaims.setFederated_sources(this.objectMapper.writeValueAsString(federated.getSources()));
+            try {
+                userClaims.setFederated_sources(this.objectMapper.writeValueAsString(federated.getSources()));
+            } catch (JsonProcessingException e) {
+                logger.error("LOGIN FAILED ___ could not serialize federated_identities_ial2 for user {}", user.getSubject(), e);
+                return null;
+            }
             Map<String, RasIal2UserInfo.FederatedIdentityDetail> identities = federated.getIdentities();
             if (identities != null && !identities.isEmpty()) {
                 RasIal2UserInfo.FederatedIdentityDetail era = identities.get("era");
