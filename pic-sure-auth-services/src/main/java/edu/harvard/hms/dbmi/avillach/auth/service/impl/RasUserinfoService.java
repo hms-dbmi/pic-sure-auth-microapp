@@ -3,6 +3,7 @@ package edu.harvard.hms.dbmi.avillach.auth.service.impl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import edu.harvard.hms.dbmi.avillach.auth.model.ras.RasIal2UserInfo;
 import edu.harvard.hms.dbmi.avillach.auth.utils.RestClientUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,7 +64,7 @@ public class RasUserinfoService {
      * @param oktaUserId the Okta-internal user id (the introspection "uid" claim)
      * @return the parsed RAS userinfo node, or {@code null} on any failure. Never throws.
      */
-    public JsonNode fetchUserinfo(String oktaUserId) {
+    public RasIal2UserInfo fetchUserinfo(String oktaUserId) {
         if (!fetchEnabled) {
             logger.info("RAS userinfo fetch is disabled (ras.fetch.userinfo.enabled=false)");
             return null;
@@ -171,7 +172,7 @@ public class RasUserinfoService {
         return null;
     }
 
-    private JsonNode callUserinfo(String rasAccessToken) throws JsonProcessingException {
+    private RasIal2UserInfo callUserinfo(String rasAccessToken) throws JsonProcessingException {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(rasAccessToken);
         ResponseEntity<String> resp = this.restClientUtil.retrieveGetResponse(this.userinfoUri, headers);
@@ -180,6 +181,6 @@ public class RasUserinfoService {
             logger.warn("RAS userinfo response had a null body");
             return null;
         }
-        return objectMapper.readTree(body);
+        return objectMapper.readValue(body, RasIal2UserInfo.class);
     }
 }
