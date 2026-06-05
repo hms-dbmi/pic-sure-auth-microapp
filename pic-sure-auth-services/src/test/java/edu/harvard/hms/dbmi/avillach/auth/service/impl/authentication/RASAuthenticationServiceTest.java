@@ -12,6 +12,7 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.entity.UserClaims;
 import edu.harvard.hms.dbmi.avillach.auth.model.ras.Passport;
 import edu.harvard.hms.dbmi.avillach.auth.model.ras.RasDbgapPermission;
+import edu.harvard.hms.dbmi.avillach.auth.model.ras.RasIal2UserInfo;
 import edu.harvard.hms.dbmi.avillach.auth.repository.RoleRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.UserRepository;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.*;
@@ -103,7 +104,7 @@ public class RASAuthenticationServiceTest {
     }
 
     @Test
-    public void testAuthorizationCodeFlow_Successful() {
+    public void testAuthorizationCodeFlow_Successful() throws JsonProcessingException {
         String data = "{\"access_token\":\"" + testAccessToken + "\", \"active\":true, \"id_token\":\"SomeRandomToken\"}";
         String payload = "token_type_hint=access_token&token=" + testAccessToken;
         String redirectUri = "https://" + testDomain + "/login/loading";
@@ -127,6 +128,11 @@ public class RASAuthenticationServiceTest {
         when(userService.createRasUser(any(), any())).thenReturn(Optional.of(user));
         when(userService.updateUserRoles(any(), any())).thenReturn(user);
         when(userService.updateUserConsents(any(), any())).thenReturn(user);
+
+        // userid and preferred_username now come from the RAS userinfo response, not introspection.
+        RasIal2UserInfo userinfo = new ObjectMapper().readValue(
+                "{\"userid\":\"test_userid\",\"preferred_username\":\"testuser\"}", RasIal2UserInfo.class);
+        when(rasUserinfoService.fetchUserinfo("00uTEST")).thenReturn(userinfo);
 
         ArgumentCaptor<UserClaims> claimsCaptor = ArgumentCaptor.forClass(UserClaims.class);
         when(userService.getUserProfileResponse(claimsCaptor.capture())).thenReturn(new HashMap<>());
@@ -166,9 +172,8 @@ public class RASAuthenticationServiceTest {
         when(userService.updateUserRoles(any(), any())).thenReturn(user);
         when(userService.updateUserConsents(any(), any())).thenReturn(user);
 
-        JsonNode userinfo = new ObjectMapper().readTree(
-                "{\"federated_identities_ial2\":{\"nih\":{\"userid\":\"x\"}}," +
-                "\"default_identity\":\"nih\",\"authenticated_identity\":\"nih\"}");
+        RasIal2UserInfo userinfo = new ObjectMapper().readValue(
+                "{\"federated_identities\":{\"sources\":{\"nih\":{\"identity_username\":\"x\"}}}}", RasIal2UserInfo.class);
         when(rasUserinfoService.fetchUserinfo("00uTEST")).thenReturn(userinfo);
 
         ArgumentCaptor<UserClaims> claimsCaptor = ArgumentCaptor.forClass(UserClaims.class);
@@ -177,14 +182,14 @@ public class RASAuthenticationServiceTest {
         HashMap<String, String> authenticate = rasAuthenticationService.authenticate(authRequest, testDomain);
 
         assertNotNull(authenticate);
-        assertEquals("{\"nih\":{\"userid\":\"x\"}}", claimsCaptor.getValue().getFederated_sources());
+        assertEquals("{\"nih\":{\"identity_username\":\"x\"}}", claimsCaptor.getValue().getFederated_sources());
     }
 
     @Test
     public void testGenerateRasUserMetadata_includesIdentities_fromUserinfo() throws Exception {
         User user = createTestUser();
-        JsonNode userinfo = new ObjectMapper().readTree(
-                "{\"default_identity\":\"nih\",\"authenticated_identity\":\"nih\"}");
+        RasIal2UserInfo userinfo = new ObjectMapper().readValue(
+                "{\"federated_identities_ial2\":{\"default_identity\":\"nih\",\"authenticated_identity\":\"nih\"}}", RasIal2UserInfo.class);
 
         ObjectNode metadata = rasAuthenticationService.generateRasUserMetadata(user, userinfo);
 
@@ -203,7 +208,7 @@ public class RASAuthenticationServiceTest {
     }
 
     @Test
-    public void testAuthorizationCodeFlow_MissingUid_LoginSucceedsWithoutEnrichment() {
+    public void testAuthorizationCodeFlow_MissingUid_LoginFailsWithoutUserinfo() throws JsonProcessingException {
         String data = "{\"access_token\":\"" + testAccessToken + "\", \"active\":true, \"id_token\":\"SomeRandomToken\"}";
         String payload = "token_type_hint=access_token&token=" + testAccessToken;
         String redirectUri = "https://" + testDomain + "/login/loading";
@@ -216,23 +221,17 @@ public class RASAuthenticationServiceTest {
 
         when(restClientUtil.retrievePostResponse(anyString(), any(), eq(queryString))).thenReturn(ResponseEntity.ok(data));
         when(restClientUtil.retrievePostResponse(anyString(), any(), eq(payload))).thenReturn(ResponseEntity.ok(introspectionResponse));
-        doNothing().when(cacheEvictionService).evictCache(any(User.class));
 
-        User user = createTestUser();
-        user.setSubject("okta-ras|adfadfaf");
-        when(userService.createRasUser(any(), any())).thenReturn(Optional.of(user));
-        when(userService.updateUserRoles(any(), any())).thenReturn(user);
-        when(userService.updateUserConsents(any(), any())).thenReturn(user);
-
-        ArgumentCaptor<UserClaims> claimsCaptor = ArgumentCaptor.forClass(UserClaims.class);
-        when(userService.getUserProfileResponse(claimsCaptor.capture())).thenReturn(new HashMap<>());
+        // RAS userinfo is the identity source. With no uid we cannot fetch it (fetchUserinfo(null) -> null),
+        // so createRasUser cannot build the user and login fails before any claims are assembled.
+        when(userService.createRasUser(any(), any())).thenReturn(Optional.empty());
 
         HashMap<String, String> authenticate = rasAuthenticationService.authenticate(authRequest, testDomain);
 
-        // Login still succeeds; enrichment skipped because uid is absent (fetchUserinfo(null) -> null).
-        assertNotNull(authenticate);
+        // Login is denied; userinfo was attempted with a null uid and no profile claims were built.
+        assertNull(authenticate);
         verify(rasUserinfoService).fetchUserinfo(null);
-        assertNull(claimsCaptor.getValue().getFederated_sources());
+        verify(userService, never()).getUserProfileResponse(any());
     }
 
     @Test

@@ -1,6 +1,6 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.impl;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import edu.harvard.hms.dbmi.avillach.auth.model.ras.RasIal2UserInfo;
 import edu.harvard.hms.dbmi.avillach.auth.utils.RestClientUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,7 +30,7 @@ public class RasUserinfoServiceTest {
             "[{\"id\":\"a\",\"tokenType\":\"urn:okta:params:oauth:token-type:id_token\",\"tokenAuthScheme\":\"Bearer\",\"token\":\"ID_TOKEN\"}," +
             "{\"id\":\"b\",\"tokenType\":\"urn:okta:params:oauth:token-type:access_token\",\"tokenAuthScheme\":\"Bearer\",\"token\":\"RAS_ACCESS_TOKEN\"}]";
     private static final String USERINFO_BODY =
-            "{\"sub\":\"ras-sub\",\"federated_identities_ial2\":{\"nih\":{\"userid\":\"x\"}}}";
+            "{\"sub\":\"ras-sub\",\"federated_identities_ial2\":{\"identities\":{\"nih\":{\"userid\":\"x\"}}}}";
 
     @BeforeEach
     public void setUp() {
@@ -62,14 +62,15 @@ public class RasUserinfoServiceTest {
         when(restClientUtil.retrieveGetResponse(eq(USERINFO_URI), any(HttpHeaders.class)))
                 .thenReturn(ResponseEntity.ok(USERINFO_BODY));
 
-        JsonNode result = newService(true).fetchUserinfo(OKTA_USER_ID);
+        RasIal2UserInfo result = newService(true).fetchUserinfo(OKTA_USER_ID);
 
-        assertEquals("x", result.get("federated_identities_ial2").get("nih").get("userid").asText());
+        assertEquals("ras-sub", result.getSub());
+        assertEquals("x", result.getFederatedIdentitiesIal2().getIdentities().get("nih").getUserId());
     }
 
     @Test
     public void fetchUserinfo_returnsNull_whenDisabled() {
-        JsonNode result = newService(false).fetchUserinfo(OKTA_USER_ID);
+        RasIal2UserInfo result = newService(false).fetchUserinfo(OKTA_USER_ID);
 
         assertNull(result);
         verifyNoInteractions(restClientUtil);
@@ -137,9 +138,9 @@ public class RasUserinfoServiceTest {
         when(restClientUtil.retrieveGetResponse(eq(USERINFO_URI), any(HttpHeaders.class)))
                 .thenReturn(ResponseEntity.ok(USERINFO_BODY));
 
-        JsonNode result = newService(true).fetchUserinfo(OKTA_USER_ID);
+        RasIal2UserInfo result = newService(true).fetchUserinfo(OKTA_USER_ID);
 
-        assertEquals("ras-sub", result.get("sub").asText());
+        assertEquals("ras-sub", result.getSub());
         verify(oktaApiTokenService, times(1)).invalidate();
         verify(restClientUtil, times(2)).retrieveGetResponse(contains("/credentials/tokens"), any(HttpHeaders.class));
     }
@@ -174,7 +175,7 @@ public class RasUserinfoServiceTest {
         when(restClientUtil.retrieveGetResponse(eq(USERINFO_URI), any(HttpHeaders.class)))
                 .thenReturn(ResponseEntity.ok(USERINFO_BODY));
 
-        assertEquals("ras-sub", newService(true).fetchUserinfo(OKTA_USER_ID).get("sub").asText());
+        assertEquals("ras-sub", newService(true).fetchUserinfo(OKTA_USER_ID).getSub());
 
         ArgumentCaptor<HttpHeaders> headers = ArgumentCaptor.forClass(HttpHeaders.class);
         verify(restClientUtil).retrieveGetResponse(contains("/credentials/tokens"), headers.capture());
@@ -196,7 +197,7 @@ public class RasUserinfoServiceTest {
         when(restClientUtil.retrieveGetResponse(eq(USERINFO_URI), any(HttpHeaders.class)))
                 .thenReturn(ResponseEntity.ok(USERINFO_BODY));
 
-        assertEquals("ras-sub", newService(true).fetchUserinfo(OKTA_USER_ID).get("sub").asText());
+        assertEquals("ras-sub", newService(true).fetchUserinfo(OKTA_USER_ID).getSub());
 
         verify(oktaApiTokenService, never()).invalidate();
         verify(restClientUtil, times(2)).retrieveGetResponse(contains("/credentials/tokens"), any(HttpHeaders.class));
