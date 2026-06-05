@@ -685,6 +685,14 @@ public class UserService {
             String userEmail = rasIal2UserInfo.getEmail();
             String preferredUsername = rasIal2UserInfo.getPreferredUsername();
 
+            // Don't create the user if required information is missing. We don't want a null email or a subject
+            // that ends up being okta-ras|null
+            if (StringUtils.isBlank(preferredUsername) || StringUtils.isBlank(userEmail)) {
+                logger.warn("Cannot create RAS user: missing required field(s) [preferred_username blank={}, email blank={}]",
+                        StringUtils.isBlank(preferredUsername), StringUtils.isBlank(userEmail));
+                return Optional.empty();
+            }
+
             // Load IAL2 user, null if it doesn't exist
             User rasUser = this.userRepository.findBySubject(connection.getSubPrefix() + preferredUsername);
             if (rasUser != null) {

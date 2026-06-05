@@ -1,9 +1,11 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.impl;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.harvard.dbmi.avillach.logging.LoggingClient;
 import edu.harvard.hms.dbmi.avillach.auth.entity.*;
 
 import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
+import edu.harvard.hms.dbmi.avillach.auth.model.ras.RasIal2UserInfo;
 import edu.harvard.hms.dbmi.avillach.auth.model.fenceMapping.StudyMetaData;
 import edu.harvard.hms.dbmi.avillach.auth.repository.ApplicationRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.ConnectionRepository;
@@ -705,6 +707,55 @@ public class UserServiceTest {
                 + "\"variantInfoFilters\":[{\"categoryVariantInfoFilters\":{},\"numericVariantInfoFilters\":{}}],"
                 + "\"expectedResultType\": \"COUNT\""
                 + "}";
+    }
+
+    private RasIal2UserInfo rasUserinfo(String json) throws Exception {
+        return new ObjectMapper().readValue(json, RasIal2UserInfo.class);
+    }
+
+    private Connection rasConnection() {
+        Connection connection = new Connection();
+        connection.setSubPrefix("okta-ras|");
+        return connection;
+    }
+
+    @Test
+    public void createRasUser_returnsEmpty_whenUserinfoNull() {
+        assertTrue(userService.createRasUser(null, rasConnection()).isEmpty());
+        verify(userRepository, never()).findBySubject(anyString());
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    public void createRasUser_failsClosed_whenPreferredUsernameMissing() throws Exception {
+        // Absent (null) and blank are both rejected before any lookup/persist.
+        assertTrue(userService.createRasUser(rasUserinfo("{\"email\":\"user@example.com\"}"), rasConnection()).isEmpty());
+        assertTrue(userService.createRasUser(rasUserinfo("{\"preferred_username\":\"\",\"email\":\"user@example.com\"}"), rasConnection()).isEmpty());
+
+        verify(userRepository, never()).findBySubject(anyString());
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    public void createRasUser_failsClosed_whenEmailMissing() throws Exception {
+        assertTrue(userService.createRasUser(rasUserinfo("{\"preferred_username\":\"user@idp\"}"), rasConnection()).isEmpty());
+        assertTrue(userService.createRasUser(rasUserinfo("{\"preferred_username\":\"user@idp\",\"email\":\"  \"}"), rasConnection()).isEmpty());
+
+        verify(userRepository, never()).findBySubject(anyString());
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    public void createRasUser_createsNewUser_whenRequiredFieldsPresent() throws Exception {
+        when(userRepository.findBySubject(anyString())).thenReturn(null);
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Optional<User> result = userService.createRasUser(
+                rasUserinfo("{\"preferred_username\":\"user@idp\",\"email\":\"user@example.com\"}"), rasConnection());
+
+        assertTrue(result.isPresent());
+        assertEquals("okta-ras|user@idp", result.get().getSubject());
+        assertEquals("user@example.com", result.get().getEmail());
     }
 
 }
