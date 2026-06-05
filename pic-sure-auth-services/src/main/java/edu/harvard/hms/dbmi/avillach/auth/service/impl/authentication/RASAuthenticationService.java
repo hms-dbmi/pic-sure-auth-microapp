@@ -1,5 +1,6 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.impl.authentication;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -9,6 +10,7 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.UserClaims;
 import edu.harvard.hms.dbmi.avillach.auth.model.ras.Ga4ghPassportV1;
 import edu.harvard.hms.dbmi.avillach.auth.model.ras.Passport;
 import edu.harvard.hms.dbmi.avillach.auth.model.ras.RasDbgapPermission;
+import edu.harvard.hms.dbmi.avillach.auth.model.ras.RasIal2UserInfo;
 import edu.harvard.hms.dbmi.avillach.auth.service.AuthenticationService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.*;
 import edu.harvard.hms.dbmi.avillach.auth.utils.JWTUtil;
@@ -36,6 +38,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
     private Connection rasConnection;
     private final String rasPassportIssuer;
     private final RasUserinfoService rasUserinfoService;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * Constructor for the RASAuthenticationService
@@ -87,7 +90,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
      * @return The response from the authentication attempt
      */
     @Override
-    public HashMap<String, String> authenticate(Map<String, String> authRequest, String host) {
+    public HashMap<String, String> authenticate(Map<String, String> authRequest, String host) throws JsonProcessingException {
         logger.info("RAS OKTA LOGIN ATTEMPT ___ CODE {}", authRequest.get("code"));
 
         JsonNode introspectResponse = null;
@@ -105,10 +108,10 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
         }
 
         String oktaUserId = extractOktaUserId(introspectResponse);
-        JsonNode rasUserinfo = rasUserinfoService.fetchUserinfo(oktaUserId);
+        RasIal2UserInfo rasUserinfo = rasUserinfoService.fetchUserinfo(oktaUserId);
         logger.info("RAS USERINFO RESPONSE FOR OKTA USER ID {} ___ RAS USERINFO RESPONSE {}", oktaUserId, rasUserinfo);
 
-        Optional<User> initializedUser = initializeUser(introspectResponse, rasUserinfo);
+        Optional<User> initializedUser = initializeUser(rasUserinfo);
         if (initializedUser.isEmpty()) {
             logger.info("LOGIN FAILED ___ COULD NOT CREATE USER ___ INTROSPECTION RESPONSE {} ___ CODE {}", introspectResponse, authRequest.get("code"));
             return null;
@@ -116,10 +119,13 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
 
         User user = initializedUser.get();
         Optional<Passport> rasPassport = extractAndVerifyPassport(authRequest, introspectResponse, user);
-        if (rasPassport.isEmpty()) return null;
+        if (rasPassport.isEmpty()) {
+            return null;
+        }
+
         user = updateRasUserRoles(authRequest.get("code"), user, rasPassport.get());
         setUserPassport(authRequest, introspectResponse, user);
-        UserClaims userClaims = buildUserClaims(user, introspectResponse, rasPassport.get(), rasUserinfo);
+        UserClaims userClaims = buildUserClaims(user, rasPassport.get(), rasUserinfo);
         HashMap<String, String> responseMap = userService.getUserProfileResponse(userClaims);
 
         if (responseMap != null) {
@@ -185,8 +191,8 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
         return user;
     }
 
-    private Optional<User> initializeUser(JsonNode introspectResponse, JsonNode rasUserinfo) {
-        Optional<User> user = userService.createRasUser(introspectResponse, this.rasConnection);
+    private Optional<User> initializeUser(RasIal2UserInfo rasUserinfo) {
+        Optional<User> user = userService.createRasUser(rasUserinfo, this.rasConnection);
         if (user.isEmpty()) {
             logger.info("FAILED TO LOAD OR CREATE USER");
             return Optional.empty();
@@ -194,6 +200,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
 
         User currentUser = user.get();
         currentUser.setGeneralMetadata(generateRasUserMetadata(currentUser, rasUserinfo).toString());
+        logger.info("LOGIN SUCCESS ___ USER DATA: {}", user);
         logger.info("USER METADATA SUCCESSFULLY ADDED - USER DATA: {}", currentUser.getGeneralMetadata());
 
         cacheEvictionService.evictCache(currentUser);
@@ -204,33 +211,29 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
      * Create user claims to return to the client
      *
      * @param user               The user
-     * @param introspectResponse The OKTA introspect response
      * @param rasPassport        The RAS passport
+     * @param rasUserinfo        The RAS userinfo response
      * @return The user claims as a HashMap
      */
-    private UserClaims buildUserClaims(User user, JsonNode introspectResponse, Passport rasPassport, JsonNode rasUserinfo) {
+    private UserClaims buildUserClaims(User user, Passport rasPassport, RasIal2UserInfo rasUserinfo) throws JsonProcessingException {
         UserClaims userClaims = new UserClaims();
         userClaims.setUuid(user.getUuid().toString());
         userClaims.setSub(user.getSubject());
         userClaims.setEmail(user.getEmail());
         userClaims.setIdp(this.rasConnection.getLabel());
         userClaims.setName(user.getName());
-        userClaims.setUserid(introspectResponse.get("userid").asText());
-        userClaims.setPreferred_username(introspectResponse.get("preferred_username").asText());
+        userClaims.setUserid(rasUserinfo.getUserId());
+        userClaims.setPreferred_username(rasUserinfo.getPreferredUsername());
         userClaims.setUser_permission_group(extractPermissionGroupFromPassport(rasPassport));
         userClaims.setRoles(userService.addRoleClaims(user));
 
-        if (rasUserinfo != null) {
-            JsonNode federated = rasUserinfo.get("federated_identities_ial2");
-            if (federated != null && !federated.isNull()) {
-                userClaims.setFederated_sources(federated.toString());
-                JsonNode identites = federated.get("identites");
-                if (identites != null && !identites.isNull()) {
-                    JsonNode era = identites.get("era");
-                    if (era != null && !era.isNull()) {
-                        userClaims.setEra_commons_id(era.get("userid").asText());
-                    }
-                }
+        RasIal2UserInfo.FederatedIdentities federated = rasUserinfo.getFederatedIdentities();
+        if (federated != null) {
+            userClaims.setFederated_sources(this.objectMapper.writeValueAsString(federated.getSources()));
+            Map<String, RasIal2UserInfo.FederatedIdentityDetail> identities = federated.getIdentities();
+            if (identities != null && !identities.isEmpty()) {
+                RasIal2UserInfo.FederatedIdentityDetail era = identities.get("era");
+                userClaims.setEra_commons_id(era != null ? era.getUserId() : "");
             }
         }
 
@@ -260,7 +263,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
      * @param user The user
      * @return The user metadata as an ObjectNode
      */
-    protected ObjectNode generateRasUserMetadata(User user, JsonNode rasUserinfo) {
+    protected ObjectNode generateRasUserMetadata(User user, RasIal2UserInfo rasUserinfo) {
         // JsonNode is immutable, so we need to convert it to an ObjectNode
         ObjectNode objectNode = new ObjectMapper().createObjectNode();
 
@@ -272,13 +275,15 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
         objectNode.put("idp", this.rasConnection.getLabel());
 
         if (rasUserinfo != null) {
-            JsonNode defaultIdentity = rasUserinfo.get("default_identity");
-            if (defaultIdentity != null && !defaultIdentity.isNull()) {
-                objectNode.set("default_identity", defaultIdentity);
-            }
-            JsonNode authenticatedIdentity = rasUserinfo.get("authenticated_identity");
-            if (authenticatedIdentity != null && !authenticatedIdentity.isNull()) {
-                objectNode.set("authenticated_identity", authenticatedIdentity);
+            RasIal2UserInfo.FederatedIdentities federatedIdentitiesIal2 = rasUserinfo.getFederatedIdentitiesIal2();
+            if (federatedIdentitiesIal2 != null && federatedIdentitiesIal2.getDefaultIdentity() != null) {
+                if (StringUtils.isNotBlank(federatedIdentitiesIal2.getDefaultIdentity())) {
+                    objectNode.put("default_identity", federatedIdentitiesIal2.getDefaultIdentity());
+                }
+
+                if (StringUtils.isNotBlank(federatedIdentitiesIal2.getAuthenticatedIdentity())) {
+                    objectNode.put("authenticated_identity", federatedIdentitiesIal2.getAuthenticatedIdentity());
+                }
             }
         }
 

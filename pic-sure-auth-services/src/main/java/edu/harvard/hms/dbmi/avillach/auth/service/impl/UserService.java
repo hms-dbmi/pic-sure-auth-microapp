@@ -1,12 +1,11 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import edu.harvard.hms.dbmi.avillach.auth.entity.*;
 import edu.harvard.hms.dbmi.avillach.auth.model.CustomUserDetails;
-import edu.harvard.hms.dbmi.avillach.auth.model.ras.RasDbgapPermission;
+import edu.harvard.hms.dbmi.avillach.auth.model.ras.RasIal2UserInfo;
 import edu.harvard.hms.dbmi.avillach.auth.repository.ApplicationRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.ConnectionRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.UserConsentsRepository;
@@ -673,31 +672,67 @@ public class UserService {
      * Using the introspection token response, load the user from the database. If the user does not exist, we will reject their login
      * attempt. For the RAS integration here is a sample payload.
      *
-     * @param node The response from the introspect endpoint
+     * @param rasIal2UserInfo The response from the RAS user info endpoint
      * @return The user
      */
-    public Optional<User> createRasUser(JsonNode node, Connection connection) {
+    public Optional<User> createRasUser(RasIal2UserInfo rasIal2UserInfo, Connection connection) {
         try {
-            String userEmail = node.get("preferred_username").asText();
-            logger.info("Loading user for sub: {}", userEmail);
-
-            User new_user = new User();
-            new_user.setSubject(connection.getSubPrefix() + userEmail);
-            new_user.setEmail(userEmail);
-            new_user.setConnection(connection);
-            User actual_user = this.findOrCreate(new_user);
-
-            if (actual_user.getRoles() == null) {
-                actual_user.setRoles(new HashSet<>());
+            // RAS user info failed to return any information
+            if (rasIal2UserInfo == null) {
+                return Optional.empty();
             }
 
-            actual_user.setAcceptedTOS(new Date());
-            logger.info("LOGIN SUCCESS ___ USER DATA: {}", actual_user);
-            return Optional.of(actual_user);
+            String userEmail = rasIal2UserInfo.getEmail();
+            String preferredUsername = rasIal2UserInfo.getPreferredUsername();
+
+            // Load IAL2 user, null if it doesn't exist
+            User rasUser = this.userRepository.findBySubject(connection.getSubPrefix() + preferredUsername);
+            if (rasUser != null) {
+                // If we reach this point, the user already exists in our database. We want to update their user information to ensure it is up
+                // to date with the RAS user info response
+                rasUser.setEmail(userEmail);
+                rasUser = this.userRepository.save(rasUser);
+                return Optional.of(rasUser);
+            }
+
+            // By acquiring the linkedEraCommons we can attempt to locate the IAL1 era commons user in our database
+            Optional<RasIal2UserInfo.FederatedIdentityDetail> linkedEraCommons = getLinkedEraCommons(rasIal2UserInfo);
+            if (linkedEraCommons.isPresent()) {
+                RasIal2UserInfo.FederatedIdentityDetail eraCommonDetails = linkedEraCommons.get();
+                rasUser = this.userRepository.findBySubject(connection.getSubPrefix() + eraCommonDetails.getMail());
+            }
+
+            if (rasUser != null) {
+                // We need to update the existing user account for IAL2
+                String userSubject = connection.getSubPrefix() + preferredUsername;
+                rasUser.setSubject(userSubject);
+                rasUser.setEmail(rasIal2UserInfo.getEmail());
+            } else {
+                rasUser = new User();
+                rasUser.setSubject(connection.getSubPrefix() + preferredUsername);
+                rasUser.setEmail(userEmail);
+                rasUser.setConnection(connection);
+                rasUser.setRoles(new HashSet<>());
+                rasUser.setAcceptedTOS(new Date());
+            }
+
+            rasUser = this.userRepository.save(rasUser);
+            return Optional.of(rasUser);
         } catch (Exception e) {
             logger.error("Failed to create user from introspect response", e);
             return Optional.empty();
         }
+    }
+
+    private Optional<RasIal2UserInfo.FederatedIdentityDetail> getLinkedEraCommons(RasIal2UserInfo rasIal2UserInfo) {
+         if(rasIal2UserInfo.getFederatedIdentitiesIal2() != null
+                && rasIal2UserInfo.getFederatedIdentitiesIal2().getIdentities() != null
+                && !rasIal2UserInfo.getFederatedIdentitiesIal2().getIdentities().isEmpty()
+                && rasIal2UserInfo.getFederatedIdentitiesIal2().getIdentities().get("era") != null) {
+             return Optional.of(rasIal2UserInfo.getFederatedIdentitiesIal2().getIdentities().get("era"));
+         }
+
+         return Optional.empty();
     }
 
     public Set<User> getAllUsersWithAPassport() {
