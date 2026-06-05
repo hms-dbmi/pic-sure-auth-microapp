@@ -227,7 +227,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
         userClaims.setUser_permission_group(extractPermissionGroupFromPassport(rasPassport));
         userClaims.setRoles(userService.addRoleClaims(user));
 
-        RasIal2UserInfo.FederatedIdentities federated = rasUserinfo.getFederatedIdentities();
+        RasIal2UserInfo.FederatedIdentities federated = rasUserinfo.getFederatedIdentitiesIal2();
         if (federated != null) {
             userClaims.setFederated_sources(this.objectMapper.writeValueAsString(federated.getSources()));
             Map<String, RasIal2UserInfo.FederatedIdentityDetail> identities = federated.getIdentities();
