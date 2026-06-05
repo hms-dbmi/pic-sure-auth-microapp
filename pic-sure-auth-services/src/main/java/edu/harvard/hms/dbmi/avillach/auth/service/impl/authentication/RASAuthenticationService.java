@@ -99,7 +99,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
             JsonNode userToken = handleCodeTokenExchange(host, authRequest.get("code"));
             introspectResponse = introspectToken(userToken);
             idToken = userToken.get("id_token").asText();
-            logger.debug("RAS OKTA LOGIN ATTEMPT ___ INTROSPECTION RESPONSE {}", introspectResponse);
+            logger.debug("RAS OKTA LOGIN ATTEMPT ___ INTROSPECTION RESPONSE RECEIVED: {}", introspectResponse != null);
         }
 
         if (introspectResponse == null) {
@@ -109,11 +109,11 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
 
         String oktaUserId = extractOktaUserId(introspectResponse);
         RasIal2UserInfo rasUserinfo = rasUserinfoService.fetchUserinfo(oktaUserId);
-        logger.info("RAS USERINFO RESPONSE FOR OKTA USER ID {} ___ RAS USERINFO RESPONSE {}", oktaUserId, rasUserinfo);
+        logger.info("RAS userinfo enrichment {} for okta user {}", rasUserinfo != null ? "applied" : "skipped", oktaUserId);
 
         Optional<User> initializedUser = initializeUser(rasUserinfo);
         if (initializedUser.isEmpty()) {
-            logger.info("LOGIN FAILED ___ COULD NOT CREATE USER ___ INTROSPECTION RESPONSE {} ___ CODE {}", introspectResponse, authRequest.get("code"));
+            logger.info("LOGIN FAILED ___ COULD NOT CREATE USER ___ USER ID {} ___ CODE {}", introspectResponse.path("userid").asText(""), authRequest.get("code"));
             return null;
         }
 
@@ -200,8 +200,8 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
 
         User currentUser = user.get();
         currentUser.setGeneralMetadata(generateRasUserMetadata(currentUser, rasUserinfo).toString());
-        logger.info("LOGIN SUCCESS ___ USER DATA: {}", user);
-        logger.info("USER METADATA SUCCESSFULLY ADDED - USER DATA: {}", currentUser.getGeneralMetadata());
+        logger.info("RAS user loaded/created: {}", currentUser.getSubject());
+        logger.info("USER METADATA SUCCESSFULLY ADDED FOR USER: {}", currentUser.getSubject());
 
         cacheEvictionService.evictCache(currentUser);
         return Optional.of(currentUser);
