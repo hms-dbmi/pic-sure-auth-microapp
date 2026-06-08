@@ -178,7 +178,7 @@ JsonNode introspectResponse = super.introspectToken(userToken);
                 Set<Role> roles = user.getRoles();
                 roles.add(authAccessRole);
                 user = userService.changeRole(user, roles);
-                userService.updateUserConsents(user, Set.of("Nhanes"));
+                userService.updateUserConsents(user, Set.of());
             } else {
                 logger.info("{} has not be created for this environment. Please create the role and its permissions before attempting to use auth access.", MANAGED_AUTH_ACCESS_ROLE_NAME);
             }
