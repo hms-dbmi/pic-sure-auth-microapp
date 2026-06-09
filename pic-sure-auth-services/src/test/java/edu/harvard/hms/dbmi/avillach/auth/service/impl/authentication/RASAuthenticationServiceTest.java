@@ -15,6 +15,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import io.jsonwebtoken.security.Keys;
+
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -196,6 +201,7 @@ public class RASAuthenticationServiceTest {
         Map<String, String> authRequest = primeSuccessfulFlow(RasTestFixtures.fullUserinfoJson(), ACR_AAL1);
 
         assertNull(newService(true).authenticate(authRequest, HOST));
+        verify(rasOidcClient, never()).fetchUserinfo(anyString());
     }
 
     @Test
@@ -222,7 +228,7 @@ public class RASAuthenticationServiceTest {
         String passport = RasTestFixtures.passportJwt(RasTestFixtures.RAS_ISSUER, exp,
                 List.of(RasTestFixtures.dbgapVisaJwt(exp)));
         String userinfo = """
-                {"sub":"RAS-SUB-x","preferred_username":"plain@era.nih.gov","userid":"plain",
+                {"sub":"RAS-SUB-0123456789abcdef","preferred_username":"plain@era.nih.gov","userid":"plain",
                  "email":"plain@example.org","passport_jwt_v11":"%s"}""".formatted(passport);
         Map<String, String> authRequest = primeSuccessfulFlow(userinfo, ACR_IAL2);
 
@@ -236,7 +242,7 @@ public class RASAuthenticationServiceTest {
         String passport = RasTestFixtures.passportJwt(RasTestFixtures.RAS_ISSUER, exp,
                 List.of(RasTestFixtures.dbgapVisaJwt(exp)));
         String userinfo = """
-                {"sub":"RAS-SUB-era","preferred_username":"erauser@era.nih.gov","userid":"erauser",
+                {"sub":"RAS-SUB-0123456789abcdef","preferred_username":"erauser@era.nih.gov","userid":"erauser",
                  "email":"era@example.org","researcher_role":"Principal Investigator@Yale",
                  "passport_jwt_v11":"%s"}""".formatted(passport);
         Map<String, String> authRequest = primeSuccessfulFlow(userinfo, ACR_IAL2);
@@ -256,6 +262,105 @@ public class RASAuthenticationServiceTest {
                 List.of(RasTestFixtures.dbgapVisaJwt(exp)));
         Map<String, String> authRequest = primeSuccessfulFlow(
                 RasTestFixtures.userinfoJson("ras-userinfo-full.json", passport), ACR_IAL2);
+
+        assertNull(newService(true).authenticate(authRequest, HOST));
+    }
+
+    // ------------------------------------------------------------------
+    // New tests: OIDC Core 5.3.2 sub check, state single-use, expired passport
+    // ------------------------------------------------------------------
+
+    private static final SecretKey TEST_KEY =
+            Keys.hmacShaKeyFor("test-signing-key-test-signing-key-test!!".getBytes(StandardCharsets.UTF_8));
+
+    /** Builds an expired passport JWT with both exp and iat in the past. */
+    private String expiredPassportJwt() {
+        long now = Instant.now().getEpochSecond();
+        long exp = now - 3600;
+        long iat = now - 7200;
+        long visaExp = now - 3600;
+        String visaJwt = Jwts.builder().claims(Map.of(
+                "iss", RasTestFixtures.RAS_ISSUER,
+                "sub", "RAS-SUB-0123456789abcdef",
+                "iat", iat,
+                "exp", visaExp,
+                "jti", "visa-expired-1",
+                "txn", "txn-test-0001",
+                "ga4gh_visa_v1", Map.of(
+                        "type", "https://ras.nih.gov/visas/v1.1",
+                        "asserted", iat,
+                        "value", "https://stsstg.nih.gov/passport/dbgap/v1.1",
+                        "source", "https://ncbi.nlm.nih.gov/gap",
+                        "by", "dac"),
+                "ras_dbgap_permissions", List.of(Map.of(
+                        "consent_name", "General Research Use",
+                        "phs_id", RasTestFixtures.DBGAP_PHS_ID,
+                        "version", "v1",
+                        "participant_set", "p1",
+                        "consent_group", RasTestFixtures.DBGAP_CONSENT_GROUP,
+                        "role", "pi",
+                        "expiration", visaExp)))).signWith(TEST_KEY).compact();
+        return Jwts.builder().claims(Map.of(
+                "sub", "RAS-SUB-0123456789abcdef",
+                "jti", "passport-expired-1",
+                "scope", "openid ga4gh_passport_v1",
+                "txn", "txn-test-0001",
+                "iss", RasTestFixtures.RAS_ISSUER,
+                "iat", iat,
+                "exp", exp,
+                "ga4gh_passport_v1", List.of(visaJwt))).signWith(TEST_KEY).compact();
+    }
+
+    @Test
+    public void authenticate_rejectsUserinfoSubMismatch() throws Exception {
+        Map<String, String> authRequest = primeSuccessfulFlow(RasTestFixtures.fullUserinfoJson(), ACR_IAL2);
+        // Re-stub fetchUserinfo to return a userinfo with a different sub.
+        JsonNode mismatchedUserinfo = objectMapper.readTree(
+                "{\"sub\":\"DIFFERENT-SUB\",\"preferred_username\":\"x@era.nih.gov\"," +
+                "\"userid\":\"x\",\"email\":\"x@example.org\"}");
+        when(rasOidcClient.fetchUserinfo(anyString())).thenReturn(mismatchedUserinfo);
+
+        assertNull(newService(true).authenticate(authRequest, HOST));
+        verify(userService, never()).createRasUser(any(), any());
+    }
+
+    @Test
+    public void authenticate_stateIsSingleUse_trueReplayRejected() throws Exception {
+        Map<String, String> authRequest = primeSuccessfulFlow(RasTestFixtures.fullUserinfoJson(), ACR_IAL2);
+        RASAuthenticationService service = newService(true);
+
+        // First attempt succeeds.
+        assertNotNull(service.authenticate(new HashMap<>(authRequest), HOST));
+
+        // Second attempt with the same state is rejected (state already consumed).
+        assertNull(service.authenticate(new HashMap<>(authRequest), HOST));
+
+        // exchangeCode was only called once — the replay never reached it.
+        verify(rasOidcClient, times(1)).exchangeCode(anyString(), anyString(), any());
+    }
+
+    @Test
+    public void authenticate_stateBurnedWhenExchangeFails_retryRejectedAtStateCheck() throws Exception {
+        Map<String, String> authRequest = primeSuccessfulFlow(RasTestFixtures.fullUserinfoJson(), ACR_IAL2);
+        when(rasOidcClient.exchangeCode(anyString(), anyString(), any())).thenReturn(null);
+        RASAuthenticationService service = newService(true);
+
+        // First attempt: state consumed, exchange fails → null.
+        assertNull(service.authenticate(new HashMap<>(authRequest), HOST));
+
+        // Second attempt: state already consumed → dies at state check, exchangeCode not called again.
+        assertNull(service.authenticate(new HashMap<>(authRequest), HOST));
+
+        verify(rasOidcClient, times(1)).exchangeCode(anyString(), anyString(), any());
+    }
+
+    @Test
+    public void authenticate_rejectsExpiredPassport() throws Exception {
+        String expiredPassport = expiredPassportJwt();
+        String userinfoJson = String.format(
+                "{\"sub\":\"RAS-SUB-0123456789abcdef\",\"preferred_username\":\"x@era.nih.gov\"," +
+                "\"userid\":\"x\",\"email\":\"x@example.org\",\"passport_jwt_v11\":\"%s\"}", expiredPassport);
+        Map<String, String> authRequest = primeSuccessfulFlow(userinfoJson, ACR_IAL2);
 
         assertNull(newService(true).authenticate(authRequest, HOST));
     }

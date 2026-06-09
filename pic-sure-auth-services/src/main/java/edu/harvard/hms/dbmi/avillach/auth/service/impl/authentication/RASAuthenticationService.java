@@ -57,8 +57,8 @@ public class RASAuthenticationService implements AuthenticationService {
                                     CacheEvictionService cacheEvictionService,
                                     RasOidcClient rasOidcClient,
                                     OidcFlowStateStore stateStore,
-                                    @Value("${ras.idp.provider.is.enabled}") boolean isEnabled,
-                                    @Value("${ras.enforce.ial2}") boolean enforceIal2,
+                                    @Value("${ras.idp.provider.is.enabled:false}") boolean isEnabled,
+                                    @Value("${ras.enforce.ial2:true}") boolean enforceIal2,
                                     @Value("${ras.passport.issuer}") String rasPassportIssuer) {
         this.userService = userService;
         this.isEnabled = isEnabled;
@@ -121,6 +121,13 @@ public class RASAuthenticationService implements AuthenticationService {
         JsonNode userinfo = rasOidcClient.fetchUserinfo(tokens.accessToken());
         if (userinfo == null) {
             logger.info("RAS LOGIN FAILED ___ USERINFO CALL FAILED ___ TXN {}", txn);
+            return null;
+        }
+
+        // OIDC Core 5.3.2: the userinfo sub MUST match the validated ID token's sub.
+        String userinfoSub = userinfo.path("sub").asText(null);
+        if (userinfoSub == null || !userinfoSub.equals(idTokenClaims.get().getSubject())) {
+            logger.error("RAS LOGIN FAILED ___ USERINFO SUB DOES NOT MATCH ID TOKEN SUB ___ TXN {}", txn);
             return null;
         }
 
