@@ -67,6 +67,14 @@ public class RasIal2UserInfo {
     private String linkedEraRole;
 
     /**
+     * Comma-delimited {@code role@institution} pairs from the {@code researcher_role} scope.
+     * Only released for direct eRA Commons logins; absent for all other IDPs. Non-blocking:
+     * absence must never fail a login.
+     */
+    @JsonProperty("researcher_role")
+    private String researcherRole;
+
+    /**
      * IAL2 federated identities. Same shape as {@link #federatedIdentities} but only released to
      * CADRs / IAL2 systems, and Login.gov entries include first/last name since IAL2 is met.
      * Its presence is the in-payload signal that the user is identity-proofed at IAL2.
@@ -98,6 +106,7 @@ public class RasIal2UserInfo {
     public String getDepartment() { return department; }
     public List<String> getGa4ghPassportV1() { return ga4ghPassportV1; }
     public String getLinkedEraRole() { return linkedEraRole; }
+    public String getResearcherRole() { return researcherRole; }
     public FederatedIdentities getFederatedIdentitiesIal2() { return federatedIdentitiesIal2; }
     public FederatedIdentities getFederatedIdentities() { return federatedIdentities; }
     public FederatedIdentities getFederatedSources() { return federatedSources; }

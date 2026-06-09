@@ -1,0 +1,24 @@
+{
+  "sub": "RAS-SUB-0123456789abcdef",
+  "name": "Jane Researcher",
+  "first_name": "Jane",
+  "last_name": "Researcher",
+  "preferred_username": "janeresearcher@era.nih.gov",
+  "userid": "janeresearcher",
+  "email": "jane.researcher@example.org",
+  "company": "Harvard Medical School",
+  "source": "login.gov",
+  "researcher_role": "Principal Investigator@Harvard Medical School,Researcher@Broad Institute",
+  "passport_jwt_v11": "@@PASSPORT_JWT@@",
+  "federated_identities_ial2": {
+    "default_identity": "janeresearcher@era.nih.gov",
+    "authenticated_identity": "jane@login.gov",
+    "sources": {
+      "era": { "identity_username": "janeresearcher@era.nih.gov", "ial": 1, "identity_sub": "era-sub-001" },
+      "login.gov": { "identity_username": "jane@login.gov", "ial": 2, "identity_sub": "lg-sub-002" }
+    },
+    "identities": {
+      "era": { "mail": "jane.researcher@example.org", "userid": "janeresearcher", "firstname": "Jane", "lastname": "Researcher" }
+    }
+  }
+}
