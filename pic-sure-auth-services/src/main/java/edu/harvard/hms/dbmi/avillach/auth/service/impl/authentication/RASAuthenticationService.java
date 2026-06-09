@@ -11,10 +11,11 @@ import edu.harvard.hms.dbmi.avillach.auth.model.ras.Ga4ghPassportV1;
 import edu.harvard.hms.dbmi.avillach.auth.model.ras.Passport;
 import edu.harvard.hms.dbmi.avillach.auth.model.ras.RasDbgapPermission;
 import edu.harvard.hms.dbmi.avillach.auth.model.ras.RasIal2UserInfo;
+import edu.harvard.hms.dbmi.avillach.auth.model.ras.RasOidcTokens;
 import edu.harvard.hms.dbmi.avillach.auth.service.AuthenticationService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.*;
 import edu.harvard.hms.dbmi.avillach.auth.utils.JWTUtil;
-import edu.harvard.hms.dbmi.avillach.auth.utils.RestClientUtil;
+import io.jsonwebtoken.Claims;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,162 +26,224 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Authenticates PIC-SURE users directly against NIH RAS via OIDC. The claim-acquisition layer
+ * (authorize → code → token exchange → ID-token validation → userinfo) is handled by
+ * {@link RasOidcClient}; the resulting merged claims object preserves the shape of the old
+ * Okta introspection response so the downstream pipeline is unchanged.
+ */
 @Service
-public class RASAuthenticationService extends OktaAuthenticationService implements AuthenticationService {
+public class RASAuthenticationService implements AuthenticationService {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     private final UserService userService;
     private final boolean isEnabled;
+    private final boolean enforceIal2;
     private final RoleService roleService;
     private final RASPassPortService rasPassPortService;
     private final CacheEvictionService cacheEvictionService;
+    private final RasOidcClient rasOidcClient;
+    private final OidcFlowStateStore stateStore;
     private Connection rasConnection;
     private final String rasPassportIssuer;
-    private final RasUserinfoService rasUserinfoService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    /**
-     * Constructor for the RASAuthenticationService
-     *
-     * @param userService      The user service
-     * @param idp_provider_uri The IDP provider URI
-     * @param connectionId     The connection ID
-     * @param clientId         The client ID
-     * @param clientSecret     The client secret
-     */
     @Autowired
     public RASAuthenticationService(UserService userService,
-                                    RestClientUtil restClientUtil,
-                                    @Value("${ras.okta.idp.provider.is.enabled}") boolean isEnabled,
-                                    @Value("${ras.okta.idp.provider.uri}") String idp_provider_uri,
-                                    @Value("${ras.okta.connection.id}") String connectionId,
-                                    @Value("${ras.okta.client.id}") String clientId,
-                                    @Value("${ras.okta.client.secret}") String clientSecret,
-                                    @Value("${ras.passport.issuer}") String rasPassportIssuer,
                                     RoleService roleService,
                                     RASPassPortService rasPassPortService,
-                                    ConnectionWebService connectionService, CacheEvictionService cacheEvictionService,
-                                    RasUserinfoService rasUserinfoService) {
-        super(idp_provider_uri, clientId, clientSecret, restClientUtil);
-
+                                    ConnectionWebService connectionService,
+                                    CacheEvictionService cacheEvictionService,
+                                    RasOidcClient rasOidcClient,
+                                    OidcFlowStateStore stateStore,
+                                    @Value("${ras.idp.provider.is.enabled}") boolean isEnabled,
+                                    @Value("${ras.enforce.ial2}") boolean enforceIal2,
+                                    @Value("${ras.passport.issuer}") String rasPassportIssuer) {
         this.userService = userService;
         this.isEnabled = isEnabled;
+        this.enforceIal2 = enforceIal2;
         this.roleService = roleService;
         this.rasPassPortService = rasPassPortService;
+        this.rasOidcClient = rasOidcClient;
+        this.stateStore = stateStore;
         this.rasPassportIssuer = rasPassportIssuer;
 
         logger.info("RASAuthenticationService is enabled: {}", isEnabled);
-        logger.info("RASAuthenticationService initialized");
-        logger.info("idp_provider_uri: {}", idp_provider_uri);
-        logger.info("connectionId: {}", connectionId);
+        logger.info("RASAuthenticationService enforcing IAL2/AAL2: {}", enforceIal2);
 
         this.rasConnection = connectionService.getConnectionByLabel("RAS");
         this.cacheEvictionService = cacheEvictionService;
-        this.rasUserinfoService = rasUserinfoService;
     }
 
     /**
-     * Authenticate the user using the code provided by the IDP. This code is exchanged for an access token.
-     * The access token is then used to introspect the user. The user is then loaded from the database.
-     * If the user does not exist, we will reject their login attempt.
-     *
-     * @param host        The host of the request
-     * @param authRequest The request body
-     * @return The response from the authentication attempt
+     * Authenticate the user with the authorization code returned by RAS. The code is exchanged
+     * directly with RAS for tokens; the ID token is signature-validated and bound to this flow's
+     * nonce; assurance levels are enforced from the ID token's acr; the v1.1 userinfo response
+     * supplies all rich claims. Downstream user provisioning is unchanged from the Okta-brokered
+     * flow. Returns null on any failure.
      */
     @Override
     public HashMap<String, String> authenticate(Map<String, String> authRequest, String host) {
-        logger.info("RAS OKTA LOGIN ATTEMPT ___ CODE {}", authRequest.get("code"));
-
-        JsonNode introspectResponse = null;
-        String idToken = null;
-        if (authRequest.containsKey("code") && StringUtils.isNotBlank(authRequest.get("code"))) {
-            JsonNode userToken = handleCodeTokenExchange(host, authRequest.get("code"));
-            introspectResponse = introspectToken(userToken);
-            idToken = userToken.get("id_token").asText();
-            logger.debug("RAS OKTA LOGIN ATTEMPT ___ INTROSPECTION RESPONSE RECEIVED: {}", introspectResponse != null);
-        }
-
-        if (introspectResponse == null) {
-            logger.info("LOGIN FAILED ___ USER NOT AUTHENTICATED ___ INTROSPECTION RESPONSE {} ___ CODE {}", introspectResponse, authRequest.get("code"));
+        String code = authRequest.get("code");
+        String state = authRequest.get("state");
+        if (StringUtils.isBlank(code) || StringUtils.isBlank(state)) {
+            logger.info("RAS LOGIN FAILED ___ MISSING CODE OR STATE");
             return null;
         }
 
-        String oktaUserId = extractOktaUserId(introspectResponse);
-        RasIal2UserInfo rasUserinfo = rasUserinfoService.fetchUserinfo(oktaUserId);
-        logger.info("RAS userinfo enrichment {} for okta user {}", rasUserinfo != null ? "applied" : "skipped", oktaUserId);
+        Optional<OidcFlowStateStore.FlowState> flow = stateStore.consume(state);
+        if (flow.isEmpty()) {
+            logger.info("RAS LOGIN FAILED ___ UNKNOWN, EXPIRED, OR REUSED STATE");
+            return null;
+        }
+
+        RasOidcTokens tokens = rasOidcClient.exchangeCode(code, host, flow.get().codeVerifier());
+        if (tokens == null) {
+            logger.info("RAS LOGIN FAILED ___ CODE-FOR-TOKEN EXCHANGE FAILED");
+            return null;
+        }
+
+        Optional<Claims> idTokenClaims = rasOidcClient.validateIdToken(tokens.idToken(), flow.get().nonce());
+        if (idTokenClaims.isEmpty()) {
+            logger.info("RAS LOGIN FAILED ___ ID TOKEN VALIDATION FAILED");
+            return null;
+        }
+
+        // RAS audits all activity against this transaction id; log it on every subsequent line.
+        String txn = idTokenClaims.get().get("txn", String.class);
+
+        if (!validateAssuranceLevels(idTokenClaims.get().get("acr", String.class))) {
+            logger.info("RAS LOGIN FAILED ___ ASSURANCE BELOW AAL2/IAL2 ___ TXN {}", txn);
+            return null;
+        }
+
+        JsonNode userinfo = rasOidcClient.fetchUserinfo(tokens.accessToken());
+        if (userinfo == null) {
+            logger.info("RAS LOGIN FAILED ___ USERINFO CALL FAILED ___ TXN {}", txn);
+            return null;
+        }
+
+        RasIal2UserInfo rasUserinfo = parseUserinfo(userinfo);
+        if (rasUserinfo == null) {
+            logger.info("RAS LOGIN FAILED ___ COULD NOT PARSE USERINFO ___ TXN {}", txn);
+            return null;
+        }
+
+        // Single claims object shaped like the old introspection response (userinfo ∪ ID-token claims).
+        JsonNode mergedClaims = rasOidcClient.mergeClaims(userinfo, idTokenClaims.get());
 
         Optional<User> initializedUser = initializeUser(rasUserinfo);
         if (initializedUser.isEmpty()) {
-            logger.info("LOGIN FAILED ___ COULD NOT CREATE USER ___ USER ID {} ___ CODE {}", introspectResponse.path("userid").asText(""), authRequest.get("code"));
+            logger.info("RAS LOGIN FAILED ___ COULD NOT CREATE USER ___ TXN {}", txn);
             return null;
         }
 
         User user = initializedUser.get();
-        Optional<Passport> rasPassport = extractAndVerifyPassport(authRequest, introspectResponse, user);
+        Optional<Passport> rasPassport = extractAndVerifyPassport(mergedClaims, user);
         if (rasPassport.isEmpty()) {
             return null;
         }
 
-        user = updateRasUserRoles(authRequest.get("code"), user, rasPassport.get());
-        setUserPassport(authRequest, introspectResponse, user);
+        user = updateRasUserRoles(txn, user, rasPassport.get());
+        setUserPassport(txn, mergedClaims, user);
         UserClaims userClaims = buildUserClaims(user, rasPassport.get(), rasUserinfo);
         if (userClaims == null) {
-            logger.info("LOGIN FAILED ___ COULD NOT BUILD USER CLAIMS ___ USER: {} ___ CODE {}", user.getSubject(), authRequest.get("code"));
+            logger.info("RAS LOGIN FAILED ___ COULD NOT BUILD USER CLAIMS ___ USER: {} ___ TXN {}", user.getSubject(), txn);
             return null;
         }
         HashMap<String, String> responseMap = userService.getUserProfileResponse(userClaims);
 
         if (responseMap != null) {
-            responseMap.put("oktaIdToken", idToken);
-            logger.info("LOGIN SUCCESS ___ USER {}:{} ___ WITH ROLES ___ {} ___ AUTHORIZATION WILL EXPIRE AT  ___ {} ___ CODE {}",
+            responseMap.put("idToken", tokens.idToken());
+            logger.info("LOGIN SUCCESS ___ USER {}:{} ___ WITH ROLES ___ {} ___ AUTHORIZATION WILL EXPIRE AT ___ {} ___ TXN {}",
                     user.getSubject(), user.getUuid().toString(),
                     user.getRoles().stream().map(role -> role.getName().replace("MANAGED_", "")).collect(Collectors.joining(",")),
-                    responseMap.get("expirationDate"), authRequest.get("code"));
+                    responseMap.get("expirationDate"), txn);
         }
 
         return responseMap;
     }
 
     /**
-     * Extract the OKTA user id (the "uid" claim) used to look up the stored RAS token in the Okta
-     * Management API. This is NOT the RAS "sub" used as the user lookup key. Returns null if absent.
-     * Because RAS userinfo is the identity source for the RAS login flow, a null uid means enrichment
-     * cannot run, which causes the login to fail downstream (see {@link RasUserinfoService}).
+     * Enforces IAL2/AAL2 from the validated ID token's space-delimited acr URIs
+     * (e.g. {@code https://stsstg.nih.gov/assurance/aal/2 https://stsstg.nih.gov/assurance/ial/2}).
+     * When {@code ras.enforce.ial2=false} every acr (including absent) is accepted.
      */
-    private String extractOktaUserId(JsonNode introspectResponse) {
-        JsonNode uid = introspectResponse.get("uid");
-        if (uid == null || uid.isNull() || uid.asText().isBlank()) {
-            logger.warn("Introspection response missing 'uid'; RAS userinfo enrichment will be skipped");
-            return null;
+    boolean validateAssuranceLevels(String acr) {
+        if (!enforceIal2) {
+            return true;
         }
-        return uid.asText();
+        if (StringUtils.isBlank(acr)) {
+            logger.error("RAS ID token has no acr claim; cannot verify assurance levels");
+            return false;
+        }
+        int aal = extractAssuranceLevel(acr, "/assurance/aal/");
+        int ial = extractAssuranceLevel(acr, "/assurance/ial/");
+        if (aal < 2 || ial < 2) {
+            logger.error("RAS LOGIN REJECTED ___ AAL {} IAL {} (require 2/2)", aal, ial);
+            return false;
+        }
+        return true;
     }
 
-    private Optional<Passport> extractAndVerifyPassport(Map<String, String> authRequest, JsonNode introspectResponse, User user) {
-        Optional<Passport> rasPassport = this.rasPassPortService.extractPassport(introspectResponse);
+    private int extractAssuranceLevel(String acr, String marker) {
+        for (String uri : acr.trim().split("\\s+")) {
+            int idx = uri.indexOf(marker);
+            if (idx >= 0) {
+                try {
+                    return Integer.parseInt(uri.substring(idx + marker.length()).trim());
+                } catch (NumberFormatException e) {
+                    return -1;
+                }
+            }
+        }
+        return -1;
+    }
+
+    private RasIal2UserInfo parseUserinfo(JsonNode userinfo) {
+        try {
+            return objectMapper.treeToValue(userinfo, RasIal2UserInfo.class);
+        } catch (JsonProcessingException e) {
+            logger.error("Failed to map RAS userinfo response: {}", e.getClass().getSimpleName());
+            return null;
+        }
+    }
+
+    @Override
+    public Optional<String> getAuthorizeUrl(String requestHost) {
+        return Optional.of(rasOidcClient.buildAuthorizeUrl(requestHost));
+    }
+
+    // ------------------------------------------------------------------------------------------
+    // Downstream pipeline — bodies identical to the Okta-brokered baseline except for the
+    // parameter rename introspectResponse -> mergedClaims, txn replacing code in log correlation,
+    // and the researcher_role addition in generateRasUserMetadata.
+    // ------------------------------------------------------------------------------------------
+
+    private Optional<Passport> extractAndVerifyPassport(JsonNode mergedClaims, User user) {
+        Optional<Passport> rasPassport = this.rasPassPortService.extractPassport(mergedClaims);
         if (rasPassport.isEmpty()) {
-            logger.info("LOGIN FAILED ___ NO RAS PASSPORT FOUND ___ USER: {} ___ CODE {}", user.getSubject(), authRequest.get("code"));
+            logger.info("LOGIN FAILED ___ NO RAS PASSPORT FOUND ___ USER: {}", user.getSubject());
             return Optional.empty();
         }
 
         if (rasPassPortService.isExpired(rasPassport.get())) {
-            logger.error("validateRASPassport() LOGIN FAILED ___ PASSPORT IS EXPIRED ___ USER: {} ___ CODE {}", user.getSubject(), authRequest.get("code"));
+            logger.error("validateRASPassport() LOGIN FAILED ___ PASSPORT IS EXPIRED ___ USER: {}", user.getSubject());
             return Optional.empty();
         }
 
         if (!rasPassport.get().getIss().equals(this.rasPassportIssuer)) {
             logger.error("validateRASPassport() LOGIN FAILED ___ PASSPORT ISSUER IS NOT CORRECT ___ USER: {} ___ " +
-                         "EXPECTED ISSUER {} ___ ACTUAL ISSUER {} ___ CODE {}",
-                    user.getSubject(), this.rasPassportIssuer, rasPassport.get().getIss(), authRequest.get("code"));
+                         "EXPECTED ISSUER {} ___ ACTUAL ISSUER {}",
+                    user.getSubject(), this.rasPassportIssuer, rasPassport.get().getIss());
             return Optional.empty();
         }
         return rasPassport;
     }
 
-    protected User updateRasUserRoles(String code, User user, Passport rasPassport) {
-        logger.info("RAS PASSPORT FOUND ___ USER: {} ___ PASSPORT: {} ___ CODE {}", user.getSubject(), rasPassport, code);
+    protected User updateRasUserRoles(String txn, User user, Passport rasPassport) {
+        logger.info("RAS PASSPORT FOUND ___ USER: {} ___ PASSPORT: {} ___ TXN {}", user.getSubject(), rasPassport, txn);
         Set<Optional<Ga4ghPassportV1>> ga4ghPassports = rasPassport.getGa4ghPassportV1().stream().map(JWTUtil::parseGa4ghPassportV1).filter(Optional::isPresent).collect(Collectors.toSet());
         Set<RasDbgapPermission> dbgapPermissions = this.rasPassPortService.ga4ghPassportToRasDbgapPermissions(ga4ghPassports);
         Set<String> dbgapRoleNames = this.roleService.getRoleNamesForDbgapPermissions(dbgapPermissions);
@@ -189,10 +252,10 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
         Set<String> userConsentStrings = dbgapPermissions.stream()
                 .map(permission -> permission.getPhsId() + "." + permission.getConsentGroup()).collect(Collectors.toSet());
         user = userService.updateUserConsents(user, userConsentStrings);
-        logger.debug("USER {} ROLES UPDATED {} ___ CODE {}",
+        logger.debug("USER {} ROLES UPDATED {} ___ TXN {}",
                 user.getSubject(),
                 user.getRoles().stream().map(role -> role.getName().replace("MANAGED_", "")).toArray(),
-                code);
+                txn);
         return user;
     }
 
@@ -212,14 +275,6 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
         return Optional.of(currentUser);
     }
 
-    /**
-     * Create user claims to return to the client
-     *
-     * @param user               The user
-     * @param rasPassport        The RAS passport
-     * @param rasUserinfo        The RAS userinfo response
-     * @return The user claims as a HashMap
-     */
     private UserClaims buildUserClaims(User user, Passport rasPassport, RasIal2UserInfo rasUserinfo) {
         UserClaims userClaims = new UserClaims();
         userClaims.setUuid(user.getUuid().toString());
@@ -266,13 +321,6 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
         return null;
     }
 
-    /**
-     * Generate the user metadata that will be stored in the database. This metadata is used to determine the user's
-     * role and other information.
-     *
-     * @param user The user
-     * @return The user metadata as an ObjectNode
-     */
     protected ObjectNode generateRasUserMetadata(User user, RasIal2UserInfo rasUserinfo) {
         // JsonNode is immutable, so we need to convert it to an ObjectNode
         ObjectNode objectNode = new ObjectMapper().createObjectNode();
@@ -295,16 +343,21 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
                     objectNode.put("authenticated_identity", federatedIdentitiesIal2.getAuthenticatedIdentity());
                 }
             }
+
+            // researcher_role: comma-delimited role@institution pairs, eRA logins only. Non-blocking.
+            if (StringUtils.isNotBlank(rasUserinfo.getResearcherRole())) {
+                objectNode.put("researcher_role", rasUserinfo.getResearcherRole());
+            }
         }
 
         return objectNode;
     }
 
-    private void setUserPassport(Map<String, String> authRequest, JsonNode introspectResponse, User user) {
-        String passport = introspectResponse.get("passport_jwt_v11").toString();
+    private void setUserPassport(String txn, JsonNode mergedClaims, User user) {
+        String passport = mergedClaims.get("passport_jwt_v11").toString();
         user.setPassport(passport);
         userService.save(user);
-        logger.info("RAS PASSPORT SUCCESSFULLY ADDED TO USER: {} ___ CODE {}", user.getSubject(), authRequest.get("code"));
+        logger.info("RAS PASSPORT SUCCESSFULLY ADDED TO USER: {} ___ TXN {}", user.getSubject(), txn);
     }
 
     @Override
@@ -320,6 +373,4 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
     public void setRasConnection(Connection rasConnection) {
         this.rasConnection = rasConnection;
     }
-
-
 }

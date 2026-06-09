@@ -1,301 +1,291 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.impl.authentication;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import edu.harvard.dbmi.avillach.logging.LoggingClient;
 import edu.harvard.hms.dbmi.avillach.auth.entity.Connection;
-import edu.harvard.hms.dbmi.avillach.auth.entity.Privilege;
-import edu.harvard.hms.dbmi.avillach.auth.entity.Role;
 import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.entity.UserClaims;
-import edu.harvard.hms.dbmi.avillach.auth.model.ras.Passport;
-import edu.harvard.hms.dbmi.avillach.auth.model.ras.RasDbgapPermission;
-import edu.harvard.hms.dbmi.avillach.auth.model.ras.RasIal2UserInfo;
-import edu.harvard.hms.dbmi.avillach.auth.repository.RoleRepository;
-import edu.harvard.hms.dbmi.avillach.auth.repository.UserRepository;
+import edu.harvard.hms.dbmi.avillach.auth.model.ras.RasOidcTokens;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.*;
-import edu.harvard.hms.dbmi.avillach.auth.utils.FenceMappingUtility;
-import edu.harvard.hms.dbmi.avillach.auth.utils.RestClientUtil;
+import edu.harvard.hms.dbmi.avillach.auth.utils.RasTestFixtures;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockitoAnnotations;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.context.ApplicationContext;
-import org.springframework.http.ResponseEntity;
-import org.springframework.test.context.ContextConfiguration;
+import org.mockito.ArgumentCaptor;
 
 import java.util.*;
 
-import org.mockito.ArgumentCaptor;
-
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-@SpringBootTest
-@ContextConfiguration(classes = {RASPassPortService.class, RASAuthenticationService.class, ApplicationContext.class})
 public class RASAuthenticationServiceTest {
 
-    @MockBean
+    private static final String HOST = "picsure.example.org";
+    private static final String ACR_IAL2 = "https://stsstg.nih.gov/assurance/aal/2 https://stsstg.nih.gov/assurance/ial/2";
+    private static final String ACR_IAL1 = "https://stsstg.nih.gov/assurance/aal/2 https://stsstg.nih.gov/assurance/ial/1";
+    private static final String ACR_AAL1 = "https://stsstg.nih.gov/assurance/aal/1 https://stsstg.nih.gov/assurance/ial/2";
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
     private UserService userService;
-    @MockBean
-    private RestClientUtil restClientUtil;
-    @MockBean
-    private ConnectionWebService connectionService;
-    @MockBean
-    private CacheEvictionService cacheEvictionService;
-    @MockBean
     private RoleService roleService;
-    @MockBean
-    private UserRepository userRepository;
-    @MockBean
-    private ApplicationContext applicationContext;
-    @MockBean
-    private LoggingClient loggingClient;
-    @MockBean
-    private RasUserinfoService rasUserinfoService;
-
     private RASPassPortService rasPassPortService;
-    private RASAuthenticationService rasAuthenticationService;
-
-    private final String testAccessToken = "someRandomAccessToken";
-    private final String code = "123123123";
-    private final String testDomain = "https://testdomain.com";
-    private Map<String, String> authRequest;
-    private final String exampleRasPassport = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6ImRlZmF1bHRfc3NsX2tleSJ9.ew0KInN1YiI6IjJLRWthUC1SeDJGdkJCOExRVjRucjVmZXlySG4yNXEwV3hVd1kxVDIwMnMiLA0KImp0aSI6ImNiZDFjMzkyLTk0YjYtNDc2Yi1iYjA5LTk2MWY4MTM3MmE2NCIsDQoic2NvcGUiOiJvcGVuaWQgZ2E0Z2hfcGFzc3BvcnRfdjEiLA0KInR4biI6IlRsdVJ1UVcvZlZrPS5mYWJkOTdkMTdkNGM4OGFiIiwNCiJpc3MiOiAiaHR0cHM6Ly9zdHNzdGcubmloLmdvdiIsIAoiaWF0IjogMTYyMDIxMDM2MiwKImV4cCI6IDE2MjAyNTM1NjIsCiJnYTRnaF9wYXNzcG9ydF92MSIgOiBbImV3MEtJQ0FpZEhsd0lqb2dJa3BYVkNJc0RRb2dJQ0poYkdjaU9pQWlVbE15TlRZaUxBMEtJQ0FpYTJsa0lqb2dJbVJsWm1GMWJIUmZjM05zWDJ0bGVTSU5DbjAuZXcwS0lDQWlhWE56SWpvZ0ltaDBkSEJ6T2k4dmMzUnpjM1JuTG01cGFDNW5iM1lpTEEwS0lDQWljM1ZpSWpvZ0lqSkxSV3RoVUMxU2VESkdka0pDT0V4UlZqUnVjalZtWlhseVNHNHlOWEV3VjNoVmQxa3hWREl3TW5NaUxDQU5DaUFnSW1saGRDSTZJREUyTWpBeU1UQXpOaklzRFFvZ0lDSmxlSEFpT2lBeE5qSXdNalV6TlRZeUxBMEtJQ0FpYzJOdmNHVWlPaUFpYjNCbGJtbGtJR2RoTkdkb1gzQmhjM053YjNKMFgzWXhJaXdOQ2lBZ0ltcDBhU0k2SUNJNU56UTNPV0UzTXkwMFltSmxMVFJoWVdVdE9HWTFNUzAxTldVNU9UQTBZalJqT1RnaUxBMEtJQ0FpZEhodUlqb2dJbFJzZFZKMVVWY3ZabFpyUFM1bVlXSmtPVGRrTVRka05HTTRPR0ZpSWl3TkNpQWdJbWRoTkdkb1gzWnBjMkZmZGpFaU9pQjdJQTBLSUNBZ0lDQWlkSGx3WlNJNklDSm9kSFJ3Y3pvdkwzSmhjeTV1YVdndVoyOTJMM1pwYzJGekwzWXhMakVpTENBTkNpQWdJQ0FnSW1GemMyVnlkR1ZrSWpvZ01UWXlNREl4TURNMk1pd05DaUFnSUNBZ0luWmhiSFZsSWpvZ0ltaDBkSEJ6T2k4dmMzUnpjM1JuTG01cGFDNW5iM1l2Y0dGemMzQnZjblF2WkdKbllYQXZkakV1TVNJc0RRb2dJQ0FnSUNKemIzVnlZMlVpT2lBaWFIUjBjSE02THk5dVkySnBMbTVzYlM1dWFXZ3VaMjkyTDJkaGNDSXNEUW9nSUNBZ0lDSmllU0k2SUNKa1lXTWlmU3dOQ2lBZ0lDQWdJbkpoYzE5a1ltZGhjRjl3WlhKdGFYTnphVzl1Y3lJNklGc05DaUFnSUNBZ0lDQWdJQTBLZXcwS0ltTnZibk5sYm5SZmJtRnRaU0k2SWtkbGJtVnlZV3dnVW1WelpXRnlZMmdnVlhObElpd0pEUW9pY0doelgybGtJam9pY0doek1EQXdNREEySWl3TkNpSjJaWEp6YVc5dUlqb2lkakVpTEEwS0luQmhjblJwWTJsd1lXNTBYM05sZENJNkluQXhJaXdKQ1EwS0ltTnZibk5sYm5SZlozSnZkWEFpT2lKak1TSXNEUW9pY205c1pTSTZJbkJwSWl3TkNpSmxlSEJwY21GMGFXOXVJam94TmpReE1ERXpNakF3RFFwOUxBMEtldzBLSW1OdmJuTmxiblJmYm1GdFpTSTZJa1Y0WTJoaGJtZGxJRUZ5WldFaUxBa05DaUp3YUhOZmFXUWlPaUp3YUhNd01EQXpNREFpTEEwS0luWmxjbk5wYjI0aU9pSjJNU0lzRFFvaWNHRnlkR2xqYVhCaGJuUmZjMlYwSWpvaWNERWlMQWtKRFFvaVkyOXVjMlZ1ZEY5bmNtOTFjQ0k2SW1NNU9Ua2lMQTBLSW5KdmJHVWlPaUp3YVNJc0RRb2laWGh3YVhKaGRHbHZiaUk2TVRZME1UQXhNekl3TUFrTkNuME5DaUFnSUNBZ1hTQU5DbjAuTnpSOEtzZTJOOUtFOXhvLUo4dXdUaWxzUG9pYXhNWGlGR0prY0JOYTMtOGt1ZEh3MFd6U0xDM3Z3Qk4yZ3Z0RUtMZ2ZBeVpVUDZrc0ktRzlOV0NIU3Z2RG4tbFNhbjVtV1dfWEhrRVdGWGd3RXotWlNNalBvV0Vndlk1bHhSWEhxR1lhWmQ5U2puTjdsTFpUbHNQLU9pbFUxcUNyQ205YzVfcTh1YWJyZ3o0OW5PWFRGZEpKblpPT1ZzUmtkU0NjVnlHczRlbUxNSjdDdVd2ckU2RkR2Ri1QTUpGNlhHYnN3R1pjVFRPM3h0MjR6Tk1wbm5RUEVzNXQ3Tk1LZjhucEJ3czNvd0FKcklTRkExYTNmUWtJZU83dFRUUGVSX1FRVUlxYzFJRW5JdlotMGdsNE5ETEZRSjJTTS1KdUtvSWdnQWt3NVNGWDNhSk9WNC12b2JZbXhBIl0NCn0.sJwAZeR8cYyF-BCluC9fmiQAi14L7hC3DB4MoFQNNdoakUBujPZ-NlpfP2rBgJQ3CGcxsF95Vdczm6Yk4TKa68eXkKjkswjsSSQg0qErgFhN2jis9KMxnMfmfPNUfb0lioHtD-_oghRkd9239oUwLR06KB5Ux3mD4Pc0ZPbJxJcPmyP9DZ8WEHmAFIJpcoayHwJDr1jt-GbqUtaTCs1VQ9Habh8Z8fvwrlvQNj744m5eq6141bD0G15KgvbyYf9L4_PYNgMjTyUx9EGyetrxQ4XmOpDF_ZbFEhZliy80qfO2HGQzSId-dKXCvPI_SUWcCVeJqPwmXTirTt9qJ63ypw";
+    private ConnectionWebService connectionService;
+    private CacheEvictionService cacheEvictionService;
+    private RasOidcClient rasOidcClient;
+    private OidcFlowStateStore stateStore;
+    private Connection rasConnection;
+    private User testUser;
 
     @BeforeEach
-    public void setUp() throws Exception {
-        MockitoAnnotations.openMocks(this);
-        RoleService roleService = new RoleService(mock(UserRepository.class), mock(RoleRepository.class), mock(PrivilegeService.class), mock(FenceMappingUtility.class), mock(ApplicationContext.class), null);
-        this.rasPassPortService = spy(new RASPassPortService(restClientUtil, userService, "", cacheEvictionService, null));
-        doReturn(false).when(rasPassPortService).isExpired(any());
+    public void setUp() {
+        userService = mock(UserService.class);
+        roleService = mock(RoleService.class);
+        // Real passport logic: extractPassport/isExpired/permission mapping run for real.
+        rasPassPortService = new RASPassPortService(mock(edu.harvard.hms.dbmi.avillach.auth.utils.RestClientUtil.class),
+                userService, "https://stsstg.nih.gov", mock(CacheEvictionService.class), null);
+        connectionService = mock(ConnectionWebService.class);
+        cacheEvictionService = mock(CacheEvictionService.class);
+        rasOidcClient = mock(RasOidcClient.class);
+        stateStore = new OidcFlowStateStore();
 
-        rasAuthenticationService = new RASAuthenticationService(
-                userService,
-                restClientUtil,
-                true,
-                "test.com",
-                "",
-                "",
-                "",
-                "https://stsstg.nih.gov",
-                roleService,
-                rasPassPortService,
-                connectionService,
-                cacheEvictionService,
-                rasUserinfoService
-        );
-
-        when(rasUserinfoService.fetchUserinfo(any())).thenReturn(null);
-
-        Connection rasConnection = new Connection();
-        rasConnection.setSubPrefix("okta-ras|");
-        rasConnection.setUuid(UUID.randomUUID());
-        rasConnection.setId("okta-ras");
+        rasConnection = new Connection();
         rasConnection.setLabel("RAS");
-        rasAuthenticationService.setRasConnection(rasConnection);
+        rasConnection.setSubPrefix("okta-ras|");
+        when(connectionService.getConnectionByLabel("RAS")).thenReturn(rasConnection);
 
-        authRequest = new HashMap<>();
-        authRequest.put("code", code);
-        authRequest.put("redirectURI", testDomain);
+        testUser = new User();
+        testUser.setUuid(UUID.randomUUID());
+        testUser.setSubject("okta-ras|janeresearcher@era.nih.gov");
+        testUser.setEmail("jane.researcher@example.org");
+        testUser.setRoles(new HashSet<>());
+        when(userService.createRasUser(any(edu.harvard.hms.dbmi.avillach.auth.model.ras.RasIal2UserInfo.class), eq(rasConnection)))
+                .thenReturn(Optional.of(testUser));
+        when(userService.updateUserRoles(any(User.class), anySet())).thenAnswer(inv -> inv.getArgument(0));
+        when(userService.updateUserConsents(any(User.class), anySet())).thenAnswer(inv -> inv.getArgument(0));
+        when(userService.addRoleClaims(any(User.class))).thenReturn(List.of());
+        when(userService.getUserProfileResponse(any(UserClaims.class))).thenReturn(new HashMap<>(Map.of(
+                "token", "psama-jwt", "userId", "okta-ras|janeresearcher@era.nih.gov")));
+        when(roleService.getRoleNamesForDbgapPermissions(anySet())).thenReturn(Set.of("MANAGED_phs000007_c1"));
+    }
+
+    private RASAuthenticationService newService(boolean enforceIal2) {
+        return new RASAuthenticationService(userService, roleService, rasPassPortService,
+                connectionService, cacheEvictionService, rasOidcClient, stateStore,
+                true, enforceIal2, RasTestFixtures.RAS_ISSUER);
+    }
+
+    private Claims idTokenClaims(String acr) {
+        return Jwts.claims()
+                .subject("RAS-SUB-0123456789abcdef")
+                .issuer(RasTestFixtures.RAS_ISSUER)
+                .add("acr", acr)
+                .add("txn", "txn-test-0001")
+                .add("nonce", "nonce-1")
+                .build();
+    }
+
+    /** Wires the mocked RasOidcClient for a successful flow over the given userinfo JSON. */
+    private Map<String, String> primeSuccessfulFlow(String userinfoJson, String acr) throws Exception {
+        String state = stateStore.storeNewFlow("nonce-1", null);
+        JsonNode userinfo = objectMapper.readTree(userinfoJson);
+        Claims claims = idTokenClaims(acr);
+
+        when(rasOidcClient.exchangeCode(eq("the-code"), eq(HOST), isNull()))
+                .thenReturn(new RasOidcTokens("AT", "IDT", "RT"));
+        when(rasOidcClient.validateIdToken(eq("IDT"), eq("nonce-1"))).thenReturn(Optional.of(claims));
+        when(rasOidcClient.fetchUserinfo(eq("AT"))).thenReturn(userinfo);
+        when(rasOidcClient.mergeClaims(eq(userinfo), eq(claims))).thenAnswer(inv -> {
+            ObjectNode merged = ((JsonNode) inv.getArgument(0)).deepCopy();
+            merged.put("sub", claims.getSubject());
+            merged.put("acr", acr);
+            merged.put("txn", "txn-test-0001");
+            merged.put("iss", claims.getIssuer());
+            return merged;
+        });
+        return new HashMap<>(Map.of("code", "the-code", "state", state));
     }
 
     @Test
-    public void testAuthorizationCodeFlow_Successful() throws JsonProcessingException {
-        String data = "{\"access_token\":\"" + testAccessToken + "\", \"active\":true, \"id_token\":\"SomeRandomToken\"}";
-        String payload = "token_type_hint=access_token&token=" + testAccessToken;
-        String redirectUri = "https://" + testDomain + "/login/loading";
-        String queryString = "grant_type=authorization_code" + "&code=" + code + "&redirect_uri=" + redirectUri;
-        String introspectionResponse =
-                "{\"active\":true,\"sub\":\"example_email@test.com\",\"client_id\":\"test_client_id\"," +
-                "\"uid\":\"00uTEST\"," +
-                "\"userid\":\"test_userid\",\"preferred_username\":\"testuser\"," +
-                "\"email\":\"okta_email@test.com\",\"firstName\":\"Test\",\"lastName\":\"User\"," +
-                "\"passport_jwt_v11\":\""+ exampleRasPassport +"\"}";
+    public void authenticate_fullPipeline_producesSameDownstreamEffectsAsOktaFlow() throws Exception {
+        Map<String, String> authRequest = primeSuccessfulFlow(RasTestFixtures.fullUserinfoJson(), ACR_IAL2);
 
-        // token exchange
-        when(restClientUtil.retrievePostResponse(anyString(), any(), eq(queryString))).thenReturn(ResponseEntity.ok(data));
-        // introspect
-        when(restClientUtil.retrievePostResponse(anyString(), any(), eq(payload))).thenReturn(ResponseEntity.ok(introspectionResponse));
+        HashMap<String, String> response = newService(true).authenticate(authRequest, HOST);
 
-        doNothing().when(cacheEvictionService).evictCache(any(User.class));
+        assertNotNull(response);
+        assertEquals("psama-jwt", response.get("token"));
+        assertEquals("IDT", response.get("idToken"), "RAS ID token replaces oktaIdToken");
+        assertFalse(response.containsKey("oktaIdToken"));
 
-        User user = createTestUser();
-        user.setSubject("okta-ras|adfadfaf");
-        when(userService.createRasUser(any(), any())).thenReturn(Optional.of(user));
-        when(userService.updateUserRoles(any(), any())).thenReturn(user);
-        when(userService.updateUserConsents(any(), any())).thenReturn(user);
+        // Same dbGaP-permission-to-role mapping as the Okta-brokered flow.
+        verify(userService).updateUserRoles(any(User.class), eq(Set.of("MANAGED_phs000007_c1")));
+        verify(userService).updateUserConsents(any(User.class), eq(Set.of("phs000007.c1")));
 
-        // userid and preferred_username now come from the RAS userinfo response, not introspection.
-        RasIal2UserInfo userinfo = new ObjectMapper().readValue(
-                "{\"userid\":\"test_userid\",\"preferred_username\":\"testuser\"}", RasIal2UserInfo.class);
-        when(rasUserinfoService.fetchUserinfo("00uTEST")).thenReturn(userinfo);
+        // Passport stored on the user entity.
+        assertNotNull(testUser.getPassport());
 
-        ArgumentCaptor<UserClaims> claimsCaptor = ArgumentCaptor.forClass(UserClaims.class);
-        when(userService.getUserProfileResponse(claimsCaptor.capture())).thenReturn(new HashMap<>());
+        // generalMetadata preserved + extended: idp/sub/email as before, researcher_role and
+        // federated identities from userinfo.
+        JsonNode metadata = objectMapper.readTree(testUser.getGeneralMetadata());
+        assertEquals("RAS", metadata.get("idp").asText());
+        assertEquals("okta-ras|janeresearcher@era.nih.gov", metadata.get("sub").asText());
+        assertEquals("janeresearcher@era.nih.gov", metadata.get("default_identity").asText());
+        assertEquals("jane@login.gov", metadata.get("authenticated_identity").asText());
+        assertEquals("Principal Investigator@Harvard Medical School,Researcher@Broad Institute",
+                metadata.get("researcher_role").asText());
 
-        HashMap<String, String> authenticate = rasAuthenticationService.authenticate(authRequest, testDomain);
-        assertNotNull(authenticate);
-
-        UserClaims capturedClaims = claimsCaptor.getValue();
-        assertEquals("test_userid", capturedClaims.getUserid());
-        assertEquals("testuser", capturedClaims.getPreferred_username());
-        assertEquals("test@email.com", capturedClaims.getEmail());
-        assertEquals("RAS", capturedClaims.getIdp());
-        assertEquals("https://ncbi.nlm.nih.gov/gap", capturedClaims.getUser_permission_group());
-
-        verify(rasUserinfoService).fetchUserinfo("00uTEST");
-        assertNull(capturedClaims.getFederated_sources());
+        // UserClaims carry the same RAS-specific fields as before.
+        ArgumentCaptor<UserClaims> userClaims = ArgumentCaptor.forClass(UserClaims.class);
+        verify(userService).getUserProfileResponse(userClaims.capture());
+        assertEquals("janeresearcher@era.nih.gov", userClaims.getValue().getPreferred_username());
+        assertEquals("janeresearcher", userClaims.getValue().getUserid());
+        assertEquals("RAS", userClaims.getValue().getIdp());
+        // buildUserClaims sets era_commons_id from federated_identities_ial2.identities.era.userid.
+        assertEquals("janeresearcher", userClaims.getValue().getEra_commons_id());
+        assertNotNull(userClaims.getValue().getFederated_sources(), "federated sources serialized into claims");
     }
 
     @Test
-    public void testAuthorizationCodeFlow_PopulatesFederatedIdentitiesFromUserinfo() throws Exception {
-        String data = "{\"access_token\":\"" + testAccessToken + "\", \"active\":true, \"id_token\":\"SomeRandomToken\"}";
-        String payload = "token_type_hint=access_token&token=" + testAccessToken;
-        String redirectUri = "https://" + testDomain + "/login/loading";
-        String queryString = "grant_type=authorization_code" + "&code=" + code + "&redirect_uri=" + redirectUri;
-        String introspectionResponse =
-                "{\"active\":true,\"sub\":\"example_email@test.com\",\"client_id\":\"test_client_id\"," +
-                "\"uid\":\"00uTEST\",\"userid\":\"test_userid\",\"preferred_username\":\"testuser\"," +
-                "\"passport_jwt_v11\":\""+ exampleRasPassport +"\"}";
-
-        when(restClientUtil.retrievePostResponse(anyString(), any(), eq(queryString))).thenReturn(ResponseEntity.ok(data));
-        when(restClientUtil.retrievePostResponse(anyString(), any(), eq(payload))).thenReturn(ResponseEntity.ok(introspectionResponse));
-        doNothing().when(cacheEvictionService).evictCache(any(User.class));
-
-        User user = createTestUser();
-        user.setSubject("okta-ras|adfadfaf");
-        when(userService.createRasUser(any(), any())).thenReturn(Optional.of(user));
-        when(userService.updateUserRoles(any(), any())).thenReturn(user);
-        when(userService.updateUserConsents(any(), any())).thenReturn(user);
-
-        RasIal2UserInfo userinfo = new ObjectMapper().readValue(
-                "{\"federated_identities_ial2\":{\"sources\":{\"nih\":{\"identity_username\":\"x\"}}}}", RasIal2UserInfo.class);
-        when(rasUserinfoService.fetchUserinfo("00uTEST")).thenReturn(userinfo);
-
-        ArgumentCaptor<UserClaims> claimsCaptor = ArgumentCaptor.forClass(UserClaims.class);
-        when(userService.getUserProfileResponse(claimsCaptor.capture())).thenReturn(new HashMap<>());
-
-        HashMap<String, String> authenticate = rasAuthenticationService.authenticate(authRequest, testDomain);
-
-        assertNotNull(authenticate);
-        assertEquals("{\"nih\":{\"identity_username\":\"x\"}}", claimsCaptor.getValue().getFederated_sources());
+    public void authenticate_rejectsMissingCodeOrState() {
+        RASAuthenticationService service = newService(true);
+        assertNull(service.authenticate(Map.of("state", "s-only"), HOST));
+        assertNull(service.authenticate(Map.of("code", "c-only"), HOST));
+        verifyNoInteractions(rasOidcClient);
     }
 
     @Test
-    public void testGenerateRasUserMetadata_includesIdentities_fromUserinfo() throws Exception {
-        User user = createTestUser();
-        RasIal2UserInfo userinfo = new ObjectMapper().readValue(
-                "{\"federated_identities_ial2\":{\"default_identity\":\"nih\",\"authenticated_identity\":\"nih\"}}", RasIal2UserInfo.class);
+    public void authenticate_rejectsUnknownOrReplayedState() throws Exception {
+        Map<String, String> authRequest = primeSuccessfulFlow(RasTestFixtures.fullUserinfoJson(), ACR_IAL2);
+        authRequest.put("state", "forged-state");
 
-        ObjectNode metadata = rasAuthenticationService.generateRasUserMetadata(user, userinfo);
-
-        assertEquals("nih", metadata.get("default_identity").asText());
-        assertEquals("nih", metadata.get("authenticated_identity").asText());
+        assertNull(newService(true).authenticate(authRequest, HOST));
+        verify(rasOidcClient, never()).exchangeCode(anyString(), anyString(), any());
     }
 
     @Test
-    public void testGenerateRasUserMetadata_nullUserinfo_omitsIdentities() {
-        User user = createTestUser();
+    public void authenticate_rejectsFailedTokenExchange() throws Exception {
+        Map<String, String> authRequest = primeSuccessfulFlow(RasTestFixtures.fullUserinfoJson(), ACR_IAL2);
+        when(rasOidcClient.exchangeCode(anyString(), anyString(), any())).thenReturn(null);
 
-        ObjectNode metadata = rasAuthenticationService.generateRasUserMetadata(user, null);
-
-        assertFalse(metadata.has("default_identity"));
-        assertFalse(metadata.has("authenticated_identity"));
+        assertNull(newService(true).authenticate(authRequest, HOST));
+        verify(rasOidcClient, never()).fetchUserinfo(anyString());
     }
 
     @Test
-    public void testAuthorizationCodeFlow_MissingUid_LoginFailsWithoutUserinfo() throws JsonProcessingException {
-        String data = "{\"access_token\":\"" + testAccessToken + "\", \"active\":true, \"id_token\":\"SomeRandomToken\"}";
-        String payload = "token_type_hint=access_token&token=" + testAccessToken;
-        String redirectUri = "https://" + testDomain + "/login/loading";
-        String queryString = "grant_type=authorization_code" + "&code=" + code + "&redirect_uri=" + redirectUri;
-        // No "uid" claim in the introspection response.
-        String introspectionResponse =
-                "{\"active\":true,\"sub\":\"example_email@test.com\",\"client_id\":\"test_client_id\"," +
-                "\"userid\":\"test_userid\",\"preferred_username\":\"testuser\"," +
-                "\"passport_jwt_v11\":\""+ exampleRasPassport +"\"}";
+    public void authenticate_rejectsInvalidIdToken() throws Exception {
+        Map<String, String> authRequest = primeSuccessfulFlow(RasTestFixtures.fullUserinfoJson(), ACR_IAL2);
+        when(rasOidcClient.validateIdToken(anyString(), anyString())).thenReturn(Optional.empty());
 
-        when(restClientUtil.retrievePostResponse(anyString(), any(), eq(queryString))).thenReturn(ResponseEntity.ok(data));
-        when(restClientUtil.retrievePostResponse(anyString(), any(), eq(payload))).thenReturn(ResponseEntity.ok(introspectionResponse));
-
-        // RAS userinfo is the identity source. With no uid we cannot fetch it (fetchUserinfo(null) -> null),
-        // so createRasUser cannot build the user and login fails before any claims are assembled.
-        when(userService.createRasUser(any(), any())).thenReturn(Optional.empty());
-
-        HashMap<String, String> authenticate = rasAuthenticationService.authenticate(authRequest, testDomain);
-
-        // Login is denied; userinfo was attempted with a null uid and no profile claims were built.
-        assertNull(authenticate);
-        verify(rasUserinfoService).fetchUserinfo(null);
-        verify(userService, never()).getUserProfileResponse(any());
+        assertNull(newService(true).authenticate(authRequest, HOST));
+        verify(rasOidcClient, never()).fetchUserinfo(anyString());
     }
 
     @Test
-    public void testUpdateUserRoles_withEmptyDBGapPermissions() throws JsonProcessingException {
-        String introspectionResponse =
-                "{\"active\":true,\"sub\":\"example_email@test.com\",\"client_id\":\"test_client_id\",\"passport_jwt_v11\":\""+ exampleRasPassport +"\"}";
-        JsonNode introspectionResponseParsed = new ObjectMapper().readTree(introspectionResponse);
-        User user = createTestUser();
-        Optional<Passport> passport = this.rasPassPortService.extractPassport(introspectionResponseParsed);
-        assertTrue(passport.isPresent());
+    public void authenticate_rejectsIal1WhenEnforced() throws Exception {
+        Map<String, String> authRequest = primeSuccessfulFlow(RasTestFixtures.fullUserinfoJson(), ACR_IAL1);
 
-        Set<RasDbgapPermission> dbgapPermissions = new HashSet<>();
-        Set<String> dbgapRoleNames = new HashSet<>();
-
-        when(rasPassPortService.ga4ghPassportToRasDbgapPermissions(any())).thenReturn(dbgapPermissions);
-        when(roleService.getRoleNamesForDbgapPermissions(any())).thenReturn(dbgapRoleNames);
-        when(userService.updateUserRoles(any(), any())).thenReturn(user);
-        when(userService.updateUserConsents(any(), any())).thenReturn(user);
-
-        user = this.rasAuthenticationService.updateRasUserRoles(code, user, passport.get());
-        assertNotNull(user);
-
-        // We are verifying that we attempt to update a users roles even if no dbgap roles are present.
-        verify(userService, times(1)).updateUserRoles(user, dbgapRoleNames);
+        assertNull(newService(true).authenticate(authRequest, HOST));
+        verify(rasOidcClient, never()).fetchUserinfo(anyString());
     }
 
-    private User createTestUser() {
-        User user = new User();
-        user.setUuid(UUID.randomUUID());
-        user.setRoles(new HashSet<>(Collections.singleton(createTestRole())));
-        user.setSubject("TEST_SUBJECT");
-        user.setEmail("test@email.com");
-        user.setAcceptedTOS(new Date());
-        user.setActive(true);
+    @Test
+    public void authenticate_rejectsAal1WhenEnforced() throws Exception {
+        Map<String, String> authRequest = primeSuccessfulFlow(RasTestFixtures.fullUserinfoJson(), ACR_AAL1);
 
-        return user;
+        assertNull(newService(true).authenticate(authRequest, HOST));
     }
 
-    private Role createTestRole() {
-        Role role = new Role();
-        role.setName("TEST_ROLE");
-        role.setUuid(UUID.randomUUID());
-        role.setPrivileges(Collections.singleton(createTestPrivilege()));
-        return role;
+    @Test
+    public void authenticate_acceptsIal1WhenEnforcementDisabled() throws Exception {
+        Map<String, String> authRequest = primeSuccessfulFlow(RasTestFixtures.fullUserinfoJson(), ACR_IAL1);
+
+        assertNotNull(newService(false).authenticate(authRequest, HOST));
     }
 
-    private Privilege createTestPrivilege() {
-        Privilege privilege = new Privilege();
-        privilege.setName("TEST_PRIVILEGE");
-        privilege.setUuid(UUID.randomUUID());
-        privilege.setQueryTemplate(createQueryTemplate("consent_concept_path_"+privilege.getUuid(), "project_name_"+privilege.getUuid(), "consent_group_"+privilege.getUuid()));
+    @Test
+    public void authenticate_failsGracefullyWithoutPassport_noException() throws Exception {
+        // Google-style IDP: no passport claim at all. Login must fail cleanly (null), not throw.
+        Map<String, String> authRequest = primeSuccessfulFlow(
+                RasTestFixtures.userinfoJson("ras-userinfo-no-passport.json", null), ACR_IAL2);
 
-        return privilege;
+        assertNull(newService(true).authenticate(authRequest, HOST));
     }
 
-    private String createQueryTemplate(String consent_concept_path, String project_name, String consent_group) {
-        return "{\"categoryFilters\": {\""
-                + consent_concept_path
-                + "\":\""
-                + project_name + "." + consent_group
-                + "\"},"
-                + "\"numericFilters\":{},\"requiredFields\":[],"
-                + "\"variantInfoFilters\":[{\"categoryVariantInfoFilters\":{},\"numericVariantInfoFilters\":{}}],"
-                + "\"expectedResultType\": \"COUNT\""
-                + "}";
+    @Test
+    public void authenticate_succeedsWithoutFederatedOrResearcherClaims() throws Exception {
+        // Userinfo with passport but neither federated_identities_ial2 nor researcher_role:
+        // processing of those claims is non-blocking.
+        long exp = java.time.Instant.now().getEpochSecond() + 3600;
+        String passport = RasTestFixtures.passportJwt(RasTestFixtures.RAS_ISSUER, exp,
+                List.of(RasTestFixtures.dbgapVisaJwt(exp)));
+        String userinfo = """
+                {"sub":"RAS-SUB-x","preferred_username":"plain@era.nih.gov","userid":"plain",
+                 "email":"plain@example.org","passport_jwt_v11":"%s"}""".formatted(passport);
+        Map<String, String> authRequest = primeSuccessfulFlow(userinfo, ACR_IAL2);
+
+        assertNotNull(newService(true).authenticate(authRequest, HOST));
+    }
+
+    @Test
+    public void authenticate_eraShapedUserinfo_researcherRoleWithoutIal2Block() throws Exception {
+        // Realistic direct-eRA shape: researcher_role present, NO federated_identities_ial2.
+        long exp = java.time.Instant.now().getEpochSecond() + 3600;
+        String passport = RasTestFixtures.passportJwt(RasTestFixtures.RAS_ISSUER, exp,
+                List.of(RasTestFixtures.dbgapVisaJwt(exp)));
+        String userinfo = """
+                {"sub":"RAS-SUB-era","preferred_username":"erauser@era.nih.gov","userid":"erauser",
+                 "email":"era@example.org","researcher_role":"Principal Investigator@Yale",
+                 "passport_jwt_v11":"%s"}""".formatted(passport);
+        Map<String, String> authRequest = primeSuccessfulFlow(userinfo, ACR_IAL2);
+
+        HashMap<String, String> response = newService(true).authenticate(authRequest, HOST);
+
+        assertNotNull(response);
+        JsonNode metadata = objectMapper.readTree(testUser.getGeneralMetadata());
+        assertEquals("Principal Investigator@Yale", metadata.get("researcher_role").asText());
+        assertNull(metadata.get("default_identity"), "no federated block -> no federated metadata");
+    }
+
+    @Test
+    public void authenticate_rejectsWrongPassportIssuer() throws Exception {
+        long exp = java.time.Instant.now().getEpochSecond() + 3600;
+        String passport = RasTestFixtures.passportJwt("https://wrong-issuer.example.com", exp,
+                List.of(RasTestFixtures.dbgapVisaJwt(exp)));
+        Map<String, String> authRequest = primeSuccessfulFlow(
+                RasTestFixtures.userinfoJson("ras-userinfo-full.json", passport), ACR_IAL2);
+
+        assertNull(newService(true).authenticate(authRequest, HOST));
+    }
+
+    @Test
+    public void validateAssuranceLevels_parsesRealisticAcrStrings() {
+        RASAuthenticationService service = newService(true);
+        assertTrue(service.validateAssuranceLevels(ACR_IAL2));
+        assertFalse(service.validateAssuranceLevels(ACR_IAL1));
+        assertFalse(service.validateAssuranceLevels(ACR_AAL1));
+        assertFalse(service.validateAssuranceLevels(null));
+        assertFalse(service.validateAssuranceLevels(""));
+        assertFalse(service.validateAssuranceLevels("https://stsstg.nih.gov/assurance/aal/2"), "missing ial");
+
+        RASAuthenticationService lenient = newService(false);
+        assertTrue(lenient.validateAssuranceLevels(ACR_IAL1));
+        assertTrue(lenient.validateAssuranceLevels(null));
+    }
+
+    @Test
+    public void getAuthorizeUrl_delegatesToOidcClient() {
+        when(rasOidcClient.buildAuthorizeUrl(HOST)).thenReturn("https://stsstg.nih.gov/auth/oauth/v2/authorize?x=y");
+        assertEquals(Optional.of("https://stsstg.nih.gov/auth/oauth/v2/authorize?x=y"),
+                newService(true).getAuthorizeUrl(HOST));
+    }
+
+    @Test
+    public void getProviderAndIsEnabled_unchangedContract() {
+        RASAuthenticationService service = newService(true);
+        assertEquals("ras", service.getProvider());
+        assertTrue(service.isEnabled());
     }
 }
