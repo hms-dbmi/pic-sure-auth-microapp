@@ -165,7 +165,10 @@ JsonNode introspectResponse = super.introspectToken(userToken);
         String userEmail = introspectResponse.get("sub").asText();
         try {
             // connection id = okta
-            User user = userService.findByEmailAndConnection(userEmail, this.connectionId).orElseThrow(() -> new RuntimeException("User not found for email: " + userEmail));
+            User user = userService.findByEmailAndConnection(userEmail, this.connectionId).orElse(null);
+            if (user == null) {
+                return null;
+            }
 
             // If the user does not yet have a subject, set it to the subject from the introspect response
             if (user.getSubject() == null) {
