@@ -3,6 +3,7 @@ package edu.harvard.hms.dbmi.avillach.auth.utils;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 
+import javax.crypto.SecretKey;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -18,7 +19,14 @@ public final class RasTestFixtures {
     public static final String DBGAP_PHS_ID = "phs000007";
     public static final String DBGAP_CONSENT_GROUP = "c1";
 
-    private static final javax.crypto.SecretKey TEST_KEY =
+    /**
+     * Throwaway HMAC key. Real RAS signs passports/visas with RS256, but the production parsers
+     * ({@code JWTUtil.parsePassportJWTV11}/{@code parseGa4ghPassportV1}) decode payloads WITHOUT
+     * verifying signatures, so the algorithm is irrelevant here. Do not "fix" this to RS256/JWKS.
+     * Note: payload strings must avoid {@code >}, {@code ?}, {@code ~} — JWTUtil decodes with the
+     * non-URL-safe Base64 decoder, and those characters can produce url-safe base64 output bytes.
+     */
+    private static final SecretKey TEST_KEY =
             Keys.hmacShaKeyFor("test-signing-key-test-signing-key-test!!".getBytes(StandardCharsets.UTF_8));
 
     private RasTestFixtures() {}
@@ -86,13 +94,22 @@ public final class RasTestFixtures {
         try (InputStream in = RasTestFixtures.class.getResourceAsStream("/fixtures/" + fixtureName)) {
             String json = new String(Objects.requireNonNull(in, "missing fixture " + fixtureName)
                     .readAllBytes(), StandardCharsets.UTF_8);
+            if (passportJwt == null && json.contains("@@PASSPORT_JWT@@")) {
+                throw new IllegalArgumentException("fixture " + fixtureName + " requires a passport JWT");
+            }
             return passportJwt == null ? json : json.replace("@@PASSPORT_JWT@@", passportJwt);
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
     }
 
-    /** Convenience: a fully-valid userinfo document with a dbGaP visa and a LinkedIdentities visa. */
+    /**
+     * Convenience: a fully-valid userinfo document with a dbGaP visa and a LinkedIdentities visa.
+     * Deliberately unrealistic combination: real RAS never returns {@code researcher_role}
+     * (eRA-only) together with {@code federated_identities_ial2} (IAL2 IDPs only) — the fixture
+     * combines them so one pipeline test exercises both claim paths. eRA-shaped payloads
+     * (researcher_role without the IAL2 block) are covered separately at the unit level.
+     */
     public static String fullUserinfoJson() {
         long exp = Instant.now().getEpochSecond() + 12 * 60 * 60; // RAS passports/visas live 12h
         String passport = passportJwt(RAS_ISSUER, exp, List.of(dbgapVisaJwt(exp), linkedIdentitiesVisaJwt(exp)));
