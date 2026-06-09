@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.util.CollectionUtils;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -93,5 +94,22 @@ public class AuthenticationController {
         AuditAttributes.putMetadata(request, "login_result", "failure");
         AuditAttributes.putMetadata(request, "reason", "authentication_failed");
         return PICSUREResponse.unauthorizedError("User not authenticated.");
+    }
+
+    @Operation(description = "Returns the IDP authorize redirect URL for providers that build the"
+            + " authorization request server-side (state/nonce are generated and stored by PSAMA)")
+    @GetMapping(path = "/authentication/{idpProvider}/authorize-url", produces = "application/json")
+    public ResponseEntity<?> authorizeUrl(@PathVariable("idpProvider") String idpProvider, HttpServletRequest request) {
+        AuthenticationService authenticationService;
+        try {
+            authenticationService = authenticationServiceRegistry.getAuthenticationService(idpProvider);
+        } catch (IllegalArgumentException e) {
+            logger.error("authorizeUrl() unknown idp provider: {}", idpProvider);
+            return ResponseEntity.badRequest().body("Unknown identity provider: " + idpProvider);
+        }
+
+        return authenticationService.getAuthorizeUrl(request.getServerName())
+                .<ResponseEntity<?>>map(url -> ResponseEntity.ok(Map.of("authorizeUrl", url)))
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 }
