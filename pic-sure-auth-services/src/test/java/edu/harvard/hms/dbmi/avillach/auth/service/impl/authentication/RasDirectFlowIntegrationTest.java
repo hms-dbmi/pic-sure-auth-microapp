@@ -27,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.client.ExpectedCount.manyTimes;
+import static org.springframework.test.web.client.ExpectedCount.times;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
@@ -111,7 +112,7 @@ public class RasDirectFlowIntegrationTest {
 
         // 2. RAS redirects back with a code; PSAMA exchanges it. The signed ID token's sub MUST equal
         //    the userinfo sub (RAS-SUB-0123456789abcdef) per the OIDC 5.3.2 check in the pipeline.
-        mockServer.expect(manyTimes(), requestTo(BASE + "/auth/oauth/v2/token"))
+        mockServer.expect(times(1), requestTo(BASE + "/auth/oauth/v2/token"))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(header("Authorization", org.hamcrest.Matchers.startsWith("Basic ")))
                 .andRespond(request -> {
@@ -131,7 +132,7 @@ public class RasDirectFlowIntegrationTest {
                     resp.getHeaders().setContentType(MediaType.APPLICATION_JSON);
                     return resp;
                 });
-        mockServer.expect(manyTimes(), requestTo(BASE + "/openid/connect/v1.1/userinfo"))
+        mockServer.expect(times(1), requestTo(BASE + "/openid/connect/v1.1/userinfo"))
                 .andExpect(header("Authorization", "Bearer AT-1"))
                 .andRespond(withSuccess(RasTestFixtures.fullUserinfoJson(), MediaType.APPLICATION_JSON));
 
@@ -150,6 +151,7 @@ public class RasDirectFlowIntegrationTest {
         assertFalse(response.containsKey("oktaIdToken"));
         verify(userService).updateUserRoles(any(), eq(Set.of("MANAGED_phs000007_c1")));
         assertNotNull(testUser.getPassport(), "passport persisted on the user entity");
+        mockServer.verify();
     }
 
     private static String queryParam(String url, String name) {

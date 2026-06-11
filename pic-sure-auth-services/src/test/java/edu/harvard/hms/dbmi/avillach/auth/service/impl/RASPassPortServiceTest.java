@@ -311,10 +311,13 @@ public class RASPassPortServiceTest {
     /**
      * Builds a service with a real (mock) UserService and a non-expired passport, stubs the
      * /passport/validate response, and asserts validateUserPassport invalidates + logs out.
+     * A local service instance is required because the class-level {@code rasPassPortService} is
+     * constructed in setUp with a null userService, so it cannot be used to verify logoutUser calls.
      */
     private void assertReactsByLogout(String validateResponse) {
         UserService mockUserService = mock(UserService.class);
         CacheEvictionService mockCache = mock(CacheEvictionService.class);
+        // Construct a dedicated service with a real mock UserService so logoutUser can be verified.
         RASPassPortService service =
                 new RASPassPortService(restClientUtil, mockUserService, "https://test.com/", mockCache, null);
 
