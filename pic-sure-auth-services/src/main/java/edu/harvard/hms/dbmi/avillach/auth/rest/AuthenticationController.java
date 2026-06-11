@@ -98,8 +98,10 @@ public class AuthenticationController {
 
     @Operation(description = "Returns the IDP authorize redirect URL for providers that build the"
             + " authorization request server-side (state/nonce are generated and stored by PSAMA)")
+    @AuditEvent(type = "AUTH", action = "auth.authorize_url")
     @GetMapping(path = "/authentication/{idpProvider}/authorize-url", produces = "application/json")
     public ResponseEntity<?> authorizeUrl(@PathVariable("idpProvider") String idpProvider, HttpServletRequest request) {
+        AuditAttributes.putMetadata(request, "idp", idpProvider);
         AuthenticationService authenticationService;
         try {
             authenticationService = authenticationServiceRegistry.getAuthenticationService(idpProvider);
