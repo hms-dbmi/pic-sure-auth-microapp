@@ -174,5 +174,35 @@
       "name": "application.max.session.length",
       "type": "java.lang.String",
       "description": "If a user has been signed in for this length of time they will be logged out."
+    },
+    {
+      "name": "ras.idp.provider.is.enabled",
+      "type": "java.lang.String",
+      "description": "If true, the direct-to-RAS OIDC provider is enabled."
+    },
+    {
+      "name": "ras.idp.uri",
+      "type": "java.lang.String",
+      "description": "RAS base URI per environment (e.g. https://stsstg.nih.gov). Also the base for /passport/validate visa polling."
+    },
+    {
+      "name": "ras.client.id",
+      "type": "java.lang.String",
+      "description": "RAS-issued OIDC client id."
+    },
+    {
+      "name": "ras.client.secret",
+      "type": "java.lang.String",
+      "description": "RAS-issued OIDC client secret."
+    },
+    {
+      "name": "ras.enforce.ial2",
+      "type": "java.lang.String",
+      "description": "If true, reject logins below AAL2/IAL2 based on the RAS ID token acr."
+    },
+    {
+      "name": "ras.userinfo.uri",
+      "type": "java.lang.String",
+      "description": "Optional userinfo endpoint override; defaults to <ras.idp.uri>/openid/connect/v1.1/userinfo."
     }
   ] }
