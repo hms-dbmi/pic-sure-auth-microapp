@@ -1,11 +1,13 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.impl;
 
 import edu.harvard.dbmi.avillach.logging.LoggingClient;
+import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.enums.PassportValidationResponse;
 import edu.harvard.hms.dbmi.avillach.auth.model.ras.Ga4ghPassportV1;
 import edu.harvard.hms.dbmi.avillach.auth.model.ras.Passport;
 import edu.harvard.hms.dbmi.avillach.auth.model.ras.RasDbgapPermission;
 import edu.harvard.hms.dbmi.avillach.auth.utils.JWTUtil;
+import edu.harvard.hms.dbmi.avillach.auth.utils.RasTestFixtures;
 import edu.harvard.hms.dbmi.avillach.auth.utils.RestClientUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,6 +24,8 @@ import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @SpringBootTest
@@ -292,6 +296,42 @@ public class RASPassPortServiceTest {
         assertEquals(2, permissions.size());
         assertTrue(permissions.stream().anyMatch(p -> p.getPhsId().equals("phs000007")));
         assertTrue(permissions.stream().anyMatch(p -> p.getPhsId().equals("phs000179")));
+    }
+
+    @Test
+    public void validateUserPassport_permissionUpdate_invalidatesAndLogsOut() {
+        assertReactsByLogout("Permission Update");
+    }
+
+    @Test
+    public void validateUserPassport_expiredPolling_invalidatesAndLogsOut() {
+        assertReactsByLogout("Expired Polling");
+    }
+
+    /**
+     * Builds a service with a real (mock) UserService and a non-expired passport, stubs the
+     * /passport/validate response, and asserts validateUserPassport invalidates + logs out.
+     */
+    private void assertReactsByLogout(String validateResponse) {
+        UserService mockUserService = mock(UserService.class);
+        CacheEvictionService mockCache = mock(CacheEvictionService.class);
+        RASPassPortService service =
+                new RASPassPortService(restClientUtil, mockUserService, "https://test.com/", mockCache, null);
+
+        long futureExp = Instant.now().getEpochSecond() + 3600;
+        String passport = RasTestFixtures.passportJwt(RasTestFixtures.RAS_ISSUER, futureExp,
+                List.of(RasTestFixtures.dbgapVisaJwt(futureExp)));
+        User user = new User();
+        user.setSubject("okta-ras|jane@era.nih.gov");
+        user.setPassport(passport);
+
+        when(restClientUtil.retrievePostResponse(any(String.class), any()))
+                .thenReturn(new ResponseEntity<>(validateResponse, HttpStatus.OK));
+
+        RASPassPortService.ValidationOutcome outcome = service.validateUserPassport(user);
+
+        assertEquals(RASPassPortService.ValidationOutcome.INVALIDATED, outcome);
+        verify(mockUserService).logoutUser(user);
     }
 
 }
