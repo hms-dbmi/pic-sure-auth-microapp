@@ -1,6 +1,7 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.impl;
 
 import edu.harvard.dbmi.avillach.logging.LoggingClient;
+import edu.harvard.hms.dbmi.avillach.auth.entity.User;
 import edu.harvard.hms.dbmi.avillach.auth.enums.PassportValidationResponse;
 import edu.harvard.hms.dbmi.avillach.auth.model.ras.Ga4ghPassportV1;
 import edu.harvard.hms.dbmi.avillach.auth.model.ras.Passport;
@@ -15,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ContextConfiguration;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -22,7 +24,7 @@ import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @SpringBootTest
 @ContextConfiguration(classes = {RASPassPortService.class})
@@ -62,6 +64,81 @@ public class RASPassPortServiceTest {
     private static final String multiVisaPassportWithEmptyPermissions = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6InRlc3Qta2V5In0"
             + ".eyJzdWIiOiJ0ZXN0LXN1Yi0wMDEiLCJqdGkiOiJwYXNzcG9ydC1qdGktMDAyIiwic2NvcGUiOiJvcGVuaWQgZ2E0Z2hfcGFzc3BvcnRfdjEiLCJ0eG4iOiJ0ZXN0LXR4bi0wMDEiLCJpc3MiOiJodHRwczovL3N0c3N0Zy5uaWguZ292IiwiaWF0IjoxNjIwMjEwMzYyLCJleHAiOjE2MjAyNTM1NjIsImdhNGdoX3Bhc3Nwb3J0X3YxIjpbImV5SjBlWEFpT2lKS1YxUWlMQ0poYkdjaU9pSlNVekkxTmlJc0ltdHBaQ0k2SW5SbGMzUXRhMlY1SW4wLmV5SnBjM01pT2lKb2RIUndjem92TDNOMGMzTjBaeTV1YVdndVoyOTJJaXdpYzNWaUlqb2lkR1Z6ZEMxemRXSXRNREF4SWl3aWFXRjBJam94TmpJd01qRXdNell5TENKbGVIQWlPakUyTWpBeU5UTTFOaklzSW5OamIzQmxJam9pYjNCbGJtbGtJR2RoTkdkb1gzQmhjM053YjNKMFgzWXhJaXdpYW5ScElqb2lkbWx6WVMxcWRHa3RiR2x1YTJWa0xUQXdNU0lzSW5SNGJpSTZJblJsYzNRdGRIaHVMVEF3TVNJc0ltZGhOR2RvWDNacGMyRmZkakVpT25zaWRIbHdaU0k2SWt4cGJtdGxaRWxrWlc1MGFYUnBaWE1pTENKaGMzTmxjblJsWkNJNk1UWXlNREl4TURNMk1pd2lkbUZzZFdVaU9pSjBaWE4wTFd4cGJtdGxaQzFwWkMxMllXeDFaU0lzSW5OdmRYSmpaU0k2SW1oMGRIQnpPaTh2YzNSemMzUm5MbTVwYUM1bmIzWWlMQ0ppZVNJNkltNXBhQzVuYjNZaWZYMC5mYWtlc2lnbmF0dXJlIiwiZXlKMGVYQWlPaUpLVjFRaUxDSmhiR2NpT2lKU1V6STFOaUlzSW10cFpDSTZJblJsYzNRdGEyVjVJbjAuZXlKcGMzTWlPaUpvZEhSd2N6b3ZMM04wYzNOMFp5NXVhV2d1WjI5Mklpd2ljM1ZpSWpvaWRHVnpkQzF6ZFdJdE1EQXhJaXdpYVdGMElqb3hOakl3TWpFd016WXlMQ0psZUhBaU9qRTJNakF5TlRNMU5qSXNJbk5qYjNCbElqb2liM0JsYm1sa0lHZGhOR2RvWDNCaGMzTndiM0owWDNZeElpd2lhblJwSWpvaWRtbHpZUzFxZEdrdFpHSm5ZWEF0Wlcxd2RIa3RNREF4SWl3aWRIaHVJam9pZEdWemRDMTBlRzR0TURBeElpd2laMkUwWjJoZmRtbHpZVjkyTVNJNmV5SjBlWEJsSWpvaWFIUjBjSE02THk5eVlYTXVibWxvTG1kdmRpOTJhWE5oY3k5Mk1TNHhJaXdpWVhOelpYSjBaV1FpT2pFMk1qQXlNVEF6TmpJc0luWmhiSFZsSWpvaWFIUjBjSE02THk5emRITnpkR2N1Ym1sb0xtZHZkaTl3WVhOemNHOXlkQzlrWW1kaGNDOTJNUzR4SWl3aWMyOTFjbU5sSWpvaWFIUjBjSE02THk5dVkySnBMbTVzYlM1dWFXZ3VaMjkyTDJkaGNDSXNJbUo1SWpvaVpHRmpJbjBzSW5KaGMxOWtZbWRoY0Y5d1pYSnRhWE56YVc5dWN5STZXMTE5LmZha2VzaWduYXR1cmUiXX0"
             + ".fakesignature";
+
+    @Test
+    public void testValidateUserPassport_invalidatesWhenAnyVisaIsInvalid() {
+        long future = (System.currentTimeMillis() / 1000) + 100_000;
+        String visa1 = visaJwt(future, "visa-one");
+        String visa2 = visaJwt(future, "visa-two");
+        assertNotEquals(visa1, visa2, "test visas must be distinct so per-visa stubbing is meaningful");
+        String passport = passportJwt(future, visa1, visa2);
+
+        RASPassPortService svc = spy(new RASPassPortService(restClientUtil, userService, "https://test.com/", cacheEvictionService, null));
+        // First visa validates, second does not. The whole passport must be invalidated.
+        doReturn(Optional.of(PassportValidationResponse.VALID.getValue())).when(svc).validateVisa(visa1);
+        doReturn(Optional.of(PassportValidationResponse.INVALID.getValue())).when(svc).validateVisa(visa2);
+
+        User user = new User();
+        user.setSubject("test-subject");
+        user.setPassport(passport);
+
+        RASPassPortService.ValidationOutcome outcome = svc.validateUserPassport(user);
+
+        assertEquals(RASPassPortService.ValidationOutcome.INVALIDATED, outcome,
+                "A passport with any invalid visa must be invalidated, not validated after the first visa");
+        verify(svc).validateVisa(visa2);
+    }
+
+    @Test
+    public void testValidateUserPassport_validatesEveryVisaWhenAllValid() {
+        long future = (System.currentTimeMillis() / 1000) + 100_000;
+        String visa1 = visaJwt(future, "visa-one");
+        String visa2 = visaJwt(future, "visa-two");
+        String passport = passportJwt(future, visa1, visa2);
+
+        RASPassPortService svc = spy(new RASPassPortService(restClientUtil, userService, "https://test.com/", cacheEvictionService, null));
+        doReturn(Optional.of(PassportValidationResponse.VALID.getValue())).when(svc).validateVisa(visa1);
+        doReturn(Optional.of(PassportValidationResponse.VALID.getValue())).when(svc).validateVisa(visa2);
+
+        User user = new User();
+        user.setSubject("test-subject");
+        user.setPassport(passport);
+
+        RASPassPortService.ValidationOutcome outcome = svc.validateUserPassport(user);
+
+        assertEquals(RASPassPortService.ValidationOutcome.VALIDATED, outcome);
+        // Every visa must be validated, not just the first.
+        verify(svc).validateVisa(visa1);
+        verify(svc).validateVisa(visa2);
+    }
+
+    private static String visaJwt(long exp, String id) {
+        String payload = "{\"iss\":\"https://stsstg.nih.gov\",\"exp\":" + exp + ",\"jti\":\"" + id + "\","
+                + "\"ga4gh_visa_v1\":{\"type\":\"https://ras.nih.gov/visas/v1.1\",\"value\":\"v\",\"source\":\"s\",\"by\":\"dac\"}}";
+        return standardB64Jwt(payload);
+    }
+
+    private static String passportJwt(long exp, String... visas) {
+        StringBuilder arr = new StringBuilder("[");
+        for (int i = 0; i < visas.length; i++) {
+            if (i > 0) arr.append(",");
+            arr.append("\"").append(visas[i]).append("\"");
+        }
+        arr.append("]");
+        String payload = "{\"iss\":\"https://stsstg.nih.gov\",\"exp\":" + exp + ",\"iat\":" + (exp - 200_000)
+                + ",\"ga4gh_passport_v1\":" + arr + "}";
+        return standardB64Jwt(payload);
+    }
+
+    // Build header.payload.signature using STANDARD base64, matching the decoder JWTUtil uses to parse.
+    private static String standardB64Jwt(String payloadJson) {
+        String header = b64("{\"alg\":\"RS256\",\"kid\":\"k\"}");
+        return header + "." + b64(payloadJson) + ".signature";
+    }
+
+    private static String b64(String s) {
+        return Base64.getEncoder().encodeToString(s.getBytes(StandardCharsets.UTF_8));
+    }
 
     @Test
     public void testIsExpired_passportPastExpirationIsExpiredRegardlessOfIssuedAt() {

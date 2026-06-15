@@ -13,6 +13,7 @@ import edu.harvard.hms.dbmi.avillach.auth.model.ras.Passport;
 import edu.harvard.hms.dbmi.avillach.auth.model.ras.RasDbgapPermission;
 import edu.harvard.hms.dbmi.avillach.auth.repository.RoleRepository;
 import edu.harvard.hms.dbmi.avillach.auth.repository.UserRepository;
+import edu.harvard.hms.dbmi.avillach.auth.utils.JWTUtil;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.*;
 import edu.harvard.hms.dbmi.avillach.auth.utils.FenceMappingUtility;
 import edu.harvard.hms.dbmi.avillach.auth.utils.RestClientUtil;
@@ -83,6 +84,7 @@ public class RASAuthenticationServiceTest {
                 "",
                 "",
                 "https://stsstg.nih.gov",
+                false,
                 roleService,
                 rasPassPortService,
                 rasPassportSignatureVerifier,
@@ -142,6 +144,80 @@ public class RASAuthenticationServiceTest {
     }
 
     @Test
+    public void testValidateAssuranceLevels_aal2ial2_passes() throws Exception {
+        JsonNode node = acrNode("https://stsstg.nih.gov/assurance/aal/2 https://stsstg.nih.gov/assurance/ial/2");
+        assertTrue(rasAuthenticationService.validateAssuranceLevels(node));
+    }
+
+    @Test
+    public void testValidateAssuranceLevels_aal3ial2_passes() throws Exception {
+        JsonNode node = acrNode("https://stsstg.nih.gov/assurance/aal/3 https://stsstg.nih.gov/assurance/ial/2");
+        assertTrue(rasAuthenticationService.validateAssuranceLevels(node));
+    }
+
+    @Test
+    public void testValidateAssuranceLevels_aal1ial1_fails() throws Exception {
+        JsonNode node = acrNode("https://stsstg.nih.gov/assurance/aal/1 https://stsstg.nih.gov/assurance/ial/1");
+        assertFalse(rasAuthenticationService.validateAssuranceLevels(node));
+    }
+
+    @Test
+    public void testValidateAssuranceLevels_aal2ial1_fails() throws Exception {
+        JsonNode node = acrNode("https://stsstg.nih.gov/assurance/aal/2 https://stsstg.nih.gov/assurance/ial/1");
+        assertFalse(rasAuthenticationService.validateAssuranceLevels(node));
+    }
+
+    @Test
+    public void testValidateAssuranceLevels_missingAcr_fails() throws Exception {
+        JsonNode node = new ObjectMapper().readTree("{\"sub\":\"x\"}");
+        assertFalse(rasAuthenticationService.validateAssuranceLevels(node));
+    }
+
+    private JsonNode acrNode(String acr) throws Exception {
+        return new ObjectMapper().readTree("{\"acr\":\"" + acr + "\"}");
+    }
+
+    @Test
+    public void testAuthenticate_rejectsWhenIal2EnforcedAndAssuranceTooLow() {
+        // A service with ras.enforce.ial2 = true must reject a login whose acr is below AAL2/IAL2,
+        // before any user record is created or role granted.
+        RASAuthenticationService enforcingService = new RASAuthenticationService(
+                userService, restClientUtil, true, "test.com", "", "", "",
+                "https://stsstg.nih.gov", true,
+                roleService, rasPassPortService, rasPassportSignatureVerifier,
+                connectionService, cacheEvictionService);
+        Connection rasConnection = new Connection();
+        rasConnection.setLabel("RAS");
+        enforcingService.setRasConnection(rasConnection);
+
+        String data = "{\"access_token\":\"" + testAccessToken + "\", \"active\":true, \"id_token\":\"SomeRandomToken\"}";
+        String payload = "token_type_hint=access_token&token=" + testAccessToken;
+        String redirectUri = "https://" + testDomain + "/login/loading";
+        String queryString = "grant_type=authorization_code" + "&code=" + code + "&redirect_uri=" + redirectUri;
+        String introspectionResponse =
+                "{\"active\":true,\"sub\":\"example_email@test.com\"," +
+                "\"acr\":\"https://stsstg.nih.gov/assurance/aal/1 https://stsstg.nih.gov/assurance/ial/1\"," +
+                "\"userid\":\"test_userid\",\"preferred_username\":\"testuser\"," +
+                "\"passport_jwt_v11\":\"" + exampleRasPassport + "\"}";
+
+        when(restClientUtil.retrievePostResponse(anyString(), any(), eq(queryString))).thenReturn(ResponseEntity.ok(data));
+        when(restClientUtil.retrievePostResponse(anyString(), any(), eq(payload))).thenReturn(ResponseEntity.ok(introspectionResponse));
+
+        // Full downstream stubs so that WITHOUT the gate the flow would succeed and return non-null.
+        User user = createTestUser();
+        user.setSubject("okta-ras|adfadfaf");
+        when(userService.createRasUser(any(), any())).thenReturn(Optional.of(user));
+        when(userService.updateUserRoles(any(), any())).thenReturn(user);
+        when(userService.updateUserConsents(any(), any())).thenReturn(user);
+        when(userService.getUserProfileResponse(any())).thenReturn(new HashMap<>());
+
+        HashMap<String, String> result = enforcingService.authenticate(authRequest, testDomain);
+
+        assertNull(result, "Login must be rejected when IAL2 is enforced and assurance is below AAL2/IAL2");
+        verify(userService, never()).createRasUser(any(), any());
+    }
+
+    @Test
     public void testAuthenticate_rejectsPassportWithInvalidSignature() {
         // RAS passport whose JWT signature does not verify against RAS's JWKS must block login,
         // before any role/permission is granted from its (untrusted) dbGaP claims.
@@ -167,6 +243,39 @@ public class RASAuthenticationServiceTest {
 
         assertNull(authenticate, "Login must be rejected when the passport signature is invalid");
         // No roles may be granted off an unverified passport.
+        verify(userService, never()).updateUserRoles(any(), any());
+    }
+
+    @Test
+    public void testAuthenticate_rejectsPassportWithInvalidVisaSignature() {
+        // The outer passport signature is valid, but an embedded visa's signature is not.
+        // The login must still be rejected before any role is granted.
+        String visa = JWTUtil.parsePassportJWTV11(exampleRasPassport).get().getGa4ghPassportV1().get(0);
+        when(rasPassportSignatureVerifier.isSignatureValid(visa)).thenReturn(false);
+
+        String data = "{\"access_token\":\"" + testAccessToken + "\", \"active\":true, \"id_token\":\"SomeRandomToken\"}";
+        String payload = "token_type_hint=access_token&token=" + testAccessToken;
+        String redirectUri = "https://" + testDomain + "/login/loading";
+        String queryString = "grant_type=authorization_code" + "&code=" + code + "&redirect_uri=" + redirectUri;
+        String introspectionResponse =
+                "{\"active\":true,\"sub\":\"example_email@test.com\",\"client_id\":\"test_client_id\"," +
+                "\"userid\":\"test_userid\",\"preferred_username\":\"testuser\"," +
+                "\"passport_jwt_v11\":\"" + exampleRasPassport + "\"}";
+
+        when(restClientUtil.retrievePostResponse(anyString(), any(), eq(queryString))).thenReturn(ResponseEntity.ok(data));
+        when(restClientUtil.retrievePostResponse(anyString(), any(), eq(payload))).thenReturn(ResponseEntity.ok(introspectionResponse));
+
+        // Full downstream stubs so that WITHOUT per-visa verification the flow would succeed.
+        User user = createTestUser();
+        user.setSubject("okta-ras|adfadfaf");
+        when(userService.createRasUser(any(), any())).thenReturn(Optional.of(user));
+        when(userService.updateUserRoles(any(), any())).thenReturn(user);
+        when(userService.updateUserConsents(any(), any())).thenReturn(user);
+        when(userService.getUserProfileResponse(any())).thenReturn(new HashMap<>());
+
+        HashMap<String, String> result = rasAuthenticationService.authenticate(authRequest, testDomain);
+
+        assertNull(result, "Login must be rejected when an embedded visa signature is invalid");
         verify(userService, never()).updateUserRoles(any(), any());
     }
 

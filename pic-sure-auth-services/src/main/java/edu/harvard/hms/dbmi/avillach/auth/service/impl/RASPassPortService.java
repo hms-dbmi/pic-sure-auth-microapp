@@ -104,6 +104,9 @@ public class RASPassPortService {
         }
 
         List<String> ga4ghPassportV1 = passportOptional.get().getGa4ghPassportV1();
+        boolean anyValidated = false;
+        // Validate EVERY visa. A single invalid visa invalidates the passport; we must not stop at the
+        // first one that happens to be valid.
         for (String visa : ga4ghPassportV1) {
             Optional<Ga4ghPassportV1> parsedVisa = JWTUtil.parseGa4ghPassportV1(visa);
             if (parsedVisa.isEmpty()) {
@@ -124,11 +127,14 @@ public class RASPassPortService {
                     logger.info("PASSPORT VALIDATION COMPLETE __ PASSPORT IS NO LONGER VALID ___ USER {} ___ USER LOGGED OUT", user.getSubject());
                     sendInvalidatedEvent(user.getSubject(), response.get());
                     return ValidationOutcome.INVALIDATED;
-                } else {
-                    logger.info("PASSPORT VALIDATION COMPLETE __ PASSPORT IS VALID ___ USER {}", user.getSubject());
-                    return ValidationOutcome.VALIDATED;
                 }
+                anyValidated = true;
             }
+        }
+
+        if (anyValidated) {
+            logger.info("PASSPORT VALIDATION COMPLETE __ PASSPORT IS VALID ___ USER {}", user.getSubject());
+            return ValidationOutcome.VALIDATED;
         }
 
         return ValidationOutcome.SKIPPED;

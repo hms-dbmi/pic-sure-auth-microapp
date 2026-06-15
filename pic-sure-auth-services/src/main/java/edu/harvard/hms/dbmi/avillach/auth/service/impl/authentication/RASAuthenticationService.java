@@ -36,6 +36,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
     private final CacheEvictionService cacheEvictionService;
     private Connection rasConnection;
     private final String rasPassportIssuer;
+    private final boolean enforceIal2;
 
     /**
      * Constructor for the RASAuthenticationService
@@ -55,6 +56,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
                                     @Value("${ras.okta.client.id}") String clientId,
                                     @Value("${ras.okta.client.secret}") String clientSecret,
                                     @Value("${ras.passport.issuer}") String rasPassportIssuer,
+                                    @Value("${ras.enforce.ial2:false}") boolean enforceIal2,
                                     RoleService roleService,
                                     RASPassPortService rasPassPortService,
                                     RasPassportSignatureVerifier rasPassportSignatureVerifier,
@@ -67,6 +69,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
         this.rasPassPortService = rasPassPortService;
         this.rasPassportSignatureVerifier = rasPassportSignatureVerifier;
         this.rasPassportIssuer = rasPassportIssuer;
+        this.enforceIal2 = enforceIal2;
 
         logger.info("RASAuthenticationService is enabled: {}", isEnabled);
         logger.info("RASAuthenticationService initialized");
@@ -101,6 +104,13 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
 
         if (introspectResponse == null) {
             logger.info("LOGIN FAILED ___ USER NOT AUTHENTICATED ___ INTROSPECTION RESPONSE {} ___ CODE {}", introspectResponse, authRequest.get("code"));
+            return null;
+        }
+
+        // Enforce IAL2/AAL2 for RAS logins when configured. Opt-in via ras.enforce.ial2 because
+        // IAL1-only IdPs (eRA Commons, Google) cannot meet IAL2 and would otherwise be locked out.
+        if (this.enforceIal2 && !validateAssuranceLevels(introspectResponse)) {
+            logger.info("LOGIN FAILED ___ ASSURANCE LEVEL BELOW REQUIRED IAL2/AAL2 ___ CODE {}", authRequest.get("code"));
             return null;
         }
 
@@ -162,7 +172,63 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
                     user.getSubject(), this.rasPassportIssuer, rasPassport.get().getIss(), authRequest.get("code"));
             return Optional.empty();
         }
+
+        // Defense in depth: each embedded GA4GH visa is independently RAS-signed. Verify every visa,
+        // not just the outer passport, so a tampered visa cannot grant dbGaP permissions.
+        List<String> visas = rasPassport.get().getGa4ghPassportV1();
+        if (visas != null) {
+            for (String visa : visas) {
+                if (!this.rasPassportSignatureVerifier.isSignatureValid(visa)) {
+                    logger.error("validateRASPassport() LOGIN FAILED ___ VISA SIGNATURE INVALID ___ USER: {} ___ CODE {}",
+                            user.getSubject(), authRequest.get("code"));
+                    return Optional.empty();
+                }
+            }
+        }
         return rasPassport;
+    }
+
+    /**
+     * Verify the authentication (AAL) and identity (IAL) assurance levels carried in the {@code acr}
+     * claim meet the minimum required to access controlled-access (CADR) data: AAL >= 2 and IAL >= 2.
+     * Only consulted for RAS logins when {@code ras.enforce.ial2} is enabled.
+     */
+    protected boolean validateAssuranceLevels(JsonNode introspectResponse) {
+        JsonNode acrNode = introspectResponse.get("acr");
+        if (acrNode == null || StringUtils.isBlank(acrNode.asText())) {
+            logger.error("validateAssuranceLevels() no acr claim present in introspection response");
+            return false;
+        }
+
+        String acr = acrNode.asText();
+        int aal = parseAssuranceLevel(acr, "aal");
+        int ial = parseAssuranceLevel(acr, "ial");
+        return aal >= 2 && ial >= 2;
+    }
+
+    /**
+     * Parse the numeric level out of an {@code acr} value for a given assurance type. The {@code acr}
+     * claim is a space-delimited list of URIs such as
+     * {@code https://stsstg.nih.gov/assurance/aal/2 https://stsstg.nih.gov/assurance/ial/2}.
+     *
+     * @return the highest level found for the type, or 0 if none is present.
+     */
+    private int parseAssuranceLevel(String acr, String type) {
+        String marker = "/assurance/" + type + "/";
+        int highest = 0;
+        for (String token : acr.split("\\s+")) {
+            int idx = token.indexOf(marker);
+            if (idx < 0) {
+                continue;
+            }
+            try {
+                int level = Integer.parseInt(token.substring(idx + marker.length()).trim());
+                highest = Math.max(highest, level);
+            } catch (NumberFormatException e) {
+                logger.error("parseAssuranceLevel() could not parse {} level from acr token {}", type, token);
+            }
+        }
+        return highest;
     }
 
     protected User updateRasUserRoles(String code, User user, Passport rasPassport) {
