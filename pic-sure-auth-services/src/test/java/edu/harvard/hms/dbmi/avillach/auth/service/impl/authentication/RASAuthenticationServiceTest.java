@@ -53,6 +53,9 @@ public class RASAuthenticationServiceTest {
     @MockBean
     private LoggingClient loggingClient;
 
+    @MockBean
+    private RasPassportSignatureVerifier rasPassportSignatureVerifier;
+
     private RASPassPortService rasPassPortService;
     private RASAuthenticationService rasAuthenticationService;
 
@@ -69,6 +72,8 @@ public class RASAuthenticationServiceTest {
         this.rasPassPortService = spy(new RASPassPortService(restClientUtil, userService, "", cacheEvictionService, null));
         doReturn(false).when(rasPassPortService).isExpired(any());
 
+        when(rasPassportSignatureVerifier.isSignatureValid(any())).thenReturn(true);
+
         rasAuthenticationService = new RASAuthenticationService(
                 userService,
                 restClientUtil,
@@ -80,6 +85,7 @@ public class RASAuthenticationServiceTest {
                 "https://stsstg.nih.gov",
                 roleService,
                 rasPassPortService,
+                rasPassportSignatureVerifier,
                 connectionService,
                 cacheEvictionService
         );
@@ -133,6 +139,35 @@ public class RASAuthenticationServiceTest {
         assertEquals("test@email.com", capturedClaims.getEmail());
         assertEquals("RAS", capturedClaims.getIdp());
         assertEquals("https://ncbi.nlm.nih.gov/gap", capturedClaims.getUser_permission_group());
+    }
+
+    @Test
+    public void testAuthenticate_rejectsPassportWithInvalidSignature() {
+        // RAS passport whose JWT signature does not verify against RAS's JWKS must block login,
+        // before any role/permission is granted from its (untrusted) dbGaP claims.
+        when(rasPassportSignatureVerifier.isSignatureValid(any())).thenReturn(false);
+
+        String data = "{\"access_token\":\"" + testAccessToken + "\", \"active\":true, \"id_token\":\"SomeRandomToken\"}";
+        String payload = "token_type_hint=access_token&token=" + testAccessToken;
+        String redirectUri = "https://" + testDomain + "/login/loading";
+        String queryString = "grant_type=authorization_code" + "&code=" + code + "&redirect_uri=" + redirectUri;
+        String introspectionResponse =
+                "{\"active\":true,\"sub\":\"example_email@test.com\",\"client_id\":\"test_client_id\"," +
+                "\"userid\":\"test_userid\",\"preferred_username\":\"testuser\"," +
+                "\"passport_jwt_v11\":\"" + exampleRasPassport + "\"}";
+
+        when(restClientUtil.retrievePostResponse(anyString(), any(), eq(queryString))).thenReturn(ResponseEntity.ok(data));
+        when(restClientUtil.retrievePostResponse(anyString(), any(), eq(payload))).thenReturn(ResponseEntity.ok(introspectionResponse));
+
+        User user = createTestUser();
+        user.setSubject("okta-ras|adfadfaf");
+        when(userService.createRasUser(any(), any())).thenReturn(Optional.of(user));
+
+        HashMap<String, String> authenticate = rasAuthenticationService.authenticate(authRequest, testDomain);
+
+        assertNull(authenticate, "Login must be rejected when the passport signature is invalid");
+        // No roles may be granted off an unverified passport.
+        verify(userService, never()).updateUserRoles(any(), any());
     }
 
     @Test

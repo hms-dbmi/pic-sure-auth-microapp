@@ -32,6 +32,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
     private final boolean isEnabled;
     private final RoleService roleService;
     private final RASPassPortService rasPassPortService;
+    private final RasPassportSignatureVerifier rasPassportSignatureVerifier;
     private final CacheEvictionService cacheEvictionService;
     private Connection rasConnection;
     private final String rasPassportIssuer;
@@ -56,6 +57,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
                                     @Value("${ras.passport.issuer}") String rasPassportIssuer,
                                     RoleService roleService,
                                     RASPassPortService rasPassPortService,
+                                    RasPassportSignatureVerifier rasPassportSignatureVerifier,
                                     ConnectionWebService connectionService, CacheEvictionService cacheEvictionService) {
         super(idp_provider_uri, clientId, clientSecret, restClientUtil);
 
@@ -63,6 +65,7 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
         this.isEnabled = isEnabled;
         this.roleService = roleService;
         this.rasPassPortService = rasPassPortService;
+        this.rasPassportSignatureVerifier = rasPassportSignatureVerifier;
         this.rasPassportIssuer = rasPassportIssuer;
 
         logger.info("RASAuthenticationService is enabled: {}", isEnabled);
@@ -127,6 +130,21 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
     }
 
     private Optional<Passport> extractAndVerifyPassport(Map<String, String> authRequest, JsonNode introspectResponse, User user) {
+        JsonNode passportNode = introspectResponse.get("passport_jwt_v11");
+        if (passportNode == null) {
+            logger.info("LOGIN FAILED ___ NO RAS PASSPORT FOUND ___ USER: {} ___ CODE {}", user.getSubject(), authRequest.get("code"));
+            return Optional.empty();
+        }
+
+        // Cryptographically verify RAS's signature on the passport JWT BEFORE trusting any claim it
+        // carries. Okta brokers this connection, so this signature is the only guarantee the dbGaP
+        // permissions were issued by RAS and not tampered with in transit. Fail closed.
+        if (!this.rasPassportSignatureVerifier.isSignatureValid(passportNode.asText())) {
+            logger.error("validateRASPassport() LOGIN FAILED ___ PASSPORT SIGNATURE INVALID ___ USER: {} ___ CODE {}",
+                    user.getSubject(), authRequest.get("code"));
+            return Optional.empty();
+        }
+
         Optional<Passport> rasPassport = this.rasPassPortService.extractPassport(introspectResponse);
         if (rasPassport.isEmpty()) {
             logger.info("LOGIN FAILED ___ NO RAS PASSPORT FOUND ___ USER: {} ___ CODE {}", user.getSubject(), authRequest.get("code"));

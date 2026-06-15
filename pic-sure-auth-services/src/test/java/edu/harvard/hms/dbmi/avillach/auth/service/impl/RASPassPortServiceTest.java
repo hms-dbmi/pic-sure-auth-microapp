@@ -64,6 +64,28 @@ public class RASPassPortServiceTest {
             + ".fakesignature";
 
     @Test
+    public void testIsExpired_passportPastExpirationIsExpiredRegardlessOfIssuedAt() {
+        long now = System.currentTimeMillis() / 1000;
+        Passport passport = new Passport();
+        passport.setExp(now - 100_000); // already expired
+        passport.setIat(now + 100_000); // malformed / future issued-at must not mask expiry
+
+        assertTrue(rasPassPortService.isExpired(passport),
+                "A passport past its exp must be reported expired even when iat is not in the past");
+    }
+
+    @Test
+    public void testIsExpired_validPassportIsNotExpired() {
+        long now = System.currentTimeMillis() / 1000;
+        Passport passport = new Passport();
+        passport.setExp(now + 100_000); // not yet expired
+        passport.setIat(now - 100_000);
+
+        assertFalse(rasPassPortService.isExpired(passport),
+                "A passport whose exp is in the future must not be reported expired");
+    }
+
+    @Test
     public void testGa4ghPassPortStudies_IsNull() {
         Set<RasDbgapPermission> permissions = rasPassPortService.ga4ghPassportToRasDbgapPermissions(null);
         assertNull(permissions);
