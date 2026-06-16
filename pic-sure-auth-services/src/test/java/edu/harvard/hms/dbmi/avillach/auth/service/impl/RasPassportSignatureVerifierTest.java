@@ -1,10 +1,8 @@
 package edu.harvard.hms.dbmi.avillach.auth.service.impl;
 
-import edu.harvard.hms.dbmi.avillach.auth.utils.RestClientUtil;
 import io.jsonwebtoken.Jwts;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.ResponseEntity;
 
 import java.math.BigInteger;
 import java.security.KeyPair;
@@ -16,14 +14,11 @@ import java.util.Date;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 /**
  * Verifies that {@link RasPassportSignatureVerifier} cryptographically validates the RS256
  * signature of a RAS passport JWT against RAS's published JWKS, fetched via OIDC discovery.
+ * The HTTP layer is replaced with a canned fetcher so the tests exercise real RSA verification.
  */
 public class RasPassportSignatureVerifierTest {
 
@@ -31,23 +26,28 @@ public class RasPassportSignatureVerifierTest {
     private static final String JWKS_URI = "https://stsstg.nih.gov/jwks";
     private static final String KID = "ras-test-key";
 
-    private RestClientUtil restClientUtil;
     private KeyPair rasKeyPair;
     private KeyPair attackerKeyPair;
     private RasPassportSignatureVerifier verifier;
 
     @BeforeEach
     public void setUp() throws Exception {
-        restClientUtil = mock(RestClientUtil.class);
         rasKeyPair = generateKeyPair();
         attackerKeyPair = generateKeyPair();
 
-        when(restClientUtil.retrieveGetResponse(eq(ISSUER + "/.well-known/openid-configuration"), any()))
-                .thenReturn(ResponseEntity.ok("{\"jwks_uri\":\"" + JWKS_URI + "\"}"));
-        when(restClientUtil.retrieveGetResponse(eq(JWKS_URI), any()))
-                .thenReturn(ResponseEntity.ok(buildJwksJson(KID, (RSAPublicKey) rasKeyPair.getPublic())));
+        String jwks = buildJwksJson(KID, (RSAPublicKey) rasKeyPair.getPublic());
+        RasPassportSignatureVerifier.UrlFetcher fetcher = url -> {
+            if ((ISSUER + "/.well-known/openid-configuration").equals(url)) {
+                return new RasPassportSignatureVerifier.FetchResult(
+                        200, "HTTP_2", null, "{\"jwks_uri\":\"" + JWKS_URI + "\"}");
+            }
+            if (JWKS_URI.equals(url)) {
+                return new RasPassportSignatureVerifier.FetchResult(200, "HTTP_2", null, jwks);
+            }
+            throw new IllegalArgumentException("unexpected url: " + url);
+        };
 
-        verifier = new RasPassportSignatureVerifier(restClientUtil, ISSUER);
+        verifier = new RasPassportSignatureVerifier(ISSUER, fetcher);
     }
 
     @Test
