@@ -11,7 +11,9 @@ import java.security.PrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.Base64;
 import java.util.Date;
+import java.util.concurrent.atomic.AtomicLong;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -107,7 +109,89 @@ public class RasPassportSignatureVerifierTest {
                 "A passport with a forged signature segment must be rejected");
     }
 
+    @Test
+    public void rejectsNonRs256SignedToken() {
+        // Same key + kid, but signed with RS384. Verification must accept only RS256.
+        String rs384 = Jwts.builder()
+                .header().keyId(KID).and()
+                .subject("test-sub").issuer(ISSUER)
+                .issuedAt(new Date()).expiration(new Date(System.currentTimeMillis() + 3_600_000))
+                .signWith(rasKeyPair.getPrivate(), Jwts.SIG.RS384)
+                .compact();
+
+        assertFalse(verifier.isSignatureValid(rs384), "Only RS256-signed passports may be accepted");
+    }
+
+    @Test
+    public void rejectsTokenWithNoKid() {
+        String noKid = Jwts.builder()
+                .subject("test-sub").issuer(ISSUER)
+                .issuedAt(new Date()).expiration(new Date(System.currentTimeMillis() + 3_600_000))
+                .signWith(rasKeyPair.getPrivate(), Jwts.SIG.RS256)
+                .compact();
+
+        assertFalse(verifier.isSignatureValid(noKid), "A token without a kid header must be rejected");
+    }
+
+    @Test
+    public void rejectsWhenJwksFetchReturnsNon2xx() {
+        RasPassportSignatureVerifier.UrlFetcher fetcher = url -> {
+            if ((ISSUER + "/.well-known/openid-configuration").equals(url)) {
+                return new RasPassportSignatureVerifier.FetchResult(200, "HTTP_2", null, "{\"jwks_uri\":\"" + JWKS_URI + "\"}");
+            }
+            return new RasPassportSignatureVerifier.FetchResult(503, "HTTP_2", null, "{\"error\":\"unavailable\"}");
+        };
+        RasPassportSignatureVerifier v = new RasPassportSignatureVerifier(ISSUER, fetcher);
+
+        assertFalse(v.isSignatureValid(signedJwt(KID, rasKeyPair.getPrivate(), "test-sub")),
+                "A non-2xx JWKS response must fail closed");
+    }
+
+    @Test
+    public void doesNotRefetchJwksForRepeatedUnknownKid() {
+        int[] jwksFetches = {0};
+        RasPassportSignatureVerifier v = new RasPassportSignatureVerifier(ISSUER, countingFetcher(jwksFetches));
+        // kid absent from the JWKS (e.g. rotated-out or forged).
+        String unknownKid = signedJwt("rotated-out-kid", rasKeyPair.getPrivate(), "test-sub");
+
+        assertFalse(v.isSignatureValid(unknownKid));
+        assertFalse(v.isSignatureValid(unknownKid));
+
+        assertEquals(1, jwksFetches[0],
+                "Repeated verifications of an unknown kid must not refetch the JWKS each time (throttled)");
+    }
+
+    @Test
+    public void refetchesJwksAfterTtl() {
+        int[] jwksFetches = {0};
+        AtomicLong clock = new AtomicLong(1_000_000L);
+        RasPassportSignatureVerifier v = new RasPassportSignatureVerifier(ISSUER, countingFetcher(jwksFetches), clock::get);
+        String valid = signedJwt(KID, rasKeyPair.getPrivate(), "test-sub");
+
+        assertTrue(v.isSignatureValid(valid));
+        assertTrue(v.isSignatureValid(valid));
+        assertEquals(1, jwksFetches[0], "A cached key must be reused within the TTL");
+
+        clock.addAndGet(RasPassportSignatureVerifier.CACHE_TTL_MS + 1);
+        assertTrue(v.isSignatureValid(valid));
+        assertEquals(2, jwksFetches[0], "After the TTL the JWKS must be re-pulled so rotated-out keys are dropped");
+    }
+
     // ---- helpers ----
+
+    private RasPassportSignatureVerifier.UrlFetcher countingFetcher(int[] jwksFetches) {
+        String jwks = buildJwksJson(KID, (RSAPublicKey) rasKeyPair.getPublic());
+        return url -> {
+            if ((ISSUER + "/.well-known/openid-configuration").equals(url)) {
+                return new RasPassportSignatureVerifier.FetchResult(200, "HTTP_2", null, "{\"jwks_uri\":\"" + JWKS_URI + "\"}");
+            }
+            if (JWKS_URI.equals(url)) {
+                jwksFetches[0]++;
+                return new RasPassportSignatureVerifier.FetchResult(200, "HTTP_2", null, jwks);
+            }
+            throw new IllegalArgumentException("unexpected url: " + url);
+        };
+    }
 
     private static String signedJwt(String kid, PrivateKey signingKey, String subject) {
         return Jwts.builder()
