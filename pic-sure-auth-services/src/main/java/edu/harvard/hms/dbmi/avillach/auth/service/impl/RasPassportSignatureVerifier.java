@@ -102,10 +102,12 @@ public class RasPassportSignatureVerifier {
     }
 
     private synchronized void refreshKeys() {
+        String jwksUri = null;
         try {
-            String jwksUri = discoverJwksUri();
+            jwksUri = discoverJwksUri();
             ResponseEntity<String> response = restClientUtil.retrieveGetResponse(jwksUri, new HttpHeaders());
-            JsonNode keys = objectMapper.readTree(response.getBody()).get("keys");
+            String body = logFetchDiagnostics("JWKS", jwksUri, response);
+            JsonNode keys = objectMapper.readTree(body).get("keys");
             if (keys == null) {
                 logger.error("refreshKeys() RAS JWKS response had no 'keys' array");
                 return;
@@ -127,19 +129,41 @@ public class RasPassportSignatureVerifier {
                 keyCache.put(kid, key);
             }
         } catch (Exception ex) {
-            logger.error("refreshKeys() failed to load RAS JWKS - {}: {}", ex.getClass().getSimpleName(), ex.getMessage());
+            logger.error("refreshKeys() failed to load RAS JWKS from {} - {}: {}",
+                    jwksUri, ex.getClass().getSimpleName(), ex.getMessage());
         }
     }
 
     private String discoverJwksUri() throws Exception {
-        ResponseEntity<String> response =
-                restClientUtil.retrieveGetResponse(issuer + "/.well-known/openid-configuration", new HttpHeaders());
-        JsonNode config = objectMapper.readTree(response.getBody());
+        String discoveryUrl = issuer + "/.well-known/openid-configuration";
+        ResponseEntity<String> response = restClientUtil.retrieveGetResponse(discoveryUrl, new HttpHeaders());
+        String body = logFetchDiagnostics("OIDC discovery", discoveryUrl, response);
+        JsonNode config = objectMapper.readTree(body);
         JsonNode jwksUri = config.get("jwks_uri");
         if (jwksUri == null) {
-            throw new IllegalStateException("RAS OIDC discovery document has no jwks_uri");
+            throw new IllegalStateException("RAS OIDC discovery document has no jwks_uri at " + discoveryUrl);
         }
         return jwksUri.asText();
+    }
+
+    /**
+     * Logs what we actually received for a RAS fetch so transport problems (truncation, compression,
+     * proxy interference) are diagnosable. Compare bodyLength against the Content-Length header: a
+     * mismatch means the response was truncated before our JSON parser saw it.
+     */
+    private String logFetchDiagnostics(String what, String url, ResponseEntity<String> response) {
+        String body = response.getBody();
+        logger.info("RAS {} fetch: url={} status={} contentLengthHeader={} contentEncoding={} transferEncoding={} bodyLength={}",
+                what, url, response.getStatusCode(),
+                response.getHeaders().getFirst("Content-Length"),
+                response.getHeaders().getFirst("Content-Encoding"),
+                response.getHeaders().getFirst("Transfer-Encoding"),
+                body == null ? "null" : body.length());
+        if (logger.isDebugEnabled()) {
+            logger.debug("RAS {} body (first 300 chars): {}", what,
+                    body == null ? "null" : body.substring(0, Math.min(300, body.length())));
+        }
+        return body;
     }
 
     private static String text(JsonNode node, String field) {
