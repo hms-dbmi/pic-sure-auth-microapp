@@ -79,6 +79,26 @@ public class RasPassportSignatureVerifierTest {
     }
 
     @Test
+    public void rejectsWhenJwksBodyIsTruncated() {
+        // Reproduces the production incident: the JWKS body comes back truncated mid-stream, so no
+        // key can be loaded. Verification must fail closed rather than accept the passport.
+        String validPassport = signedJwt(KID, rasKeyPair.getPrivate(), "test-sub");
+        RasPassportSignatureVerifier.UrlFetcher truncating = url -> {
+            if ((ISSUER + "/.well-known/openid-configuration").equals(url)) {
+                return new RasPassportSignatureVerifier.FetchResult(
+                        200, "HTTP_1_1", "1998", "{\"jwks_uri\":\"" + JWKS_URI + "\"}");
+            }
+            // JWKS truncated mid-field, exactly like the gateway-over-HTTP/1.1 failure.
+            return new RasPassportSignatureVerifier.FetchResult(
+                    200, "HTTP_1_1", "1998", "{\"keys\":[{\"kty\":\"RSA\",\"kid\":\"" + KID + "\",\"n");
+        };
+        RasPassportSignatureVerifier truncatedVerifier = new RasPassportSignatureVerifier(ISSUER, truncating);
+
+        assertFalse(truncatedVerifier.isSignatureValid(validPassport),
+                "A truncated/unparseable JWKS must cause verification to fail closed");
+    }
+
+    @Test
     public void rejectsPassportWithFakeSignature() {
         String[] parts = signedJwt(KID, rasKeyPair.getPrivate(), "test-sub").split("\\.");
         String fakeSigned = parts[0] + "." + parts[1] + ".fakesignature";

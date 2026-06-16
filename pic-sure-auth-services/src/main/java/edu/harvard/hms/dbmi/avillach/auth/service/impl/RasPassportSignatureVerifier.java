@@ -120,8 +120,7 @@ public class RasPassportSignatureVerifier {
         String jwksUri = null;
         try {
             jwksUri = discoverJwksUri();
-            String body = fetchBody("JWKS", jwksUri);
-            JsonNode keys = objectMapper.readTree(body).get("keys");
+            JsonNode keys = fetchJson("JWKS", jwksUri).get("keys");
             if (keys == null) {
                 logger.error("refreshKeys() RAS JWKS response had no 'keys' array");
                 return;
@@ -150,8 +149,7 @@ public class RasPassportSignatureVerifier {
 
     private String discoverJwksUri() throws Exception {
         String discoveryUrl = issuer + "/.well-known/openid-configuration";
-        String body = fetchBody("OIDC discovery", discoveryUrl);
-        JsonNode config = objectMapper.readTree(body);
+        JsonNode config = fetchJson("OIDC discovery", discoveryUrl);
         JsonNode jwksUri = config.get("jwks_uri");
         if (jwksUri == null) {
             throw new IllegalStateException("RAS OIDC discovery document has no jwks_uri at " + discoveryUrl);
@@ -160,18 +158,28 @@ public class RasPassportSignatureVerifier {
     }
 
     /**
-     * Fetches a URL and logs what we actually received at INFO (no DEBUG required) so transport
-     * problems (truncation, wrong Content-Length, HTTP version) are diagnosable. The discovery/JWKS
-     * documents are public (no secrets), so logging the body is safe; capped at 2048 chars.
+     * Fetches a URL and parses it as JSON. Logs status / HTTP version / Content-Length / body length
+     * at INFO on every fetch so a transport problem (a truncated body, a wrong Content-Length, an
+     * unexpected HTTP version) is visible without enabling DEBUG. Only when the body fails to parse
+     * do we log the body itself (capped at 2048 chars) - it is public data and that is the one time
+     * it is actually needed to diagnose.
      */
-    private String fetchBody(String what, String url) throws Exception {
+    private JsonNode fetchJson(String what, String url) throws Exception {
         FetchResult result = urlFetcher.fetch(url);
         String body = result.body();
-        logger.info("RAS {} fetch: url={} status={} httpVersion={} contentLength={} bodyLength={} body={}",
+        logger.info("RAS {} fetch: url={} status={} httpVersion={} contentLength={} bodyLength={}",
                 what, url, result.status(), result.httpVersion(), result.contentLengthHeader(),
-                body == null ? "null" : body.length(),
-                body == null ? "null" : body.substring(0, Math.min(2048, body.length())));
-        return body;
+                body == null ? "null" : body.length());
+        try {
+            return objectMapper.readTree(body);
+        } catch (Exception e) {
+            logger.error("RAS {} fetch from {} returned an unparseable body (status={} contentLength={} bodyLength={}) - "
+                            + "likely truncated or non-JSON. Body: {}",
+                    what, url, result.status(), result.contentLengthHeader(),
+                    body == null ? "null" : body.length(),
+                    body == null ? "null" : body.substring(0, Math.min(2048, body.length())));
+            throw e;
+        }
     }
 
     private static UrlFetcher defaultFetcher(String proxyHost, int proxyPort) {
