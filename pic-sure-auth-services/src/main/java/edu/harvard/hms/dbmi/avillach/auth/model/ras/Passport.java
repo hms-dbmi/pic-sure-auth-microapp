@@ -2,6 +2,7 @@ package edu.harvard.hms.dbmi.avillach.auth.model.ras;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -19,7 +20,7 @@ public class Passport {
     private long exp;
 
     @JsonProperty("ga4gh_passport_v1")
-    private List<String> ga4ghPassportV1;
+    private List<String> ga4ghPassportV1 = new ArrayList<>();
 
     public String getSub() {
         return sub;
@@ -82,7 +83,7 @@ public class Passport {
     }
 
     public void setGa4ghPassportV1(List<String> ga4ghPassportV1) {
-        this.ga4ghPassportV1 = ga4ghPassportV1;
+        this.ga4ghPassportV1 = ga4ghPassportV1 != null ? ga4ghPassportV1 : new ArrayList<>();
     }
 
     @Override

@@ -141,6 +141,35 @@ public class RASPassPortServiceTest {
     }
 
     @Test
+    public void testParsePassport_absentGa4ghPassportV1_isEmptyNotNull() {
+        long future = (System.currentTimeMillis() / 1000) + 100_000;
+        String payload = "{\"iss\":\"https://stsstg.nih.gov\",\"exp\":" + future + "}";
+        Optional<Passport> parsed = JWTUtil.parsePassportJWTV11(standardB64Jwt(payload));
+
+        assertTrue(parsed.isPresent());
+        assertNotNull(parsed.get().getGa4ghPassportV1(), "missing ga4gh_passport_v1 must yield an empty list, not null");
+        assertTrue(parsed.get().getGa4ghPassportV1().isEmpty());
+    }
+
+    @Test
+    public void testValidateUserPassport_passportWithNoVisas_skipsWithoutNpe() {
+        long future = (System.currentTimeMillis() / 1000) + 100_000;
+        String payload = "{\"iss\":\"https://stsstg.nih.gov\",\"exp\":" + future + ",\"iat\":" + (future - 200_000) + "}";
+        String passport = standardB64Jwt(payload);
+
+        RASPassPortService svc = spy(new RASPassPortService(restClientUtil, userService, "https://test.com/", cacheEvictionService, null));
+        User user = new User();
+        user.setSubject("test-subject");
+        user.setPassport(passport);
+
+        RASPassPortService.ValidationOutcome outcome = svc.validateUserPassport(user);
+
+        assertEquals(RASPassPortService.ValidationOutcome.SKIPPED, outcome,
+                "A passport with no ga4gh_passport_v1 visas must skip cleanly, not NPE");
+        verify(svc, never()).validateVisa(any());
+    }
+
+    @Test
     public void testIsExpired_passportPastExpirationIsExpiredRegardlessOfIssuedAt() {
         long now = System.currentTimeMillis() / 1000;
         Passport passport = new Passport();
