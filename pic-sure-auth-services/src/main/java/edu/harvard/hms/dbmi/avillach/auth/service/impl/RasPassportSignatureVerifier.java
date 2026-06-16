@@ -148,21 +148,21 @@ public class RasPassportSignatureVerifier {
 
     /**
      * Logs what we actually received for a RAS fetch so transport problems (truncation, compression,
-     * proxy interference) are diagnosable. Compare bodyLength against the Content-Length header: a
-     * mismatch means the response was truncated before our JSON parser saw it.
+     * proxy interference) are diagnosable without enabling DEBUG. Compare bodyLength against the
+     * Content-Length header: a mismatch means the response was truncated before our JSON parser saw
+     * it. The discovery/JWKS documents contain only public data (no secrets), so logging the body is
+     * safe. Capped at 2048 chars to bound log size.
      */
     private String logFetchDiagnostics(String what, String url, ResponseEntity<String> response) {
         String body = response.getBody();
-        logger.info("RAS {} fetch: url={} status={} contentLengthHeader={} contentEncoding={} transferEncoding={} bodyLength={}",
+        String snippet = body == null ? "null" : body.substring(0, Math.min(2048, body.length()));
+        logger.info("RAS {} fetch: url={} status={} contentLengthHeader={} contentEncoding={} transferEncoding={} bodyLength={} body={}",
                 what, url, response.getStatusCode(),
                 response.getHeaders().getFirst("Content-Length"),
                 response.getHeaders().getFirst("Content-Encoding"),
                 response.getHeaders().getFirst("Transfer-Encoding"),
-                body == null ? "null" : body.length());
-        if (logger.isDebugEnabled()) {
-            logger.debug("RAS {} body (first 300 chars): {}", what,
-                    body == null ? "null" : body.substring(0, Math.min(300, body.length())));
-        }
+                body == null ? "null" : body.length(),
+                snippet);
         return body;
     }
 
