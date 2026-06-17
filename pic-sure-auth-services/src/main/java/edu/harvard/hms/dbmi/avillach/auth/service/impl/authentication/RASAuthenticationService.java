@@ -190,8 +190,9 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
 
     /**
      * Verify the authentication (AAL) and identity (IAL) assurance levels carried in the {@code acr}
-     * claim meet the minimum required to access controlled-access (CADR) data: AAL >= 2 and IAL >= 2.
-     * Only consulted for RAS logins when {@code ras.enforce.ial2} is enabled.
+     * claim meet the minimum required to access controlled-access (CADR) data. Per the NIH RAS rule
+     * this is AAL >= 2 AND (IAL >= 2 OR InCommon IAP = high). Only consulted for RAS logins when
+     * {@code ras.enforce.ial2} is enabled.
      */
     protected boolean validateAssuranceLevels(JsonNode introspectResponse) {
         JsonNode acrNode = introspectResponse.get("acr");
@@ -203,7 +204,20 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
         String acr = acrNode.asText();
         int aal = parseAssuranceLevel(acr, "aal");
         int ial = parseAssuranceLevel(acr, "ial");
-        return aal >= 2 && ial >= 2;
+        return aal >= 2 && (ial >= 2 || hasInCommonIapHigh(acr));
+    }
+
+    /**
+     * InCommon federation IdPs express identity proofing via an Identity Assurance Profile rather than
+     * a numeric IAL; IAP "high" is CADR-eligible.
+     */
+    private boolean hasInCommonIapHigh(String acr) {
+        for (String token : acr.split("\\s+")) {
+            if (token.endsWith("/assurance/iap/high")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

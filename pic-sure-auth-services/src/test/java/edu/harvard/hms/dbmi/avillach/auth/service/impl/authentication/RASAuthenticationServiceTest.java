@@ -173,6 +173,25 @@ public class RASAuthenticationServiceTest {
         assertFalse(rasAuthenticationService.validateAssuranceLevels(node));
     }
 
+    @Test
+    public void testValidateAssuranceLevels_aal2IapHigh_passes() throws Exception {
+        // InCommon federation: AAL2 + IAP high is CADR-eligible even without an ial/2 token.
+        JsonNode node = acrNode("https://stsstg.nih.gov/assurance/aal/2 https://stsstg.nih.gov/assurance/iap/high");
+        assertTrue(rasAuthenticationService.validateAssuranceLevels(node));
+    }
+
+    @Test
+    public void testValidateAssuranceLevels_aal1IapHigh_fails() throws Exception {
+        JsonNode node = acrNode("https://stsstg.nih.gov/assurance/aal/1 https://stsstg.nih.gov/assurance/iap/high");
+        assertFalse(rasAuthenticationService.validateAssuranceLevels(node));
+    }
+
+    @Test
+    public void testValidateAssuranceLevels_aal2IapMedium_fails() throws Exception {
+        JsonNode node = acrNode("https://stsstg.nih.gov/assurance/aal/2 https://stsstg.nih.gov/assurance/iap/medium");
+        assertFalse(rasAuthenticationService.validateAssuranceLevels(node));
+    }
+
     private JsonNode acrNode(String acr) throws Exception {
         return new ObjectMapper().readTree("{\"acr\":\"" + acr + "\"}");
     }
