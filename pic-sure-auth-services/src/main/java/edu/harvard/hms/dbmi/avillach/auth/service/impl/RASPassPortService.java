@@ -196,16 +196,15 @@ public class RASPassPortService {
         queryParams.add("visa", visa);
         HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(queryParams, null);
 
-        String responseVal = PassportValidationResponse.VISA_EXPIRED.getValue();
-        ResponseEntity<String> resp;
         try {
-            resp = this.restClientUtil.retrievePostResponse(this.rasURI + "/passport/validate", request);
-            responseVal = resp.getBody();
+            ResponseEntity<String> resp = this.restClientUtil.retrievePostResponse(this.rasURI + "/passport/validate", request);
+            return Optional.ofNullable(resp.getBody());
         } catch (Exception e) {
-            logger.error("validatePassport() FAILED TO VALIDATE VISA ___ {}", e.getMessage());
+            // A transport error is NOT a verdict. Returning empty makes the caller skip this visa
+            // rather than treat it as "Visa Expired" and force-log-out the user on a transient RAS blip.
+            logger.error("validatePassport() FAILED TO VALIDATE VISA (transient, skipping) ___ {}", e.getMessage());
+            return Optional.empty();
         }
-
-        return Optional.ofNullable(responseVal);
     }
 
     public Set<RasDbgapPermission> ga4ghPassportToRasDbgapPermissions(Set<Optional<Ga4ghPassportV1>> ga4ghPassports) {

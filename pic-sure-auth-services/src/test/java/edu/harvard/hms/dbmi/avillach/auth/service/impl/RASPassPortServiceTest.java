@@ -141,6 +141,36 @@ public class RASPassPortServiceTest {
     }
 
     @Test
+    public void testValidateVisa_transportError_returnsEmpty() {
+        when(restClientUtil.retrievePostResponse(any(String.class), any()))
+                .thenThrow(new RuntimeException("connection refused"));
+
+        Optional<String> response = rasPassPortService.validateVisa(visa);
+
+        assertTrue(response.isEmpty(),
+                "A transport error must return empty (skip), not a 'Visa Expired' verdict that logs the user out");
+    }
+
+    @Test
+    public void testValidateUserPassport_transientRasError_doesNotLogOut() {
+        long future = (System.currentTimeMillis() / 1000) + 100_000;
+        String passport = passportJwt(future, visaJwt(future, "visa-one"));
+        when(restClientUtil.retrievePostResponse(any(String.class), any()))
+                .thenThrow(new RuntimeException("RAS unreachable"));
+
+        RASPassPortService svc = new RASPassPortService(restClientUtil, userService, "https://test.com/", cacheEvictionService, null);
+        User user = new User();
+        user.setSubject("test-subject");
+        user.setPassport(passport);
+
+        RASPassPortService.ValidationOutcome outcome = svc.validateUserPassport(user);
+
+        assertEquals(RASPassPortService.ValidationOutcome.SKIPPED, outcome,
+                "A transient RAS validation error must not invalidate the passport");
+        verify(userService, never()).logoutUser(any());
+    }
+
+    @Test
     public void testParsePassport_absentGa4ghPassportV1_isEmptyNotNull() {
         long future = (System.currentTimeMillis() / 1000) + 100_000;
         String payload = "{\"iss\":\"https://stsstg.nih.gov\",\"exp\":" + future + "}";
