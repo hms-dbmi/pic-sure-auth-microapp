@@ -155,9 +155,11 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
             return Optional.empty();
         }
 
-        Optional<Passport> rasPassport = this.rasPassPortService.extractPassport(introspectResponse);
+        // Parse the exact token we just verified (verify-before-trust), rather than re-extracting it
+        // from the introspection response a second time.
+        Optional<Passport> rasPassport = JWTUtil.parsePassportJWTV11(passportNode.asText());
         if (rasPassport.isEmpty()) {
-            logger.info("LOGIN FAILED ___ NO RAS PASSPORT FOUND ___ USER: {} ___ CODE {}", user.getSubject(), authRequest.get("code"));
+            logger.error("validateRASPassport() LOGIN FAILED ___ PASSPORT COULD NOT BE PARSED ___ USER: {} ___ CODE {}", user.getSubject(), authRequest.get("code"));
             return Optional.empty();
         }
 
@@ -175,14 +177,11 @@ public class RASAuthenticationService extends OktaAuthenticationService implemen
 
         // Defense in depth: each embedded GA4GH visa is independently RAS-signed. Verify every visa,
         // not just the outer passport, so a tampered visa cannot grant dbGaP permissions.
-        List<String> visas = rasPassport.get().getGa4ghPassportV1();
-        if (visas != null) {
-            for (String visa : visas) {
-                if (!this.rasPassportSignatureVerifier.isSignatureValid(visa)) {
-                    logger.error("validateRASPassport() LOGIN FAILED ___ VISA SIGNATURE INVALID ___ USER: {} ___ CODE {}",
-                            user.getSubject(), authRequest.get("code"));
-                    return Optional.empty();
-                }
+        for (String visa : rasPassport.get().getGa4ghPassportV1()) {
+            if (!this.rasPassportSignatureVerifier.isSignatureValid(visa)) {
+                logger.error("validateRASPassport() LOGIN FAILED ___ VISA SIGNATURE INVALID ___ USER: {} ___ CODE {}",
+                        user.getSubject(), authRequest.get("code"));
+                return Optional.empty();
             }
         }
         return rasPassport;
