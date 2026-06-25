@@ -36,7 +36,7 @@
         </repository>
     </repositories>
     <properties>
-        <java.version>24</java.version>
+        <java.version>25</java.version>
         <spotless.version>2.41.1</spotless.version>
     </properties>
     <dependencies>
