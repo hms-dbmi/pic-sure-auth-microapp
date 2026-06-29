@@ -132,10 +132,7 @@ public class AuditLoggingFilter extends OncePerRequestFilter {
                 }
             }
 
-            // Originating caller (e.g. PYTHON_ADAPTER / R_ADAPTER), set by the
-            // adapters via the X-Client-Type header. Recorded as "caller" to
-            // distinguish it from the top-level client_type, which identifies
-            // the emitting service.
+            // Originating caller (e.g. PYTHON_ADAPTER / R_ADAPTER)
             String caller = request.getHeader("X-Client-Type");
             if (caller != null && !caller.isEmpty()) {
                 metadata.put("caller", caller);
