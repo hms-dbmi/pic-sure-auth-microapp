@@ -102,7 +102,7 @@ class AuditLoggingFilterTest {
 
         ArgumentCaptor<LoggingEvent> captor = ArgumentCaptor.forClass(LoggingEvent.class);
         verify(loggingClient).send(captor.capture());
-        assertEquals("PYTHON_ADAPTER", captor.getValue().getMetadata().get("caller"));
+        assertEquals("PYTHON_ADAPTER", captor.getValue().getCaller());
     }
 
     @Test
@@ -116,7 +116,7 @@ class AuditLoggingFilterTest {
 
         ArgumentCaptor<LoggingEvent> captor = ArgumentCaptor.forClass(LoggingEvent.class);
         verify(loggingClient).send(captor.capture());
-        assertFalse(captor.getValue().getMetadata().containsKey("caller"));
+        assertNull(captor.getValue().getCaller());
     }
 
     @Test
