@@ -132,6 +132,9 @@ public class AuditLoggingFilter extends OncePerRequestFilter {
                 }
             }
 
+            // Originating caller (e.g. PYTHON_ADAPTER / R_ADAPTER)
+            String caller = request.getHeader("X-Client-Type");
+
             // Session ID
             String sessionId = SessionIdResolver.resolve(request.getHeader("X-Session-Id"), srcIp, request.getHeader("User-Agent"));
 
@@ -150,6 +153,10 @@ public class AuditLoggingFilter extends OncePerRequestFilter {
             // Build the event
             LoggingEvent.Builder eventBuilder =
                 LoggingEvent.builder(eventType).action(action).sessionId(sessionId).request(requestInfo).metadata(metadata);
+
+            if (caller != null && !caller.isEmpty()) {
+                eventBuilder.caller(caller);
+            }
 
             if (errorMap != null) {
                 eventBuilder.error(errorMap);

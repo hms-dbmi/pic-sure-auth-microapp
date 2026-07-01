@@ -91,6 +91,35 @@ class AuditLoggingFilterTest {
     }
 
     @Test
+    void shouldRecordClientTypeFromHeader() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/user/me");
+        request.setAttribute(AuditAttributes.EVENT_TYPE, "ACCESS");
+        request.setAttribute(AuditAttributes.ACTION, "user.profile");
+        request.addHeader("X-Client-Type", "PYTHON_ADAPTER");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, filterChain);
+
+        ArgumentCaptor<LoggingEvent> captor = ArgumentCaptor.forClass(LoggingEvent.class);
+        verify(loggingClient).send(captor.capture());
+        assertEquals("PYTHON_ADAPTER", captor.getValue().getCaller());
+    }
+
+    @Test
+    void shouldOmitCallerWhenHeaderAbsent() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/user/me");
+        request.setAttribute(AuditAttributes.EVENT_TYPE, "ACCESS");
+        request.setAttribute(AuditAttributes.ACTION, "user.profile");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, filterChain);
+
+        ArgumentCaptor<LoggingEvent> captor = ArgumentCaptor.forClass(LoggingEvent.class);
+        verify(loggingClient).send(captor.capture());
+        assertNull(captor.getValue().getCaller());
+    }
+
+    @Test
     void shouldCategorizeAdminUserModify() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/user");
         request.setAttribute(AuditAttributes.EVENT_TYPE, "ADMIN");
