@@ -50,7 +50,7 @@ class AuthorizationServiceHpdsV3TargetServiceTest {
     @Test
     void legacyV3PrefixIsNotMatchedByHelperButIsHandledSeparatelyByStartsWith() {
         // isHpdsV3TargetService is intentionally narrow; the legacy "/v3" prefix continues to be
-        // handled by the separate startsWith("/v3") check in passesAccessRuleEvaluation until Phase 7.
+        // handled by the separate startsWith("/v3") check in passesAccessRuleEvaluation for now.
         assertFalse(AuthorizationService.isHpdsV3TargetService("/v3/query"));
     }
 
