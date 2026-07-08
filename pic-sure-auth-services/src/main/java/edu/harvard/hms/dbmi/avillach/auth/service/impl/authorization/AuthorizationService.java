@@ -48,12 +48,14 @@ public class AuthorizationService {
     private final Logger logger = LoggerFactory.getLogger(AuthorizationService.class);
 
     /**
-     * Matches clean HPDS-v3 target service paths, e.g. {@code /hpds/auth/v3}, {@code /hpds/auth/v3/query},
-     * {@code /hpds/open/v3}, {@code /hpds/open/v3/query/abc/result}. Intentionally segment-aware so it does
-     * NOT match things like {@code /hpds/auth/v30/query}, {@code /hpds/auth/v3ish/query},
-     * {@code /hpds/v3/query}, {@code /foo/hpds/auth/v3/query}, or {@code /hpds/auth/v3-query}.
+     * Matches clean HPDS-v3 (auth-backend) target service paths, e.g. {@code /hpds/auth/v3},
+     * {@code /hpds/auth/v3/query}, {@code /hpds/auth/v3/query/abc/result}. Only the {@code auth} backend
+     * reaches this method — open-access requests are authorized via a separate endpoint — so the
+     * {@code open} backend is intentionally not matched. Segment-aware so it does NOT match things like
+     * {@code /hpds/auth/v30/query}, {@code /hpds/auth/v3ish/query}, {@code /hpds/v3/query},
+     * {@code /foo/hpds/auth/v3/query}, or {@code /hpds/auth/v3-query}.
      */
-    private static final Pattern HPDS_V3_TARGET_SERVICE_PATTERN = Pattern.compile("^/hpds/(auth|open)/v3(/.*)?$");
+    private static final Pattern HPDS_V3_TARGET_SERVICE_PATTERN = Pattern.compile("^/hpds/auth/v3(/.*)?$");
 
     protected AccessRuleService accessRuleService;
     protected SessionService sessionService;
@@ -284,8 +286,9 @@ public class AuthorizationService {
     }
 
     /**
-     * Returns true only when {@code targetService} is a clean HPDS-v3 target service path, i.e. exactly
-     * {@code /hpds/auth/v3}, {@code /hpds/auth/v3/**}, {@code /hpds/open/v3}, or {@code /hpds/open/v3/**}.
+     * Returns true only when {@code targetService} is a clean HPDS-v3 (auth-backend) target service path,
+     * i.e. exactly {@code /hpds/auth/v3} or {@code /hpds/auth/v3/**}. Open-access requests never reach this
+     * method (they are authorized via a separate endpoint), so the {@code open} backend is not matched.
      * <p>
      * This is intentionally segment/prefix-aware (not a loose {@code contains("hpds") && contains("v3")}
      * check) so that consent-rule evaluation is skipped only for genuine HPDS-v3 calls, not for

@@ -20,8 +20,7 @@ class AuthorizationServiceHpdsV3TargetServiceTest {
     @ValueSource(strings = {
             "/hpds/auth/v3",
             "/hpds/auth/v3/query",
-            "/hpds/open/v3",
-            "/hpds/open/v3/query/abc/result",
+            "/hpds/auth/v3/query/abc/result",
             "/hpds/auth/v3/"
     })
     void returnsTrueForCleanHpdsV3Paths(String targetService) {
@@ -36,6 +35,9 @@ class AuthorizationServiceHpdsV3TargetServiceTest {
             "/hpds/v3/query",
             "/foo/hpds/auth/v3/query",
             "/hpds/auth/v3-query",
+            // open-access requests are authorized via a separate endpoint and never reach this method
+            "/hpds/open/v3",
+            "/hpds/open/v3/query/abc/result",
             "/v3/query"
     })
     void returnsFalseForNonMatchingPaths(String targetService) {
