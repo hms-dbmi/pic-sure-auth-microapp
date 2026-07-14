@@ -2,8 +2,13 @@ package edu.harvard.hms.dbmi.avillach.auth.repository;
 
 import edu.harvard.hms.dbmi.avillach.auth.entity.ApiKey;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -14,4 +19,11 @@ public interface ApiKeyRepository extends JpaRepository<ApiKey, UUID> {
     Optional<ApiKey> findByKeyHash(String keyHash);
 
     List<ApiKey> findAllByOrderByCreatedAtDesc();
+
+    // dedicated single-column update: a save() of the entity loaded during verification would merge
+    // every column, letting a stale revoked_at=null overwrite a concurrent revocation
+    @Modifying
+    @Transactional
+    @Query("UPDATE api_key k SET k.lastUsedAt = :now WHERE k.uuid = :uuid AND k.revokedAt IS NULL AND k.expiresAt > :now")
+    int touchLastUsed(@Param("uuid") UUID uuid, @Param("now") Instant now);
 }
