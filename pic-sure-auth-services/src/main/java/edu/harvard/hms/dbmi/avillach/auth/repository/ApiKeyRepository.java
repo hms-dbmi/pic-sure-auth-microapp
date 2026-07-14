@@ -9,7 +9,6 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -17,8 +16,6 @@ import java.util.UUID;
 public interface ApiKeyRepository extends JpaRepository<ApiKey, UUID> {
 
     Optional<ApiKey> findByKeyHash(String keyHash);
-
-    List<ApiKey> findAllByOrderByCreatedAtDesc();
 
     // dedicated single-column update: a save() of the entity loaded during verification would merge
     // every column, letting a stale revoked_at=null overwrite a concurrent revocation

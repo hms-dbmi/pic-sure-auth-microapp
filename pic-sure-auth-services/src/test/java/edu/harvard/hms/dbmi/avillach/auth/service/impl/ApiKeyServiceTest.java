@@ -299,12 +299,14 @@ public class ApiKeyServiceTest {
             .setKeyType(ApiKeyType.PLATFORM).setName("Partner X").setEmail("partner@example.com").setCreatedAt(createdAt)
             .setExpiresAt(expiresAt).setRevokedAt(revokedAt).setLastUsedAt(lastUsedAt);
         stored.setUuid(UUID.randomUUID());
-        when(apiKeyRepository.findAllByOrderByCreatedAtDesc()).thenReturn(java.util.List.of(stored));
+        when(apiKeyRepository.findAll(any(org.springframework.data.domain.Pageable.class)))
+            .thenReturn(new org.springframework.data.domain.PageImpl<>(java.util.List.of(stored)));
 
-        java.util.List<ApiKeyMetadata> keys = apiKeyService.listKeys();
+        edu.harvard.hms.dbmi.avillach.auth.model.response.ApiKeyPage keyPage = apiKeyService.listKeys(0, 100);
 
-        assertEquals(1, keys.size());
-        ApiKeyMetadata metadata = keys.get(0);
+        assertEquals(1, keyPage.totalCount());
+        assertEquals(1, keyPage.keys().size());
+        ApiKeyMetadata metadata = keyPage.keys().get(0);
         assertEquals(stored.getUuid(), metadata.uuid());
         assertEquals("abcdefgh", metadata.displayPrefix());
         assertEquals(ApiKeyType.PLATFORM, metadata.keyType());

@@ -143,6 +143,27 @@ class ControllerAuditEventTest {
     }
 
     @Test
+    void apiKeyController() throws Exception {
+        Class<?> c = ApiKeyController.class;
+        // createUserKey(UserApiKeyRequest keyRequest, HttpServletRequest request)
+        assertAuditEvent(
+            c, "createUserKey",
+            new Class[]{edu.harvard.hms.dbmi.avillach.auth.model.request.UserApiKeyRequest.class, HttpServletRequest.class}, "ACCESS",
+            "api_key.create"
+        );
+        // listKeys(int page, int size)
+        assertAuditEvent(c, "listKeys", new Class[]{int.class, int.class}, "OTHER", "api_key.list");
+        // createPlatformKey(PlatformApiKeyRequest keyRequest, HttpServletRequest request)
+        assertAuditEvent(
+            c, "createPlatformKey",
+            new Class[]{edu.harvard.hms.dbmi.avillach.auth.model.request.PlatformApiKeyRequest.class, HttpServletRequest.class}, "ADMIN",
+            "api_key.platform.create"
+        );
+        // revokeKey(String keyId, HttpServletRequest request)
+        assertAuditEvent(c, "revokeKey", new Class[]{String.class, HttpServletRequest.class}, "ADMIN", "api_key.revoke");
+    }
+
+    @Test
     void studyAccessController() throws Exception {
         Class<?> c = StudyAccessController.class;
         // addStudyAccess(String studyIdentifier, HttpServletRequest request)

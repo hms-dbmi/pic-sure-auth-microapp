@@ -4,11 +4,15 @@ import edu.harvard.hms.dbmi.avillach.auth.entity.ApiKey;
 import edu.harvard.hms.dbmi.avillach.auth.enums.ApiKeyType;
 import edu.harvard.hms.dbmi.avillach.auth.model.response.ApiKeyCreationResponse;
 import edu.harvard.hms.dbmi.avillach.auth.model.response.ApiKeyMetadata;
+import edu.harvard.hms.dbmi.avillach.auth.model.response.ApiKeyPage;
 import edu.harvard.hms.dbmi.avillach.auth.repository.ApiKeyRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.Mac;
@@ -94,8 +98,7 @@ public class ApiKeyService {
     }
 
     /**
-     * Verifies a presented key: indexed hash lookup, then revocation and expiry checks.
-     * Returns the matching entity only when the key is currently valid.
+     * Returns the matching key only when it is currently valid: known, unrevoked, unexpired.
      */
     public Optional<ApiKey> verifyKey(String plaintext) {
         if (plaintext == null || !plaintext.startsWith(KEY_PREFIX)) {
@@ -121,8 +124,9 @@ public class ApiKeyService {
         return Optional.of(apiKey);
     }
 
-    public List<ApiKeyMetadata> listKeys() {
-        return apiKeyRepository.findAllByOrderByCreatedAtDesc().stream().map(ApiKeyMetadata::from).toList();
+    public ApiKeyPage listKeys(int page, int size) {
+        Page<ApiKey> keys = apiKeyRepository.findAll(PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
+        return new ApiKeyPage(keys.getContent().stream().map(ApiKeyMetadata::from).toList(), keys.getTotalElements(), page, size);
     }
 
     public Optional<ApiKeyMetadata> revokeKey(UUID uuid) {
