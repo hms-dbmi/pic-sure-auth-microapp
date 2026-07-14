@@ -56,65 +56,65 @@ public class ApiKeyControllerTest {
     @Test
     public void testCreateUserKey_success() {
         when(captchaVerifier.verify(any(), any())).thenReturn(true);
-        when(apiKeyService.generateUserKey(anyString())).thenReturn(creationResponse);
+        when(apiKeyService.generateUserKey(any(), anyString())).thenReturn(creationResponse);
 
-        ResponseEntity<?> response = controller.createUserKey(new UserApiKeyRequest("captcha-token", "user@example.com"), request);
+        ResponseEntity<?> response = controller.createUserKey(new UserApiKeyRequest("captcha-token", "Jane Doe", "user@example.com"), request);
 
         assertEquals(200, response.getStatusCode().value());
         assertEquals(creationResponse, response.getBody());
-        verify(apiKeyService).generateUserKey("user@example.com");
+        verify(apiKeyService).generateUserKey("Jane Doe", "user@example.com");
     }
 
     @Test
     public void testCreateUserKey_blankEmailNormalizedToNull() {
         when(captchaVerifier.verify(any(), any())).thenReturn(true);
-        when(apiKeyService.generateUserKey(any())).thenReturn(creationResponse);
+        when(apiKeyService.generateUserKey(any(), any())).thenReturn(creationResponse);
 
-        controller.createUserKey(new UserApiKeyRequest("captcha-token", "  "), request);
+        controller.createUserKey(new UserApiKeyRequest("captcha-token", "  ", "  "), request);
 
-        verify(apiKeyService).generateUserKey(null);
+        verify(apiKeyService).generateUserKey(null, null);
     }
 
     @Test
     public void testCreateUserKey_captchaFailure() {
         when(captchaVerifier.verify(any(), any())).thenReturn(false);
 
-        ResponseEntity<?> response = controller.createUserKey(new UserApiKeyRequest("bad-token", null), request);
+        ResponseEntity<?> response = controller.createUserKey(new UserApiKeyRequest("bad-token", null, null), request);
 
         assertNotEquals(200, response.getStatusCode().value());
-        verify(apiKeyService, never()).generateUserKey(any());
+        verify(apiKeyService, never()).generateUserKey(any(), any());
     }
 
     @Test
     public void testCreateUserKey_openAccessDisabled() {
         controller = new ApiKeyController(apiKeyService, captchaVerifier, false, true);
 
-        ResponseEntity<?> response = controller.createUserKey(new UserApiKeyRequest("captcha-token", null), request);
+        ResponseEntity<?> response = controller.createUserKey(new UserApiKeyRequest("captcha-token", null, null), request);
 
         assertNotEquals(200, response.getStatusCode().value());
         verify(captchaVerifier, never()).verify(any(), any());
-        verify(apiKeyService, never()).generateUserKey(any());
+        verify(apiKeyService, never()).generateUserKey(any(), any());
     }
 
     @Test
     public void testCreateUserKey_generationDisabled() {
         controller = new ApiKeyController(apiKeyService, captchaVerifier, true, false);
 
-        ResponseEntity<?> response = controller.createUserKey(new UserApiKeyRequest("captcha-token", null), request);
+        ResponseEntity<?> response = controller.createUserKey(new UserApiKeyRequest("captcha-token", null, null), request);
 
         assertNotEquals(200, response.getStatusCode().value());
         verify(captchaVerifier, never()).verify(any(), any());
-        verify(apiKeyService, never()).generateUserKey(any());
+        verify(apiKeyService, never()).generateUserKey(any(), any());
     }
 
     @Test
     public void testCreateUserKey_oversizedEmailRejected() {
         when(captchaVerifier.verify(any(), any())).thenReturn(true);
 
-        ResponseEntity<?> response = controller.createUserKey(new UserApiKeyRequest("captcha-token", "a".repeat(250) + "@example.com"), request);
+        ResponseEntity<?> response = controller.createUserKey(new UserApiKeyRequest("captcha-token", null, "a".repeat(250) + "@example.com"), request);
 
         assertNotEquals(200, response.getStatusCode().value());
-        verify(apiKeyService, never()).generateUserKey(any());
+        verify(apiKeyService, never()).generateUserKey(any(), any());
     }
 
     @Test

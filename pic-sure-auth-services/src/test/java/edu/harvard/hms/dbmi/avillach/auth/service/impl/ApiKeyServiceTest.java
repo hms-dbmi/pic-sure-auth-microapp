@@ -47,7 +47,7 @@ public class ApiKeyServiceTest {
 
     @Test
     public void testGenerateUserKey_formatAndPersistedFields() {
-        ApiKeyCreationResponse response = apiKeyService.generateUserKey("user@example.com");
+        ApiKeyCreationResponse response = apiKeyService.generateUserKey(null, "user@example.com");
 
         assertTrue(response.apiKey().matches("^picsure_[0-9A-Za-z]{43}$"));
         assertEquals(response.apiKey().substring("picsure_".length(), "picsure_".length() + 8), response.displayPrefix());
@@ -72,7 +72,7 @@ public class ApiKeyServiceTest {
     public void testGenerateUserKey_withPepperUsesHmacScheme() {
         apiKeyService = new ApiKeyService(apiKeyRepository, "test-pepper", "", USER_TTL_DAYS);
 
-        ApiKeyCreationResponse response = apiKeyService.generateUserKey(null);
+        ApiKeyCreationResponse response = apiKeyService.generateUserKey(null, null);
 
         ArgumentCaptor<ApiKey> captor = ArgumentCaptor.forClass(ApiKey.class);
         verify(apiKeyRepository).save(captor.capture());
@@ -97,7 +97,7 @@ public class ApiKeyServiceTest {
 
     @Test
     public void testVerifyKey_validKey() {
-        ApiKeyCreationResponse response = apiKeyService.generateUserKey(null);
+        ApiKeyCreationResponse response = apiKeyService.generateUserKey(null, null);
         ApiKey stored = storedKeyFor(response);
         when(apiKeyRepository.findByKeyHash(stored.getKeyHash())).thenReturn(Optional.of(stored));
 
@@ -123,7 +123,7 @@ public class ApiKeyServiceTest {
 
     @Test
     public void testVerifyKey_revokedKey() {
-        ApiKeyCreationResponse response = apiKeyService.generateUserKey(null);
+        ApiKeyCreationResponse response = apiKeyService.generateUserKey(null, null);
         ApiKey stored = storedKeyFor(response).setRevokedAt(Instant.now());
         when(apiKeyRepository.findByKeyHash(stored.getKeyHash())).thenReturn(Optional.of(stored));
 
@@ -132,7 +132,7 @@ public class ApiKeyServiceTest {
 
     @Test
     public void testVerifyKey_expiredKey() {
-        ApiKeyCreationResponse response = apiKeyService.generateUserKey(null);
+        ApiKeyCreationResponse response = apiKeyService.generateUserKey(null, null);
         ApiKey stored = storedKeyFor(response).setExpiresAt(Instant.now().minusSeconds(1));
         when(apiKeyRepository.findByKeyHash(stored.getKeyHash())).thenReturn(Optional.of(stored));
 
@@ -142,7 +142,7 @@ public class ApiKeyServiceTest {
     @Test
     public void testVerifyKey_prePepperKeyStillVerifiesAfterPepperEnabled() {
         // key minted while no pepper was configured...
-        ApiKeyCreationResponse response = apiKeyService.generateUserKey(null);
+        ApiKeyCreationResponse response = apiKeyService.generateUserKey(null, null);
         ApiKey stored = storedKeyFor(response);
         when(apiKeyRepository.findByKeyHash(anyString())).thenReturn(Optional.empty());
         when(apiKeyRepository.findByKeyHash(stored.getKeyHash())).thenReturn(Optional.of(stored));
@@ -157,7 +157,7 @@ public class ApiKeyServiceTest {
 
     @Test
     public void testVerifyKey_updatesLastUsedWhenStale() {
-        ApiKeyCreationResponse response = apiKeyService.generateUserKey(null);
+        ApiKeyCreationResponse response = apiKeyService.generateUserKey(null, null);
         ApiKey stored = storedKeyFor(response).setLastUsedAt(Instant.now().minusSeconds(300));
         when(apiKeyRepository.findByKeyHash(stored.getKeyHash())).thenReturn(Optional.of(stored));
         clearInvocations(apiKeyRepository);
@@ -170,7 +170,7 @@ public class ApiKeyServiceTest {
 
     @Test
     public void testVerifyKey_skipsLastUsedWriteWhenRecent() {
-        ApiKeyCreationResponse response = apiKeyService.generateUserKey(null);
+        ApiKeyCreationResponse response = apiKeyService.generateUserKey(null, null);
         ApiKey stored = storedKeyFor(response).setLastUsedAt(Instant.now().minusSeconds(5));
         when(apiKeyRepository.findByKeyHash(stored.getKeyHash())).thenReturn(Optional.of(stored));
         clearInvocations(apiKeyRepository);
@@ -206,7 +206,7 @@ public class ApiKeyServiceTest {
     public void testVerifyKey_keyFromRotatedPepperStillVerifies() {
         // key minted under the old pepper...
         ApiKeyService oldPepperService = new ApiKeyService(apiKeyRepository, "old-pepper", "", USER_TTL_DAYS);
-        ApiKeyCreationResponse response = oldPepperService.generateUserKey(null);
+        ApiKeyCreationResponse response = oldPepperService.generateUserKey(null, null);
         ApiKey stored = storedKeyFor(response);
         when(apiKeyRepository.findByKeyHash(anyString())).thenReturn(Optional.empty());
         when(apiKeyRepository.findByKeyHash(stored.getKeyHash())).thenReturn(Optional.of(stored));
@@ -223,7 +223,7 @@ public class ApiKeyServiceTest {
     @Test
     public void testVerifyKey_keyFromTwoRotationsAgoVerifiesViaPepperList() {
         ApiKeyService oldestPepperService = new ApiKeyService(apiKeyRepository, "pepper-v1", "", USER_TTL_DAYS);
-        ApiKeyCreationResponse response = oldestPepperService.generateUserKey(null);
+        ApiKeyCreationResponse response = oldestPepperService.generateUserKey(null, null);
         ApiKey stored = storedKeyFor(response);
         when(apiKeyRepository.findByKeyHash(anyString())).thenReturn(Optional.empty());
         when(apiKeyRepository.findByKeyHash(stored.getKeyHash())).thenReturn(Optional.of(stored));
@@ -235,7 +235,7 @@ public class ApiKeyServiceTest {
 
     @Test
     public void testVerifyKey_lastUsedWriteFailureDoesNotRejectKey() {
-        ApiKeyCreationResponse response = apiKeyService.generateUserKey(null);
+        ApiKeyCreationResponse response = apiKeyService.generateUserKey(null, null);
         ApiKey stored = storedKeyFor(response);
         when(apiKeyRepository.findByKeyHash(stored.getKeyHash())).thenReturn(Optional.of(stored));
         when(apiKeyRepository.touchLastUsed(any(UUID.class), any(Instant.class))).thenThrow(new RuntimeException("db is read-only"));
@@ -273,7 +273,7 @@ public class ApiKeyServiceTest {
         // key minted under a pepper, presented to a service with no peppers at all: the SHA256
         // fallback lookup must not accept the HMAC-schemed row
         ApiKeyService pepperedService = new ApiKeyService(apiKeyRepository, "test-pepper", "", USER_TTL_DAYS);
-        ApiKeyCreationResponse response = pepperedService.generateUserKey(null);
+        ApiKeyCreationResponse response = pepperedService.generateUserKey(null, null);
         ApiKey stored = storedKeyFor(response);
         when(apiKeyRepository.findByKeyHash(anyString())).thenReturn(Optional.empty());
         when(apiKeyRepository.findByKeyHash(stored.getKeyHash())).thenReturn(Optional.of(stored));
@@ -283,7 +283,7 @@ public class ApiKeyServiceTest {
 
     @Test
     public void testCreationResponse_toStringRedactsPlaintext() {
-        ApiKeyCreationResponse response = apiKeyService.generateUserKey(null);
+        ApiKeyCreationResponse response = apiKeyService.generateUserKey(null, null);
 
         assertFalse(response.toString().contains(response.apiKey()));
         assertTrue(response.toString().contains(response.displayPrefix()));

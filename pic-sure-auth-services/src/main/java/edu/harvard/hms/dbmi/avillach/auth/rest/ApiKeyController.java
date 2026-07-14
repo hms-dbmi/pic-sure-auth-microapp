@@ -65,22 +65,23 @@ public class ApiKeyController {
     @AuditEvent(type = "ACCESS", action = "api_key.create")
     @PostMapping(produces = "application/json", path = "/open/apiKey")
     public ResponseEntity<?> createUserKey(
-        @Parameter(required = true, description = "captchaToken (required when CAPTCHA is enabled) and optional contact email")
+        @Parameter(required = true, description = "captchaToken (required when CAPTCHA is enabled) and optional contact name/email")
         @RequestBody UserApiKeyRequest keyRequest, HttpServletRequest request
     ) {
         if (!generationEnabled || !openIdpProviderIsEnabled) {
             return PICSUREResponse.protocolError("API key generation is not enabled on this deployment.");
         }
+        String name = blankToNull(keyRequest.name());
         String email = blankToNull(keyRequest.email());
-        if (tooLong(email)) {
-            return PICSUREResponse.protocolError("Email must be at most " + MAX_METADATA_FIELD_LENGTH + " characters.");
+        if (tooLong(name) || tooLong(email)) {
+            return PICSUREResponse.protocolError("Name and email must be at most " + MAX_METADATA_FIELD_LENGTH + " characters.");
         }
         if (!captchaVerifier.verify(keyRequest.captchaToken(), AuditAttributes.extractClientIp(request))) {
             AuditAttributes.putMetadata(request, "captcha_result", "failure");
             return PICSUREResponse.protocolError("CAPTCHA verification failed.");
         }
 
-        ApiKeyCreationResponse created = apiKeyService.generateUserKey(email);
+        ApiKeyCreationResponse created = apiKeyService.generateUserKey(name, email);
         AuditAttributes.putMetadata(request, "api_key_id", created.uuid().toString());
         AuditAttributes.putMetadata(request, "api_key_prefix", created.displayPrefix());
         return PICSUREResponse.success(created);

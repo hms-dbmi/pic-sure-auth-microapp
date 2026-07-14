@@ -71,8 +71,8 @@ public class ApiKeyService {
         this.userKeyTtlDays = userKeyTtlDays;
     }
 
-    public ApiKeyCreationResponse generateUserKey(String email) {
-        return generate(ApiKeyType.USER, null, email, null);
+    public ApiKeyCreationResponse generateUserKey(String name, String email) {
+        return generate(ApiKeyType.USER, name, email, null);
     }
 
     public ApiKeyCreationResponse generatePlatformKey(String name, String email, Instant expiresAt) {
