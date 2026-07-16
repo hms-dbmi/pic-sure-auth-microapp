@@ -136,17 +136,19 @@ public class ApiKeyControllerTest {
         ApiKeyPage keyPage = new ApiKeyPage(List.of(), 0, 0, 100);
         when(apiKeyService.listKeys(0, 100, ApiKeyType.PLATFORM)).thenReturn(keyPage);
 
-        controller.listKeys(0, 100, "platform");
+        controller.listKeys(0, 100, ApiKeyType.PLATFORM);
 
         verify(apiKeyService).listKeys(0, 100, ApiKeyType.PLATFORM);
     }
 
     @Test
-    public void testListKeys_invalidKeyTypeReturns400NotError() {
-        ResponseEntity<?> response = controller.listKeys(0, 100, "not-a-type");
+    public void testCreatePlatformKey_neverExpiresPassedThrough() {
+        when(apiKeyService.generatePlatformKey("Partner", "a@b.com", null, true)).thenReturn(creationResponse);
 
-        assertNotEquals(200, response.getStatusCode().value());
-        verify(apiKeyService, never()).listKeys(anyInt(), anyInt(), any());
+        ResponseEntity<?> response = controller.createPlatformKey(new PlatformApiKeyRequest("Partner", "a@b.com", null, true), request);
+
+        assertEquals(200, response.getStatusCode().value());
+        verify(apiKeyService).generatePlatformKey("Partner", "a@b.com", null, true);
     }
 
     @Test
@@ -160,25 +162,25 @@ public class ApiKeyControllerTest {
 
     @Test
     public void testCreatePlatformKey_requiresNameAndEmail() {
-        assertNotEquals(200, controller.createPlatformKey(new PlatformApiKeyRequest(null, "a@b.com", null), request).getStatusCode().value());
-        assertNotEquals(200, controller.createPlatformKey(new PlatformApiKeyRequest("Partner", " ", null), request).getStatusCode().value());
-        verify(apiKeyService, never()).generatePlatformKey(any(), any(), any());
+        assertNotEquals(200, controller.createPlatformKey(new PlatformApiKeyRequest(null, "a@b.com", null, false), request).getStatusCode().value());
+        assertNotEquals(200, controller.createPlatformKey(new PlatformApiKeyRequest("Partner", " ", null, false), request).getStatusCode().value());
+        verify(apiKeyService, never()).generatePlatformKey(any(), any(), any(), anyBoolean());
     }
 
     @Test
     public void testCreatePlatformKey_oversizedNameRejected() {
-        ResponseEntity<?> response = controller.createPlatformKey(new PlatformApiKeyRequest("x".repeat(256), "a@b.com", null), request);
+        ResponseEntity<?> response = controller.createPlatformKey(new PlatformApiKeyRequest("x".repeat(256), "a@b.com", null, false), request);
 
         assertNotEquals(200, response.getStatusCode().value());
-        verify(apiKeyService, never()).generatePlatformKey(any(), any(), any());
+        verify(apiKeyService, never()).generatePlatformKey(any(), any(), any(), anyBoolean());
     }
 
     @Test
     public void testCreatePlatformKey_success() {
         Instant expiresAt = Instant.now().plusSeconds(86400);
-        when(apiKeyService.generatePlatformKey("Partner", "a@b.com", expiresAt)).thenReturn(creationResponse);
+        when(apiKeyService.generatePlatformKey("Partner", "a@b.com", expiresAt, false)).thenReturn(creationResponse);
 
-        ResponseEntity<?> response = controller.createPlatformKey(new PlatformApiKeyRequest("Partner", "a@b.com", expiresAt), request);
+        ResponseEntity<?> response = controller.createPlatformKey(new PlatformApiKeyRequest("Partner", "a@b.com", expiresAt, false), request);
 
         assertEquals(200, response.getStatusCode().value());
         assertEquals(creationResponse, response.getBody());
@@ -186,9 +188,9 @@ public class ApiKeyControllerTest {
 
     @Test
     public void testCreatePlatformKey_pastExpiryReturnsError() {
-        when(apiKeyService.generatePlatformKey(any(), any(), any())).thenThrow(new IllegalArgumentException("API key expiration must be in the future"));
+        when(apiKeyService.generatePlatformKey(any(), any(), any(), anyBoolean())).thenThrow(new IllegalArgumentException("API key expiration must be in the future"));
 
-        ResponseEntity<?> response = controller.createPlatformKey(new PlatformApiKeyRequest("Partner", "a@b.com", Instant.now().minusSeconds(1)), request);
+        ResponseEntity<?> response = controller.createPlatformKey(new PlatformApiKeyRequest("Partner", "a@b.com", Instant.now().minusSeconds(1), false), request);
 
         assertNotEquals(200, response.getStatusCode().value());
     }

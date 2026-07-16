@@ -12,8 +12,11 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.sql.SQLIntegrityConstraintViolationException;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 /**
  * Global exception handler for the PICSURE Auth application.
@@ -75,8 +78,32 @@ public class GlobalExceptionHandler {
     }
     
     /**
+     * Handles request parameter type mismatches (e.g. a non-numeric page number or an unknown
+     * enum value), which are client errors — without this, they fall through to the
+     * RuntimeException handler as 500s.
+     *
+     * @param ex The exception thrown during parameter binding
+     * @return A response with HTTP 400 Bad Request status naming the parameter and expected type
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<?> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        Class<?> requiredType = ex.getRequiredType();
+        // the offending value is client-controlled; keep it out of the log and the response
+        String expected = requiredType == null ? "a different type"
+            : requiredType.isEnum()
+                ? "one of " + Arrays.stream(requiredType.getEnumConstants()).map(Object::toString).collect(Collectors.joining(", "))
+                : "a " + requiredType.getSimpleName();
+        logger.warn("Type mismatch for request parameter '{}': expected {}", ex.getName(), expected);
+        return PICSUREResponse.error(
+            HttpStatus.BAD_REQUEST,
+            "Invalid value for parameter '" + ex.getName() + "'",
+            "Expected " + expected + "."
+        );
+    }
+
+    /**
      * Handles IllegalArgumentException, which is commonly used for validation errors.
-     * 
+     *
      * @param ex The exception
      * @return A response with HTTP 400 Bad Request status
      */

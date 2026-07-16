@@ -55,37 +55,53 @@ public class ApiKeyService {
     private final String pepper;
     private final List<String> previousPeppers;
     private final long userKeyTtlDays;
+    private final long platformKeyTtlDays;
 
     @Autowired
     public ApiKeyService(
         ApiKeyRepository apiKeyRepository, @Value("${api.key.pepper}") String pepper,
-        @Value("${api.key.pepper.previous}") String previousPeppers, @Value("${api.key.user.ttl.days}") long userKeyTtlDays
+        @Value("${api.key.pepper.previous}") String previousPeppers, @Value("${api.key.user.ttl.days}") long userKeyTtlDays,
+        @Value("${api.key.platform.ttl.days}") long platformKeyTtlDays
     ) {
         if (userKeyTtlDays <= 0) {
             throw new IllegalStateException("api.key.user.ttl.days must be positive, was " + userKeyTtlDays);
+        }
+        if (platformKeyTtlDays <= 0) {
+            throw new IllegalStateException("api.key.platform.ttl.days must be positive, was " + platformKeyTtlDays);
         }
         this.apiKeyRepository = apiKeyRepository;
         this.pepper = pepper;
         this.previousPeppers = previousPeppers == null ? List.of()
             : Arrays.stream(previousPeppers.split(",")).map(String::trim).filter(ApiKeyService::isSet).toList();
         this.userKeyTtlDays = userKeyTtlDays;
+        this.platformKeyTtlDays = platformKeyTtlDays;
     }
 
     public ApiKeyCreationResponse generateUserKey(String name, String email) {
-        return generate(ApiKeyType.USER, name, email, null);
+        return generate(ApiKeyType.USER, name, email, null, false);
     }
 
-    public ApiKeyCreationResponse generatePlatformKey(String name, String email, Instant expiresAt) {
-        return generate(ApiKeyType.PLATFORM, name, email, expiresAt);
+    /**
+     * @param expiresAt explicit expiry, or null to apply the platform TTL default
+     * @param neverExpires mint a non-expiring key; mutually exclusive with {@code expiresAt}
+     */
+    public ApiKeyCreationResponse generatePlatformKey(String name, String email, Instant expiresAt, boolean neverExpires) {
+        return generate(ApiKeyType.PLATFORM, name, email, expiresAt, neverExpires);
     }
 
-    private ApiKeyCreationResponse generate(ApiKeyType keyType, String name, String email, Instant expiresAt) {
+    private ApiKeyCreationResponse generate(ApiKeyType keyType, String name, String email, Instant expiresAt, boolean neverExpires) {
         Instant createdAt = Instant.now();
-        if (expiresAt == null) {
-            expiresAt = createdAt.plus(userKeyTtlDays, ChronoUnit.DAYS);
+        if (neverExpires && expiresAt != null) {
+            throw new IllegalArgumentException("neverExpires and expiresAt are mutually exclusive");
         }
-        if (!expiresAt.isAfter(createdAt)) {
-            throw new IllegalArgumentException("API key expiration must be in the future");
+        if (!neverExpires) {
+            if (expiresAt == null) {
+                long ttlDays = keyType == ApiKeyType.PLATFORM ? platformKeyTtlDays : userKeyTtlDays;
+                expiresAt = createdAt.plus(ttlDays, ChronoUnit.DAYS);
+            }
+            if (!expiresAt.isAfter(createdAt)) {
+                throw new IllegalArgumentException("API key expiration must be in the future");
+            }
         }
         String body = randomBase62(KEY_BODY_LENGTH);
         String plaintext = KEY_PREFIX + body;
@@ -112,7 +128,7 @@ public class ApiKeyService {
 
         ApiKey apiKey = found.get();
         Instant now = Instant.now();
-        if (apiKey.getRevokedAt() != null || !now.isBefore(apiKey.getExpiresAt())) {
+        if (apiKey.getRevokedAt() != null || isExpired(apiKey, now)) {
             logger.info(
                 "Rejected {} API key with display prefix {}: {}", apiKey.getKeyType(), apiKey.getDisplayPrefix(),
                 apiKey.getRevokedAt() != null ? "revoked" : "expired"
@@ -174,6 +190,11 @@ public class ApiKeyService {
                 logger.warn("Failed to update last_used_at for API key with display prefix {}", apiKey.getDisplayPrefix(), e);
             }
         }
+    }
+
+    // null expires_at means the key never expires (explicit choice at platform-key mint time)
+    private static boolean isExpired(ApiKey apiKey, Instant now) {
+        return apiKey.getExpiresAt() != null && !now.isBefore(apiKey.getExpiresAt());
     }
 
     private boolean hasPepper() {

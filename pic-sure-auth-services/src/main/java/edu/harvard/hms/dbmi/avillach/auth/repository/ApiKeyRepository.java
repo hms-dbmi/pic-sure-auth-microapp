@@ -26,6 +26,9 @@ public interface ApiKeyRepository extends JpaRepository<ApiKey, UUID> {
     // every column, letting a stale revoked_at=null overwrite a concurrent revocation
     @Modifying
     @Transactional
-    @Query("UPDATE api_key k SET k.lastUsedAt = :now WHERE k.uuid = :uuid AND k.revokedAt IS NULL AND k.expiresAt > :now")
+    @Query(
+        "UPDATE api_key k SET k.lastUsedAt = :now WHERE k.uuid = :uuid AND k.revokedAt IS NULL"
+            + " AND (k.expiresAt IS NULL OR k.expiresAt > :now)"
+    )
     int touchLastUsed(@Param("uuid") UUID uuid, @Param("now") Instant now);
 }

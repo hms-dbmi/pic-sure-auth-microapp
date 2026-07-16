@@ -32,6 +32,7 @@ import static org.mockito.Mockito.*;
 public class ApiKeyServiceTest {
 
     private static final long USER_TTL_DAYS = 90;
+    private static final long PLATFORM_TTL_DAYS = 365;
 
     @MockBean
     private ApiKeyRepository apiKeyRepository;
@@ -42,7 +43,7 @@ public class ApiKeyServiceTest {
     public void setUp() {
         MockitoAnnotations.openMocks(this);
         when(apiKeyRepository.save(any(ApiKey.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        apiKeyService = new ApiKeyService(apiKeyRepository, "", "", USER_TTL_DAYS);
+        apiKeyService = new ApiKeyService(apiKeyRepository, "", "", USER_TTL_DAYS, PLATFORM_TTL_DAYS);
     }
 
     @Test
@@ -70,7 +71,7 @@ public class ApiKeyServiceTest {
 
     @Test
     public void testGenerateUserKey_withPepperUsesHmacScheme() {
-        apiKeyService = new ApiKeyService(apiKeyRepository, "test-pepper", "", USER_TTL_DAYS);
+        apiKeyService = new ApiKeyService(apiKeyRepository, "test-pepper", "", USER_TTL_DAYS, PLATFORM_TTL_DAYS);
 
         ApiKeyCreationResponse response = apiKeyService.generateUserKey(null, null);
 
@@ -85,7 +86,7 @@ public class ApiKeyServiceTest {
     public void testGeneratePlatformKey_customExpiryAndMetadata() {
         Instant expiresAt = Instant.now().plus(365, ChronoUnit.DAYS);
 
-        ApiKeyCreationResponse response = apiKeyService.generatePlatformKey("Partner X", "partner@example.com", expiresAt);
+        ApiKeyCreationResponse response = apiKeyService.generatePlatformKey("Partner X", "partner@example.com", expiresAt, false);
 
         assertEquals(ApiKeyType.PLATFORM, response.keyType());
         assertEquals(expiresAt, response.expiresAt());
@@ -148,7 +149,7 @@ public class ApiKeyServiceTest {
         when(apiKeyRepository.findByKeyHash(stored.getKeyHash())).thenReturn(Optional.of(stored));
 
         // ...must still verify on a service configured with a pepper
-        ApiKeyService pepperedService = new ApiKeyService(apiKeyRepository, "test-pepper", "", USER_TTL_DAYS);
+        ApiKeyService pepperedService = new ApiKeyService(apiKeyRepository, "test-pepper", "", USER_TTL_DAYS, PLATFORM_TTL_DAYS);
         Optional<ApiKey> verified = pepperedService.verifyKey(response.apiKey());
 
         assertTrue(verified.isPresent());
@@ -205,30 +206,30 @@ public class ApiKeyServiceTest {
     @Test
     public void testVerifyKey_keyFromRotatedPepperStillVerifies() {
         // key minted under the old pepper...
-        ApiKeyService oldPepperService = new ApiKeyService(apiKeyRepository, "old-pepper", "", USER_TTL_DAYS);
+        ApiKeyService oldPepperService = new ApiKeyService(apiKeyRepository, "old-pepper", "", USER_TTL_DAYS, PLATFORM_TTL_DAYS);
         ApiKeyCreationResponse response = oldPepperService.generateUserKey(null, null);
         ApiKey stored = storedKeyFor(response);
         when(apiKeyRepository.findByKeyHash(anyString())).thenReturn(Optional.empty());
         when(apiKeyRepository.findByKeyHash(stored.getKeyHash())).thenReturn(Optional.of(stored));
 
         // ...verifies after rotation to a new pepper with the old one kept as previous
-        ApiKeyService rotatedService = new ApiKeyService(apiKeyRepository, "new-pepper", "old-pepper", USER_TTL_DAYS);
+        ApiKeyService rotatedService = new ApiKeyService(apiKeyRepository, "new-pepper", "old-pepper", USER_TTL_DAYS, PLATFORM_TTL_DAYS);
         assertTrue(rotatedService.verifyKey(response.apiKey()).isPresent());
 
         // ...and while the current pepper is accidentally omitted entirely
-        ApiKeyService pepperlessService = new ApiKeyService(apiKeyRepository, "", "old-pepper", USER_TTL_DAYS);
+        ApiKeyService pepperlessService = new ApiKeyService(apiKeyRepository, "", "old-pepper", USER_TTL_DAYS, PLATFORM_TTL_DAYS);
         assertTrue(pepperlessService.verifyKey(response.apiKey()).isPresent());
     }
 
     @Test
     public void testVerifyKey_keyFromTwoRotationsAgoVerifiesViaPepperList() {
-        ApiKeyService oldestPepperService = new ApiKeyService(apiKeyRepository, "pepper-v1", "", USER_TTL_DAYS);
+        ApiKeyService oldestPepperService = new ApiKeyService(apiKeyRepository, "pepper-v1", "", USER_TTL_DAYS, PLATFORM_TTL_DAYS);
         ApiKeyCreationResponse response = oldestPepperService.generateUserKey(null, null);
         ApiKey stored = storedKeyFor(response);
         when(apiKeyRepository.findByKeyHash(anyString())).thenReturn(Optional.empty());
         when(apiKeyRepository.findByKeyHash(stored.getKeyHash())).thenReturn(Optional.of(stored));
 
-        ApiKeyService twiceRotatedService = new ApiKeyService(apiKeyRepository, "pepper-v3", "pepper-v2, pepper-v1", USER_TTL_DAYS);
+        ApiKeyService twiceRotatedService = new ApiKeyService(apiKeyRepository, "pepper-v3", "pepper-v2, pepper-v1", USER_TTL_DAYS, PLATFORM_TTL_DAYS);
 
         assertTrue(twiceRotatedService.verifyKey(response.apiKey()).isPresent());
     }
@@ -247,32 +248,64 @@ public class ApiKeyServiceTest {
     public void testGeneratePlatformKey_pastExpiryRejected() {
         assertThrows(
             IllegalArgumentException.class,
-            () -> apiKeyService.generatePlatformKey("Partner X", "partner@example.com", Instant.now().minusSeconds(1))
+            () -> apiKeyService.generatePlatformKey("Partner X", "partner@example.com", Instant.now().minusSeconds(1), false)
         );
         verify(apiKeyRepository, never()).save(any(ApiKey.class));
     }
 
     @Test
-    public void testGeneratePlatformKey_nullExpiryFallsBackToUserTtl() {
-        ApiKeyCreationResponse response = apiKeyService.generatePlatformKey("Partner X", "partner@example.com", null);
+    public void testGeneratePlatformKey_nullExpiryAppliesPlatformTtl() {
+        ApiKeyCreationResponse response = apiKeyService.generatePlatformKey("Partner X", "partner@example.com", null, false);
 
         ArgumentCaptor<ApiKey> captor = ArgumentCaptor.forClass(ApiKey.class);
         verify(apiKeyRepository).save(captor.capture());
-        assertEquals(USER_TTL_DAYS, ChronoUnit.DAYS.between(captor.getValue().getCreatedAt(), captor.getValue().getExpiresAt()));
+        assertEquals(PLATFORM_TTL_DAYS, ChronoUnit.DAYS.between(captor.getValue().getCreatedAt(), captor.getValue().getExpiresAt()));
         assertEquals(ApiKeyType.PLATFORM, response.keyType());
     }
 
     @Test
+    public void testGeneratePlatformKey_neverExpiresStoresNullExpiry() {
+        ApiKeyCreationResponse response = apiKeyService.generatePlatformKey("Partner X", "partner@example.com", null, true);
+
+        ArgumentCaptor<ApiKey> captor = ArgumentCaptor.forClass(ApiKey.class);
+        verify(apiKeyRepository).save(captor.capture());
+        assertNull(captor.getValue().getExpiresAt());
+        assertNull(response.expiresAt());
+    }
+
+    @Test
+    public void testGeneratePlatformKey_neverExpiresWithExplicitDateRejected() {
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> apiKeyService.generatePlatformKey("Partner X", "partner@example.com", Instant.now().plusSeconds(3600), true)
+        );
+        verify(apiKeyRepository, never()).save(any(ApiKey.class));
+    }
+
+    @Test
+    public void testVerifyKey_nullExpiryNeverExpires() {
+        ApiKeyCreationResponse response = apiKeyService.generatePlatformKey("Partner X", "partner@example.com", null, true);
+        ApiKey stored = storedKeyFor(response);
+        when(apiKeyRepository.findByKeyHash(stored.getKeyHash())).thenReturn(Optional.of(stored));
+
+        Optional<ApiKey> verified = apiKeyService.verifyKey(response.apiKey());
+
+        assertTrue(verified.isPresent());
+        assertNull(verified.get().getExpiresAt());
+    }
+
+    @Test
     public void testConstructor_rejectsNonPositiveTtl() {
-        assertThrows(IllegalStateException.class, () -> new ApiKeyService(apiKeyRepository, "", "", 0));
-        assertThrows(IllegalStateException.class, () -> new ApiKeyService(apiKeyRepository, "", "", -1));
+        assertThrows(IllegalStateException.class, () -> new ApiKeyService(apiKeyRepository, "", "", USER_TTL_DAYS, 0));
+        assertThrows(IllegalStateException.class, () -> new ApiKeyService(apiKeyRepository, "", "", 0, PLATFORM_TTL_DAYS));
+        assertThrows(IllegalStateException.class, () -> new ApiKeyService(apiKeyRepository, "", "", -1, PLATFORM_TTL_DAYS));
     }
 
     @Test
     public void testVerifyKey_hmacKeyRejectedWhenNoPeppersConfigured() {
         // key minted under a pepper, presented to a service with no peppers at all: the SHA256
         // fallback lookup must not accept the HMAC-schemed row
-        ApiKeyService pepperedService = new ApiKeyService(apiKeyRepository, "test-pepper", "", USER_TTL_DAYS);
+        ApiKeyService pepperedService = new ApiKeyService(apiKeyRepository, "test-pepper", "", USER_TTL_DAYS, PLATFORM_TTL_DAYS);
         ApiKeyCreationResponse response = pepperedService.generateUserKey(null, null);
         ApiKey stored = storedKeyFor(response);
         when(apiKeyRepository.findByKeyHash(anyString())).thenReturn(Optional.empty());

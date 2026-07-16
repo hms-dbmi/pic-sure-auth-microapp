@@ -95,22 +95,18 @@ public class ApiKeyController {
     @AuditEvent(type = "OTHER", action = "api_key.list")
     @RolesAllowed({ADMIN, SUPER_ADMIN})
     @GetMapping(produces = "application/json", path = "/apiKey")
-    public ResponseEntity<?> listKeys(
+    public ResponseEntity<ApiKeyPage> listKeys(
         @RequestParam(value = "page", defaultValue = "0") int page, @RequestParam(value = "size", defaultValue = "100") int size,
-        @RequestParam(value = "keyType", required = false) String keyType
+        @RequestParam(value = "keyType", required = false) ApiKeyType keyType
     ) {
-        // parse the enum here rather than binding it as a method parameter: a bad value would
-        // otherwise throw MethodArgumentTypeMismatchException, which the global handler maps to 500
-        ApiKeyType parsedType;
-        try {
-            parsedType = keyType == null || keyType.isBlank() ? null : ApiKeyType.valueOf(keyType.trim().toUpperCase());
-        } catch (IllegalArgumentException e) {
-            return PICSUREResponse.protocolError("Invalid keyType: " + keyType + ". Must be USER or PLATFORM.");
-        }
-        return PICSUREResponse.success(apiKeyService.listKeys(Math.max(0, page), Math.clamp(size, 1, MAX_PAGE_SIZE), parsedType));
+        return PICSUREResponse.success(apiKeyService.listKeys(Math.max(0, page), Math.clamp(size, 1, MAX_PAGE_SIZE), keyType));
     }
 
-    @Operation(description = "Mint a PLATFORM API key for a partner service, requires SUPER_ADMIN role. The key is returned once and cannot be recovered.")
+    @Operation(
+        description = "Mint a PLATFORM API key for a partner service, requires SUPER_ADMIN role. Expiry: an explicit ISO-8601 expiresAt,"
+            + " or neverExpires=true (mutually exclusive), or neither for the configured platform TTL default."
+            + " The key is returned once and cannot be recovered."
+    )
     @AuditEvent(type = "ADMIN", action = "api_key.platform.create")
     @RolesAllowed({SUPER_ADMIN})
     @PostMapping(produces = "application/json", path = "/apiKey/platform")
@@ -129,7 +125,7 @@ public class ApiKeyController {
 
         ApiKeyCreationResponse created;
         try {
-            created = apiKeyService.generatePlatformKey(name, email, keyRequest.expiresAt());
+            created = apiKeyService.generatePlatformKey(name, email, keyRequest.expiresAt(), keyRequest.neverExpires());
         } catch (IllegalArgumentException e) {
             return PICSUREResponse.protocolError(e.getMessage());
         }

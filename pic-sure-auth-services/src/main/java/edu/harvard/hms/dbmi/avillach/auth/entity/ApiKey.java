@@ -33,7 +33,8 @@ public class ApiKey extends BaseEntity {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
-    @Column(name = "expires_at", nullable = false)
+    // null means the key never expires (explicit opt-in, PLATFORM keys only)
+    @Column(name = "expires_at")
     private Instant expiresAt;
 
     @Column(name = "revoked_at")
