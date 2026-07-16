@@ -194,7 +194,6 @@ public class ApiKeyService {
         }
     }
 
-    // null expires_at means the key never expires (explicit choice at platform-key mint time)
     private static boolean isExpired(ApiKey apiKey, Instant now) {
         return apiKey.getExpiresAt() != null && !now.isBefore(apiKey.getExpiresAt());
     }
