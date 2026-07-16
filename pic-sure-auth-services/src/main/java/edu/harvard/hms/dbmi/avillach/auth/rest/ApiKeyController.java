@@ -72,8 +72,8 @@ public class ApiKeyController {
         if (!generationEnabled || !openIdpProviderIsEnabled) {
             return PICSUREResponse.protocolError("API key generation is not enabled on this deployment.");
         }
-        String name = blankToNull(keyRequest.name());
-        String email = blankToNull(keyRequest.email());
+        String name = normalize(keyRequest.name());
+        String email = normalize(keyRequest.email());
         if (tooLong(name) || tooLong(email)) {
             return PICSUREResponse.protocolError("Name and email must be at most " + MAX_METADATA_FIELD_LENGTH + " characters.");
         }
@@ -114,8 +114,8 @@ public class ApiKeyController {
         @Parameter(required = true, description = "name and contact email (both required), optional ISO-8601 expiresAt")
         @RequestBody PlatformApiKeyRequest keyRequest, HttpServletRequest request
     ) {
-        String name = blankToNull(keyRequest.name());
-        String email = blankToNull(keyRequest.email());
+        String name = normalize(keyRequest.name());
+        String email = normalize(keyRequest.email());
         if (name == null || email == null) {
             return PICSUREResponse.protocolError("Platform keys require a name and a contact email.");
         }
@@ -142,23 +142,29 @@ public class ApiKeyController {
         @Parameter(required = true, description = "UUID of the API key to revoke") @PathVariable("keyId") String keyId,
         HttpServletRequest request
     ) {
+        // the raw keyId is client-controlled: never echo it back or record it; the parsed UUID is canonical
         UUID uuid;
         try {
             uuid = UUID.fromString(keyId);
         } catch (IllegalArgumentException e) {
-            return PICSUREResponse.protocolError("Invalid API key ID: " + keyId);
+            return PICSUREResponse.protocolError("Invalid API key ID.");
         }
 
-        AuditAttributes.putMetadata(request, "api_key_id", keyId);
+        AuditAttributes.putMetadata(request, "api_key_id", uuid.toString());
         Optional<ApiKeyMetadata> revoked = apiKeyService.revokeKey(uuid);
         if (revoked.isEmpty()) {
-            return PICSUREResponse.protocolError("API key not found by given ID: " + keyId);
+            return PICSUREResponse.protocolError("API key not found by given ID.");
         }
         return PICSUREResponse.success(revoked.get());
     }
 
-    private static String blankToNull(String value) {
-        return value == null || value.isBlank() ? null : value.trim();
+    // strips control characters at the boundary: these free-text fields flow into audit metadata and logs
+    private static String normalize(String value) {
+        if (value == null) {
+            return null;
+        }
+        String cleaned = value.replaceAll("\\p{Cntrl}", "").trim();
+        return cleaned.isBlank() ? null : cleaned;
     }
 
     private static boolean tooLong(String value) {

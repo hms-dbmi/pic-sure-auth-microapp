@@ -165,7 +165,7 @@ public class ApiKeyServiceTest {
 
         apiKeyService.verifyKey(response.apiKey());
 
-        verify(apiKeyRepository).touchLastUsed(eq(stored.getUuid()), any(Instant.class));
+        verify(apiKeyRepository).touchLastUsed(eq(stored.getUuid()), any(Instant.class), any(Instant.class));
         verify(apiKeyRepository, never()).save(any(ApiKey.class));
     }
 
@@ -178,7 +178,7 @@ public class ApiKeyServiceTest {
 
         assertTrue(apiKeyService.verifyKey(response.apiKey()).isPresent());
 
-        verify(apiKeyRepository, never()).touchLastUsed(any(UUID.class), any(Instant.class));
+        verify(apiKeyRepository, never()).touchLastUsed(any(UUID.class), any(Instant.class), any(Instant.class));
         verify(apiKeyRepository, never()).save(any(ApiKey.class));
     }
 
@@ -239,7 +239,8 @@ public class ApiKeyServiceTest {
         ApiKeyCreationResponse response = apiKeyService.generateUserKey(null, null);
         ApiKey stored = storedKeyFor(response);
         when(apiKeyRepository.findByKeyHash(stored.getKeyHash())).thenReturn(Optional.of(stored));
-        when(apiKeyRepository.touchLastUsed(any(UUID.class), any(Instant.class))).thenThrow(new RuntimeException("db is read-only"));
+        when(apiKeyRepository.touchLastUsed(any(UUID.class), any(Instant.class), any(Instant.class)))
+            .thenThrow(new RuntimeException("db is read-only"));
 
         assertTrue(apiKeyService.verifyKey(response.apiKey()).isPresent());
     }

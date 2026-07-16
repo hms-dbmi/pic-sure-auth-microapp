@@ -76,6 +76,16 @@ public class ApiKeyControllerTest {
     }
 
     @Test
+    public void testCreateUserKey_controlCharactersStripped() {
+        when(captchaVerifier.verify(any(), any())).thenReturn(true);
+        when(apiKeyService.generateUserKey(any(), any())).thenReturn(creationResponse);
+
+        controller.createUserKey(new UserApiKeyRequest("captcha-token", "Jane\nDoe", "user@example.com\r\n"), request);
+
+        verify(apiKeyService).generateUserKey("JaneDoe", "user@example.com");
+    }
+
+    @Test
     public void testCreateUserKey_captchaFailure() {
         when(captchaVerifier.verify(any(), any())).thenReturn(false);
 
@@ -221,6 +231,7 @@ public class ApiKeyControllerTest {
         ResponseEntity<?> response = controller.revokeKey("not-a-uuid", request);
 
         assertNotEquals(200, response.getStatusCode().value());
+        assertFalse(String.valueOf(response.getBody()).contains("not-a-uuid"));
         verify(apiKeyService, never()).revokeKey(any(UUID.class));
     }
 }

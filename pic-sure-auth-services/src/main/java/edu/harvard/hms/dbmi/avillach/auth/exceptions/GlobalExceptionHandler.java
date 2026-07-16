@@ -10,6 +10,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -85,6 +86,21 @@ public class GlobalExceptionHandler {
      * @param ex The exception thrown during parameter binding
      * @return A response with HTTP 400 Bad Request status naming the parameter and expected type
      */
+    /**
+     * Handles unreadable request bodies (malformed JSON, missing body, unparseable field values),
+     * which are client errors — without this they reach the RuntimeException handler as 500s and
+     * could leak parser internals in the response.
+     *
+     * @param ex The exception thrown during message conversion
+     * @return A response with HTTP 400 Bad Request status and no parser details
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<?> handleUnreadableBody(HttpMessageNotReadableException ex) {
+        // the parser message can embed the raw (client-controlled) payload; log and return only a generic error
+        logger.warn("Rejected unreadable request body");
+        return PICSUREResponse.error(HttpStatus.BAD_REQUEST, "Malformed request body", "The request body could not be parsed.");
+    }
+
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<?> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
         Class<?> requiredType = ex.getRequiredType();

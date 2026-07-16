@@ -23,12 +23,14 @@ public interface ApiKeyRepository extends JpaRepository<ApiKey, UUID> {
     Page<ApiKey> findByKeyType(ApiKeyType keyType, Pageable pageable);
 
     // dedicated single-column update: a save() of the entity loaded during verification would merge
-    // every column, letting a stale revoked_at=null overwrite a concurrent revocation
+    // every column, letting a stale revoked_at=null overwrite a concurrent revocation. The cutoff
+    // makes the write throttle atomic — concurrent requests holding the same stale snapshot must
+    // not each issue an update
     @Modifying
     @Transactional
     @Query(
         "UPDATE api_key k SET k.lastUsedAt = :now WHERE k.uuid = :uuid AND k.revokedAt IS NULL"
-            + " AND (k.expiresAt IS NULL OR k.expiresAt > :now)"
+            + " AND (k.expiresAt IS NULL OR k.expiresAt > :now)" + " AND (k.lastUsedAt IS NULL OR k.lastUsedAt < :cutoff)"
     )
-    int touchLastUsed(@Param("uuid") UUID uuid, @Param("now") Instant now);
+    int touchLastUsed(@Param("uuid") UUID uuid, @Param("now") Instant now, @Param("cutoff") Instant cutoff);
 }

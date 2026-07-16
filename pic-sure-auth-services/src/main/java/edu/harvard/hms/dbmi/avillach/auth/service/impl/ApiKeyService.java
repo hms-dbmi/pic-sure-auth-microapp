@@ -181,11 +181,13 @@ public class ApiKeyService {
     }
 
     // last_used_at is usage telemetry, not an audit trail; throttling avoids a DB write per request
-    // and a failed write must not reject an otherwise valid key
+    // and a failed write must not reject an otherwise valid key. The in-memory check is only a fast
+    // path — the cutoff in the UPDATE is what makes the throttle hold under concurrency
     private void touchLastUsed(ApiKey apiKey, Instant now) {
-        if (apiKey.getLastUsedAt() == null || apiKey.getLastUsedAt().isBefore(now.minus(LAST_USED_WRITE_INTERVAL))) {
+        Instant cutoff = now.minus(LAST_USED_WRITE_INTERVAL);
+        if (apiKey.getLastUsedAt() == null || apiKey.getLastUsedAt().isBefore(cutoff)) {
             try {
-                apiKeyRepository.touchLastUsed(apiKey.getUuid(), now);
+                apiKeyRepository.touchLastUsed(apiKey.getUuid(), now, cutoff);
             } catch (RuntimeException e) {
                 logger.warn("Failed to update last_used_at for API key with display prefix {}", apiKey.getDisplayPrefix(), e);
             }

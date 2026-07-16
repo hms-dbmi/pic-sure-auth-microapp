@@ -3,6 +3,8 @@ package edu.harvard.hms.dbmi.avillach.auth.exceptions;
 import edu.harvard.hms.dbmi.avillach.auth.enums.ApiKeyType;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.mock.http.MockHttpInputMessage;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -35,6 +37,17 @@ public class GlobalExceptionHandlerTest {
         assertTrue(body.contains("PLATFORM"));
         // the offending value is client-controlled and must not be reflected
         assertFalse(body.contains("not-a-type"));
+    }
+
+    @Test
+    public void testUnreadableBodyIs400WithoutParserDetails() {
+        HttpMessageNotReadableException ex =
+            new HttpMessageNotReadableException("JSON parse error: raw-client-payload", new MockHttpInputMessage(new byte[0]));
+
+        ResponseEntity<?> response = handler.handleUnreadableBody(ex);
+
+        assertEquals(400, response.getStatusCode().value());
+        assertFalse(String.valueOf(response.getBody()).contains("raw-client-payload"));
     }
 
     @Test
