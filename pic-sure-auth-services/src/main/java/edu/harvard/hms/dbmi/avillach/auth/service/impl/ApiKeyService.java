@@ -124,8 +124,10 @@ public class ApiKeyService {
         return Optional.of(apiKey);
     }
 
-    public ApiKeyPage listKeys(int page, int size) {
-        Page<ApiKey> keys = apiKeyRepository.findAll(PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
+    public ApiKeyPage listKeys(int page, int size, ApiKeyType keyType) {
+        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<ApiKey> keys = keyType == null ? apiKeyRepository.findAll(pageRequest)
+            : apiKeyRepository.findByKeyType(keyType, pageRequest);
         return new ApiKeyPage(keys.getContent().stream().map(ApiKeyMetadata::from).toList(), keys.getTotalElements(), page, size);
     }
 

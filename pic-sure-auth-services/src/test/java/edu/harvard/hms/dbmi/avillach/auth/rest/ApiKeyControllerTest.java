@@ -123,21 +123,39 @@ public class ApiKeyControllerTest {
             UUID.randomUUID(), "00000000", ApiKeyType.USER, null, null, Instant.now(), Instant.now().plusSeconds(3600), null, null
         );
         ApiKeyPage keyPage = new ApiKeyPage(List.of(metadata), 1, 0, 100);
-        when(apiKeyService.listKeys(0, 100)).thenReturn(keyPage);
+        when(apiKeyService.listKeys(0, 100, null)).thenReturn(keyPage);
 
-        ResponseEntity<ApiKeyPage> response = controller.listKeys(0, 100);
+        ResponseEntity<?> response = controller.listKeys(0, 100, null);
 
         assertEquals(200, response.getStatusCode().value());
         assertEquals(keyPage, response.getBody());
     }
 
     @Test
+    public void testListKeys_filtersByKeyType() {
+        ApiKeyPage keyPage = new ApiKeyPage(List.of(), 0, 0, 100);
+        when(apiKeyService.listKeys(0, 100, ApiKeyType.PLATFORM)).thenReturn(keyPage);
+
+        controller.listKeys(0, 100, "platform");
+
+        verify(apiKeyService).listKeys(0, 100, ApiKeyType.PLATFORM);
+    }
+
+    @Test
+    public void testListKeys_invalidKeyTypeReturns400NotError() {
+        ResponseEntity<?> response = controller.listKeys(0, 100, "not-a-type");
+
+        assertNotEquals(200, response.getStatusCode().value());
+        verify(apiKeyService, never()).listKeys(anyInt(), anyInt(), any());
+    }
+
+    @Test
     public void testListKeys_clampsPageParams() {
-        when(apiKeyService.listKeys(0, 1000)).thenReturn(new ApiKeyPage(List.of(), 0, 0, 1000));
+        when(apiKeyService.listKeys(0, 1000, null)).thenReturn(new ApiKeyPage(List.of(), 0, 0, 1000));
 
-        controller.listKeys(-5, 999999);
+        controller.listKeys(-5, 999999, null);
 
-        verify(apiKeyService).listKeys(0, 1000);
+        verify(apiKeyService).listKeys(0, 1000, null);
     }
 
     @Test

@@ -302,7 +302,7 @@ public class ApiKeyServiceTest {
         when(apiKeyRepository.findAll(any(org.springframework.data.domain.Pageable.class)))
             .thenReturn(new org.springframework.data.domain.PageImpl<>(java.util.List.of(stored)));
 
-        edu.harvard.hms.dbmi.avillach.auth.model.response.ApiKeyPage keyPage = apiKeyService.listKeys(0, 100);
+        edu.harvard.hms.dbmi.avillach.auth.model.response.ApiKeyPage keyPage = apiKeyService.listKeys(0, 100, null);
 
         assertEquals(1, keyPage.totalCount());
         assertEquals(1, keyPage.keys().size());
@@ -316,6 +316,21 @@ public class ApiKeyServiceTest {
         assertEquals(expiresAt, metadata.expiresAt());
         assertEquals(revokedAt, metadata.revokedAt());
         assertEquals(lastUsedAt, metadata.lastUsedAt());
+    }
+
+    @Test
+    public void testListKeys_filtersByKeyType() {
+        ApiKey stored = new ApiKey().setKeyHash("deadbeef").setHashScheme(ApiKeyService.SCHEME_SHA256).setDisplayPrefix("abcdefgh")
+            .setKeyType(ApiKeyType.PLATFORM).setCreatedAt(Instant.now()).setExpiresAt(Instant.now().plusSeconds(3600));
+        stored.setUuid(UUID.randomUUID());
+        when(apiKeyRepository.findByKeyType(eq(ApiKeyType.PLATFORM), any(org.springframework.data.domain.Pageable.class)))
+            .thenReturn(new org.springframework.data.domain.PageImpl<>(java.util.List.of(stored)));
+
+        edu.harvard.hms.dbmi.avillach.auth.model.response.ApiKeyPage keyPage = apiKeyService.listKeys(0, 100, ApiKeyType.PLATFORM);
+
+        assertEquals(1, keyPage.keys().size());
+        assertEquals(ApiKeyType.PLATFORM, keyPage.keys().get(0).keyType());
+        verify(apiKeyRepository, never()).findAll(any(org.springframework.data.domain.Pageable.class));
     }
 
     @Test

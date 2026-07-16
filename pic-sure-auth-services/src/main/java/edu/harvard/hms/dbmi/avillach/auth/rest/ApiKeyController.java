@@ -1,6 +1,7 @@
 package edu.harvard.hms.dbmi.avillach.auth.rest;
 
 import edu.harvard.dbmi.avillach.logging.AuditEvent;
+import edu.harvard.hms.dbmi.avillach.auth.enums.ApiKeyType;
 import edu.harvard.hms.dbmi.avillach.auth.model.request.PlatformApiKeyRequest;
 import edu.harvard.hms.dbmi.avillach.auth.model.request.UserApiKeyRequest;
 import edu.harvard.hms.dbmi.avillach.auth.model.response.ApiKeyCreationResponse;
@@ -87,14 +88,26 @@ public class ApiKeyController {
         return PICSUREResponse.success(created);
     }
 
-    @Operation(description = "GET a page of API key metadata (never key material), newest first, requires ADMIN or SUPER_ADMIN role")
+    @Operation(
+        description = "GET a page of API key metadata (never key material), newest first, optionally filtered by keyType, "
+            + "requires ADMIN or SUPER_ADMIN role"
+    )
     @AuditEvent(type = "OTHER", action = "api_key.list")
     @RolesAllowed({ADMIN, SUPER_ADMIN})
     @GetMapping(produces = "application/json", path = "/apiKey")
-    public ResponseEntity<ApiKeyPage> listKeys(
-        @RequestParam(value = "page", defaultValue = "0") int page, @RequestParam(value = "size", defaultValue = "100") int size
+    public ResponseEntity<?> listKeys(
+        @RequestParam(value = "page", defaultValue = "0") int page, @RequestParam(value = "size", defaultValue = "100") int size,
+        @RequestParam(value = "keyType", required = false) String keyType
     ) {
-        return PICSUREResponse.success(apiKeyService.listKeys(Math.max(0, page), Math.clamp(size, 1, MAX_PAGE_SIZE)));
+        // parse the enum here rather than binding it as a method parameter: a bad value would
+        // otherwise throw MethodArgumentTypeMismatchException, which the global handler maps to 500
+        ApiKeyType parsedType;
+        try {
+            parsedType = keyType == null || keyType.isBlank() ? null : ApiKeyType.valueOf(keyType.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return PICSUREResponse.protocolError("Invalid keyType: " + keyType + ". Must be USER or PLATFORM.");
+        }
+        return PICSUREResponse.success(apiKeyService.listKeys(Math.max(0, page), Math.clamp(size, 1, MAX_PAGE_SIZE), parsedType));
     }
 
     @Operation(description = "Mint a PLATFORM API key for a partner service, requires SUPER_ADMIN role. The key is returned once and cannot be recovered.")

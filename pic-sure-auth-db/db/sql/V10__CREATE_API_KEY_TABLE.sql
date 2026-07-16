@@ -11,5 +11,6 @@ CREATE TABLE api_key (
    `revoked_at` datetime,
    `last_used_at` datetime,
    PRIMARY KEY (`uuid`),
-   UNIQUE KEY `uk_api_key_hash` (`key_hash`)
+   UNIQUE KEY `uk_api_key_hash` (`key_hash`),
+   KEY `idx_api_key_key_type_created_at` (`key_type`, `created_at`)
 );

@@ -151,8 +151,8 @@ class ControllerAuditEventTest {
             new Class[]{edu.harvard.hms.dbmi.avillach.auth.model.request.UserApiKeyRequest.class, HttpServletRequest.class}, "ACCESS",
             "api_key.create"
         );
-        // listKeys(int page, int size)
-        assertAuditEvent(c, "listKeys", new Class[]{int.class, int.class}, "OTHER", "api_key.list");
+        // listKeys(int page, int size, String keyType)
+        assertAuditEvent(c, "listKeys", new Class[]{int.class, int.class, String.class}, "OTHER", "api_key.list");
         // createPlatformKey(PlatformApiKeyRequest keyRequest, HttpServletRequest request)
         assertAuditEvent(
             c, "createPlatformKey",

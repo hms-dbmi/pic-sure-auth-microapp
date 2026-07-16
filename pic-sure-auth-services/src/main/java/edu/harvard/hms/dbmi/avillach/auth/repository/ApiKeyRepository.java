@@ -1,6 +1,9 @@
 package edu.harvard.hms.dbmi.avillach.auth.repository;
 
 import edu.harvard.hms.dbmi.avillach.auth.entity.ApiKey;
+import edu.harvard.hms.dbmi.avillach.auth.enums.ApiKeyType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -16,6 +19,8 @@ import java.util.UUID;
 public interface ApiKeyRepository extends JpaRepository<ApiKey, UUID> {
 
     Optional<ApiKey> findByKeyHash(String keyHash);
+
+    Page<ApiKey> findByKeyType(ApiKeyType keyType, Pageable pageable);
 
     // dedicated single-column update: a save() of the entity loaded during verification would merge
     // every column, letting a stale revoked_at=null overwrite a concurrent revocation
