@@ -11,12 +11,11 @@ import edu.harvard.hms.dbmi.avillach.auth.service.impl.ApiKeyService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockitoAnnotations;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
-import org.springframework.test.context.ContextConfiguration;
 
 import java.time.Instant;
 import java.util.List;
@@ -28,14 +27,13 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
-@SpringBootTest
-@ContextConfiguration(classes = {ApiKeyController.class})
+@ExtendWith(MockitoExtension.class)
 public class ApiKeyControllerTest {
 
-    @MockBean
+    @Mock
     private ApiKeyService apiKeyService;
 
-    @MockBean
+    @Mock
     private CaptchaVerifier captchaVerifier;
 
     private ApiKeyController controller;
@@ -48,7 +46,6 @@ public class ApiKeyControllerTest {
 
     @BeforeEach
     public void setUp() {
-        MockitoAnnotations.openMocks(this);
         controller = new ApiKeyController(apiKeyService, captchaVerifier, true, true);
         request = new MockHttpServletRequest();
     }
@@ -119,8 +116,7 @@ public class ApiKeyControllerTest {
 
     @Test
     public void testCreateUserKey_oversizedEmailRejected() {
-        when(captchaVerifier.verify(any(), any())).thenReturn(true);
-
+        // no stubs: the length check must reject before the CAPTCHA or service is ever consulted
         ResponseEntity<?> response = controller.createUserKey(new UserApiKeyRequest("captcha-token", null, "a".repeat(250) + "@example.com"), request);
 
         assertNotEquals(200, response.getStatusCode().value());

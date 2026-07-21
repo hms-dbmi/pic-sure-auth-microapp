@@ -296,6 +296,16 @@ public class ApiKeyServiceTest {
     }
 
     @Test
+    public void testVerifyKey_nullExpiryUserKeyRejected() {
+        ApiKeyCreationResponse response = apiKeyService.generateUserKey(null, null);
+        // such a row can only exist where a deployment schema is missing the platform-only CHECK
+        ApiKey stored = storedKeyFor(response).setExpiresAt(null);
+        when(apiKeyRepository.findByKeyHash(stored.getKeyHash())).thenReturn(Optional.of(stored));
+
+        assertTrue(apiKeyService.verifyKey(response.apiKey()).isEmpty());
+    }
+
+    @Test
     public void testConstructor_rejectsNonPositiveTtl() {
         assertThrows(IllegalStateException.class, () -> new ApiKeyService(apiKeyRepository, "", "", USER_TTL_DAYS, 0));
         assertThrows(IllegalStateException.class, () -> new ApiKeyService(apiKeyRepository, "", "", 0, PLATFORM_TTL_DAYS));

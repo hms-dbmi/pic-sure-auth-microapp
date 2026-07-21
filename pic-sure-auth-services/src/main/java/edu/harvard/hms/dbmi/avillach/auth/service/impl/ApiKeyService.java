@@ -194,8 +194,14 @@ public class ApiKeyService {
         }
     }
 
+    // null expiry means "never expires", an opt-in that exists only for PLATFORM keys. The DB CHECK
+    // enforces that too, but parallel deployment schemas are written separately — fail closed here
+    // in case one of them misses the constraint
     private static boolean isExpired(ApiKey apiKey, Instant now) {
-        return apiKey.getExpiresAt() != null && !now.isBefore(apiKey.getExpiresAt());
+        if (apiKey.getExpiresAt() == null) {
+            return apiKey.getKeyType() != ApiKeyType.PLATFORM;
+        }
+        return !now.isBefore(apiKey.getExpiresAt());
     }
 
     private boolean hasPepper() {
