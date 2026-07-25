@@ -218,6 +218,59 @@ class BdcConsentBasedAccessRuleEvaluatorTest {
     }
 
     @Test
+    public void setAuthorizationFiltersForQuery_harmonizedInFiltersOnly_keepHarmonizedConsent() {
+        UserConsents userConsents = new UserConsents().setConsents(Map.of("\\_consents\\", Set.of("phs123.c1"), "\\_harmonized_consent\\", Set.of("phs789.c1")));
+        Query query = new Query(
+                List.of(), List.of(),
+                new PhenotypicSubquery(
+                        null,
+                        List.of(
+                                new PhenotypicFilter(PhenotypicFilterType.FILTER, "\\DCC Harmonized data set\\data\\age\\", null, 30.0, 40.0, null)
+                        ), Operator.AND
+                ), null, ResultType.COUNT, null, null
+        );
+
+        Query queryWithConsents = bdcConsentBasedAccessRuleEvaluator.setAuthorizationFiltersForQuery(userConsents, query);
+        assertEquals(2, queryWithConsents.authorizationFilters().size());
+        assertTrue(queryWithConsents.authorizationFilters().contains(new AuthorizationFilter("\\_harmonized_consent\\", Set.of("phs789.c1"))));
+    }
+
+    @Test
+    public void setAuthorizationFiltersForQuery_harmonizedInSelectOnly_keepHarmonizedConsent() {
+        UserConsents userConsents = new UserConsents().setConsents(Map.of("\\_consents\\", Set.of("phs123.c1"), "\\_harmonized_consent\\", Set.of("phs789.c1")));
+        Query query = new Query(
+                List.of("\\DCC Harmonized data set\\data\\age\\", "\\phs123\\data\\age\\"), List.of(),
+                new PhenotypicSubquery(
+                        null,
+                        List.of(
+                                new PhenotypicFilter(PhenotypicFilterType.FILTER, "\\phs123\\data\\age\\", null, 30.0, 40.0, null)
+                        ), Operator.AND
+                ), null, ResultType.DATAFRAME, null, null
+        );
+
+        Query queryWithConsents = bdcConsentBasedAccessRuleEvaluator.setAuthorizationFiltersForQuery(userConsents, query);
+        assertEquals(2, queryWithConsents.authorizationFilters().size());
+        assertTrue(queryWithConsents.authorizationFilters().contains(new AuthorizationFilter("\\_harmonized_consent\\", Set.of("phs789.c1"))));
+    }
+
+    @Test
+    public void setAuthorizationFiltersForQuery_noHarmonizedInSelectOrFilters_dropHarmonizedConsent() {
+        UserConsents userConsents = new UserConsents().setConsents(Map.of("\\_consents\\", Set.of("phs123.c1"), "\\_harmonized_consent\\", Set.of("phs789.c1")));
+        Query query = new Query(
+                List.of("\\phs123\\data\\age\\", "\\phs123\\data\\sex\\"), List.of(),
+                new PhenotypicSubquery(
+                        null,
+                        List.of(
+                                new PhenotypicFilter(PhenotypicFilterType.FILTER, "\\phs123\\data\\age\\", null, 30.0, 40.0, null)
+                        ), Operator.AND
+                ), null, ResultType.DATAFRAME, null, null
+        );
+
+        Query queryWithConsents = bdcConsentBasedAccessRuleEvaluator.setAuthorizationFiltersForQuery(userConsents, query);
+        assertEquals(List.of(new AuthorizationFilter("\\_consents\\", Set.of("phs123.c1"))), queryWithConsents.authorizationFilters());
+    }
+
+    @Test
     public void evaluateAccessRule_filterIncludesTopmedAndParentStudyId_accept() {
         UserConsents userConsents = new UserConsents().setConsents(Map.of("\\_consents\\", Set.of("phs123.c1", "phs456.c2")));
         Query query = new Query(
