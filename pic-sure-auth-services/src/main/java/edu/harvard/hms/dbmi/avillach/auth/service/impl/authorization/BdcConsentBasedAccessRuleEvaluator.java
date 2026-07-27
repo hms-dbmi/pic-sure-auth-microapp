@@ -22,6 +22,7 @@ public class BdcConsentBasedAccessRuleEvaluator implements ConsentBasedAccessRul
 
     private static final String GENOMIC_AUTHORIZATION_FILTER = "\\_topmed_consents\\";
     private static final String HARMONIZED_AUTHORIZATION_FILTER = "\\_harmonized_consent\\";
+    private static final String HARMONIZED_CONCEPT_PATH_PREFIX = "\\DCC Harmonized data set\\";
     private static final Set<String> ALWAYS_ALLOWED_CONCEPT_ROOTS = Set.of("_Topmed Study Accession with Subject ID", "_Parent Study Accession with Subject ID", "_consents", "_harmonized_consent", "_topmed_consents");
 
     @Override
@@ -77,10 +78,10 @@ public class BdcConsentBasedAccessRuleEvaluator implements ConsentBasedAccessRul
                 return false;
             }
             if (entry.getKey().equals(HARMONIZED_AUTHORIZATION_FILTER)) {
-                long harmonizedFilterCount =
-                    query.allFilters().stream().filter(filter -> filter.conceptPath().startsWith("\\DCC Harmonized data set\\")).count();
-                // leave these consents if there are any filters on harmonized concept paths
-                return harmonizedFilterCount > 0;
+                boolean filtersOnHarmonized =
+                    query.allFilters().stream().anyMatch(filter -> filter.conceptPath().startsWith(HARMONIZED_CONCEPT_PATH_PREFIX));
+                boolean selectsHarmonized = query.select().stream().anyMatch(path -> path.startsWith(HARMONIZED_CONCEPT_PATH_PREFIX));
+                return filtersOnHarmonized || selectsHarmonized;
             }
             return true;
         }).map(entry -> new AuthorizationFilter(entry.getKey(), entry.getValue())).toList();
