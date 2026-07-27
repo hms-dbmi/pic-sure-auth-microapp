@@ -178,9 +178,10 @@ public class UserController {
     }
 
     @Operation(description = "Retrieve consents of current user")
+    @AuditEvent(type = "ACCESS", action = "user.consents")
     @GetMapping(path = "/me/consents", produces = "application/json")
-    public ResponseEntity<?> getUserConsents(@PathVariable("userId") UUID userId) {
-        UserConsents userConsents = this.userService.getUserConsents(userId);
+    public ResponseEntity<?> getUserConsents() {
+        UserConsents userConsents = this.userService.getUserConsents();
 
         if (userConsents == null) {
             return PICSUREResponse.applicationError("Inner application error, please contact admin.");

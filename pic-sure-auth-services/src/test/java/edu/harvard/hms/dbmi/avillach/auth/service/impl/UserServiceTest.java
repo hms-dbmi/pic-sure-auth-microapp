@@ -603,6 +603,55 @@ public class UserServiceTest {
         assertEquals(Map.of("\\_consents\\", Set.of("phs1234.c1")), userConsentsCaptor.getValue().getConsents());
     }
 
+    @Test
+    public void getUserConsents_withConsents() {
+        User user = createTestUser();
+        configureUserSecurityContext(user);
+        UserConsents storedConsents = new UserConsents()
+                .setUserId(user.getUuid())
+                .setConsents(Map.of("\\_consents\\", Set.of("phs1234.c1")));
+        when(userConsentsRepository.findByUserId(user.getUuid())).thenReturn(storedConsents);
+
+        UserConsents result = userService.getUserConsents();
+
+        assertEquals(storedConsents, result);
+        assertEquals(Map.of("\\_consents\\", Set.of("phs1234.c1")), result.getConsents());
+        verify(userConsentsRepository).findByUserId(user.getUuid());
+    }
+
+    @Test
+    public void getUserConsents_noConsentsRow_returnsEmptyConsents() {
+        User user = createTestUser();
+        configureUserSecurityContext(user);
+        when(userConsentsRepository.findByUserId(user.getUuid())).thenReturn(null);
+
+        UserConsents result = userService.getUserConsents();
+
+        assertNotNull(result);
+        assertEquals(user.getUuid(), result.getUserId());
+        assertEquals(Map.of(), result.getConsents());
+        verify(userConsentsRepository, never()).save(any());
+    }
+
+    @Test
+    public void getUserConsents_noUserInContext_returnsNull() {
+        CustomUserDetails customUserDetails = new CustomUserDetails(null);
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(customUserDetails, null, customUserDetails.getAuthorities());
+        when(securityContext.getAuthentication()).thenReturn(authentication);
+
+        assertNull(userService.getUserConsents());
+        verify(userConsentsRepository, never()).findByUserId(any());
+    }
+
+    @Test
+    public void getUserConsents_noAuthentication_returnsNull() {
+        when(securityContext.getAuthentication()).thenReturn(null);
+
+        assertNull(userService.getUserConsents());
+        verify(userConsentsRepository, never()).findByUserId(any());
+    }
+
     private UserClaims buildTestUserClaims(User user) {
         UserClaims userClaims = new UserClaims();
         userClaims.setUuid(user.getUuid().toString());

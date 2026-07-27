@@ -56,6 +56,8 @@ class ControllerAuditEventTest {
         assertAuditEvent(c, "getQueryTemplate", new Class[]{}, "ACCESS", "user.profile");
         // refreshUserToken(HttpHeaders httpHeaders, HttpServletRequest request)
         assertAuditEvent(c, "refreshUserToken", new Class[]{HttpHeaders.class, HttpServletRequest.class}, "ACCESS", "user.profile");
+        // getUserConsents() - no params
+        assertAuditEvent(c, "getUserConsents", new Class[]{}, "ACCESS", "user.consents");
     }
 
     @Test

@@ -30,6 +30,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpHeaders;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -838,16 +839,20 @@ public class UserService {
         return user;
     }
 
-    public UserConsents getUserConsents(UUID userId) {
+    public UserConsents getUserConsents() {
         SecurityContext securityContext = SecurityContextHolder.getContext();
-        CustomUserDetails customUserDetails = (CustomUserDetails) securityContext.getAuthentication().getPrincipal();
-        if (customUserDetails == null || customUserDetails.getUser() == null || customUserDetails.getUser().getUuid() == null) {
+        Authentication authentication = securityContext.getAuthentication();
+        if (authentication == null || !(authentication.getPrincipal() instanceof CustomUserDetails customUserDetails)
+            || customUserDetails.getUser() == null || customUserDetails.getUser().getUuid() == null) {
             logger.error("Security context didn't have a user stored.");
             return null;
-        } else if (customUserDetails.getUser().getUuid() != userId) {
-            logger.error("User " + customUserDetails.getUser().getUuid() + " tried to access consents for user " + userId);
-            return null;
         }
-        return userConsentsRepository.findByUserId(userId);
+
+        UUID userId = customUserDetails.getUser().getUuid();
+        UserConsents userConsents = userConsentsRepository.findByUserId(userId);
+        if (userConsents == null) {
+            return new UserConsents().setUserId(userId).setConsents(Map.of()); //non-bdc
+        }
+        return userConsents;
     }
 }
