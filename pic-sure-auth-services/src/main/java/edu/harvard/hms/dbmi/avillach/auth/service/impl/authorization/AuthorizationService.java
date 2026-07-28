@@ -8,6 +8,7 @@ import edu.harvard.hms.dbmi.avillach.auth.model.EvaluateAccessRuleResult;
 import edu.harvard.hms.dbmi.avillach.auth.repository.UserConsentsRepository;
 import edu.harvard.hms.dbmi.avillach.auth.rest.TokenController;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.AccessRuleService;
+import edu.harvard.hms.dbmi.avillach.auth.service.impl.ApiKeyService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.RoleService;
 import edu.harvard.hms.dbmi.avillach.auth.service.impl.SessionService;
 import edu.harvard.hms.dbmi.avillach.hpds.data.query.v3.Query;
@@ -72,13 +73,18 @@ public class AuthorizationService {
 
     private final UserConsentsRepository userConsentsRepository;
 
+    private final ApiKeyService apiKeyService;
+    private final boolean apiKeyEnforcementEnabled;
+
     @Autowired
     public AuthorizationService(AccessRuleService accessRuleService,
                                 SessionService sessionService,
                                 RoleService roleService,
                                 ConsentBasedAccessRuleEvaluator consentBasedAccessRuleEvaluator,
                                 @Value("${strict.authorization.applications.connections}") String strictConnections,
-                                UserConsentsRepository userConsentsRepository) {
+                                UserConsentsRepository userConsentsRepository,
+                                ApiKeyService apiKeyService,
+                                @Value("${api.key.enforcement.enabled}") boolean apiKeyEnforcementEnabled) {
         this.accessRuleService = accessRuleService;
         this.sessionService = sessionService;
         this.roleService = roleService;
@@ -87,6 +93,8 @@ public class AuthorizationService {
             this.strictConnections.addAll(Arrays.asList(strictConnections.split(",")));
         }
         this.userConsentsRepository = userConsentsRepository;
+        this.apiKeyService = apiKeyService;
+        this.apiKeyEnforcementEnabled = apiKeyEnforcementEnabled;
     }
 
     /**
@@ -303,6 +311,12 @@ public class AuthorizationService {
 
     public boolean openAccessRequestIsValid(Map<String, Object> inputMap) {
 
+        // the API key gate runs before the permissive early-returns below: with enforcement on,
+        // even body-less requests must present a valid key
+        if (apiKeyEnforcementEnabled && !openAccessApiKeyIsValid(inputMap)) {
+            return false;
+        }
+
         if (inputMap == null || inputMap.isEmpty()) {
             logger.info("ACCESS_LOG ___ AN OPEN ACCESS USER ___ has been denied access to application ___ NO REQUEST BODY FORWARDED BY APPLICATION");
             return true;
@@ -341,5 +355,14 @@ public class AuthorizationService {
         }
 
         return result;
+    }
+
+    private boolean openAccessApiKeyIsValid(Map<String, Object> inputMap) {
+        Object apiKey = inputMap == null ? null : inputMap.get("apiKey");
+        boolean valid = apiKey instanceof String plaintext && apiKeyService.verifyKey(plaintext).isPresent();
+        if (!valid) {
+            logger.info("ACCESS_LOG ___ AN OPEN ACCESS USER ___ has been denied access to application ___ MISSING OR INVALID API KEY");
+        }
+        return valid;
     }
 }
